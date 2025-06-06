@@ -7,8 +7,6 @@
 
 // Default mixins and settings -----------------
 @use "sass:color";
-//@import "../../node_modules/reveal.js/css/theme/template/mixins";
-//@import "../../node_modules/reveal.js/css/theme/template/settings";
 
 // Reveal.js templates
 
@@ -29,11 +27,6 @@ $backgroundColor: $coal;
 // Include theme-specific fonts
 
 @import url(https://fonts.googleapis.com/css?family=Ubuntu:300,700,300italic,700italic);
-
-
-
-
-
 
 // Main text
 $mainFont: Ubuntu, 'sans-serif';

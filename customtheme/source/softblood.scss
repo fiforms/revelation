@@ -1,0 +1,121 @@
+/**
+ * SoftBlood Theme for Reveal.js
+ * Based on Blood by Walther
+ * Customized for media-rich backgrounds
+ */
+
+@use "sass:color";
+
+// Reveal.js template base (via include path from node_modules)
+@import "reveal.js/css/theme/template/mixins";
+@import "reveal.js/css/theme/template/settings";
+
+// Font
+@import url(https://fonts.googleapis.com/css?family=Ubuntu:300,700,300italic,700italic);
+
+// Colors
+$blood: #a23;
+$coal: #222;
+$codeBackground: #23241f;
+
+$backgroundColor: $coal;
+
+
+// Theme template ------------------------------
+@import "reveal.js/css/theme/template/theme";
+// ---------------------------------------------
+
+$mainFont: Ubuntu, 'sans-serif';
+$mainColor: #eee;
+
+$headingFont: Ubuntu, 'sans-serif';
+$headingTextShadow: 2px 2px 2px $coal;
+
+$heading1TextShadow: 0 1px 0 #ccc, 0 2px 0 #c9c9c9, 0 3px 0 #bbb,
+  0 4px 0 #b9b9b9, 0 5px 0 #aaa, 0 6px 1px rgba(0, 0, 0, 0.1),
+  0 0 5px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.3),
+  0 3px 5px rgba(0, 0, 0, 0.2), 0 5px 10px rgba(0, 0, 0, 0.25),
+  0 20px 20px rgba(0, 0, 0, 0.15);
+
+$linkColor: $blood;
+$linkColorHover: color.scale($linkColor, $lightness: 20%);
+$selectionBackgroundColor: $blood;
+$selectionColor: #fff;
+
+// Ensure readable text on light backgrounds
+@include light-bg-text-color(#222);
+
+// Slide content enhancements
+.reveal {
+  p code {
+    background-color: $codeBackground;
+    display: inline-block;
+    border-radius: 7px;
+  }
+
+  small code {
+    vertical-align: baseline;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-weight: 700;
+  }
+
+  // Only apply paragraph backgrounds on slides with backgrounds
+
+  section[data-darkbg] p {
+    background-color: rgba(0, 0, 0, 0.33);
+    color: #fff;
+    padding: 1rem;
+    border-radius: 8px;
+    display: inline-block;
+    line-height: 1.5;
+    font-weight: 300;
+    text-shadow: 1px 1px $coal;
+  }
+  
+  section[data-lightbg] p {
+    background-color: rgba(255, 255, 255, 0.33);
+    color: #000;
+    padding: 1rem;
+    border-radius: 8px;
+    display: inline-block;
+    line-height: 1.5;
+    font-weight: 300;
+    text-shadow: 1px 1px #ccc;
+  }
+
+  // Optional: override text shadow when backgrounds are light
+  section[data-lightbg] {
+    p, h1, h2, h3, h4 {
+      /* text-shadow: none; */
+    }
+  }
+}
+/*
+.reveal section[data-lightbg] {
+  color: #111;
+
+  p {
+    background-color: rgba(255, 255, 255, 0.7);
+    color: #111;
+  }
+}
+
+*/
+
+/* Utility positioning classes */
+.reveal section[data-upper-third] p {
+  margin-bottom: 60vh;
+}
+
+.reveal section[data-lower-third] p {
+  margin-top: 60vh;
+}
+
+
