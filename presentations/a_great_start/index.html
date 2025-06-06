@@ -10,6 +10,14 @@
 
   <link rel="stylesheet" href="/node_modules/reveal.js/dist/reveal.css">
   <link id="theme-stylesheet" rel="stylesheet" href="">
+  <style>
+    .container{
+        display: flex;
+    }
+    .col{
+        flex: 1;
+    }
+   </style>
 </head>
 <body>
   <div class="reveal">
@@ -29,6 +37,23 @@
   <script src="/node_modules/reveal.js/plugin/zoom/zoom.js"></script>
   <script src="/node_modules/reveal.js/plugin/search/search.js"></script>
   <script>
+  
+  // Disable video backgrounds in speaker notes view (iFrames)
+  (function scrubBackgroundVideos() {
+    if (window.self !== window.top) {
+      document.querySelectorAll('.slide-background-content video').forEach(video => {
+        if (!video.hasAttribute('data-paused-by-notes')) {
+          video.pause();
+          video.remove();  // or: video.src = ""; video.load();
+          video.setAttribute('data-paused-by-notes', 'true');
+          console.log('[Notes] Paused and removed background video');
+        }
+      });
+      // Re-run after 1 second
+      setTimeout(scrubBackgroundVideos, 1000);
+    }
+  })();
+
     // Load metadata.json and update the <title>
     fetch('metadata.json')
       .then(res => res.json())
