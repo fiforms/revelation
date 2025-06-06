@@ -1,0 +1,12 @@
+{
+  "dependencies": {
+    "reveal.js": "^5.2.1",
+    "vite": "^6.3.5"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "generate:index": "node scripts/generatePresentationIndex.js"
+  }
+}

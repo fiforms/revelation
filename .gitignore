@@ -1,0 +1,19 @@
+# Node.js dependencies
+node_modules/
+
+# Vite build output
+dist/
+
+# Logs and system files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.DS_Store
+
+# Generated index file for presentations
+presentations/index.json
+
+# Ignore large or temporary asset directories
+assets/backgrounds/
+assets/tmp/
+
