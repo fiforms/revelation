@@ -69,9 +69,10 @@
         presentations.forEach(pres => {
           const card = document.createElement('a');
           card.href = `./${pres.slug}/index.html`;
+          card.target = '_blank';
           card.className = 'card';
           card.innerHTML = `
-            <img src="${pres.thumbnail}" alt="${pres.title}">
+            <img src="./${pres.slug}/${pres.thumbnail}" alt="${pres.title}">
             <div class="card-content">
               <div class="card-title">${pres.title}</div>
               <div class="card-desc">${pres.description}</div>
