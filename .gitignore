@@ -10,6 +10,14 @@ yarn-debug.log*
 yarn-error.log*
 .DS_Store
 
+# Ignore compiled CSS and sourcemaps from custom themes
+customtheme/*.css
+customtheme/*.css.map
+
+# But keep the SCSS source directory
+!customtheme/source/
+!customtheme/source/**
+
 # Generated index file for presentations
 presentations/index.json
 
