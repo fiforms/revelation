@@ -68,8 +68,9 @@ $selectionColor: #fff;
 
   // Only apply paragraph backgrounds on slides with backgrounds
 
-  section[data-darkbg] p {
-    background-color: rgba(0, 0, 0, 0.33);
+  section[data-darkbg] p,
+  section[data-darkbg] ul {
+    background-color: rgba(0, 0, 0, 0.75);
     color: #fff;
     padding: 1rem;
     border-radius: 8px;
@@ -79,8 +80,9 @@ $selectionColor: #fff;
     text-shadow: 1px 1px $coal;
   }
   
-  section[data-lightbg] p {
-    background-color: rgba(255, 255, 255, 0.33);
+  section[data-lightbg] p,
+  section[data-lightbg] ul {
+    background-color: rgba(255, 255, 255, 0.4);
     color: #000;
     padding: 1rem;
     border-radius: 8px;
@@ -90,24 +92,12 @@ $selectionColor: #fff;
     text-shadow: 1px 1px #ccc;
   }
 
-  // Optional: override text shadow when backgrounds are light
-  section[data-lightbg] {
-    p, h1, h2, h3, h4 {
-      /* text-shadow: none; */
-    }
+  section[data-lightbg] ul,
+  section[data-darkbg] ul {
+    padding-left: 3rem;
   }
-}
-/*
-.reveal section[data-lightbg] {
-  color: #111;
 
-  p {
-    background-color: rgba(255, 255, 255, 0.7);
-    color: #111;
-  }
 }
-
-*/
 
 /* Utility positioning classes */
 .reveal section[data-upper-third] p {
@@ -115,7 +105,17 @@ $selectionColor: #fff;
 }
 
 .reveal section[data-lower-third] p {
-  margin-top: 60vh;
+  margin-top: 40vh;
 }
 
+.reveal section p em {
+  display: block;
+  font-size: 60%;
+  opacity: 0.5;
+  text-align: right;
+}
 
+.reveal img {
+  max-height: 55vh;
+  max-width: 55vw;
+}
