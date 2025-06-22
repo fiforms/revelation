@@ -3,78 +3,23 @@
 <head>
   <meta charset="utf-8">
   <title>Loading...</title>
-
   <!-- This is a generic presentation stub. For simple markdown presentations 
        you likely do not need to modify this file.-->
-
-
-  <link rel="stylesheet" href="/node_modules/reveal.js/dist/reveal.css">
   <link id="theme-stylesheet" rel="stylesheet" href="">
-  <style>
-    .container{
-        display: flex;
-    }
-    .col{
-        flex: 1;
-    }
-   </style>
 </head>
 <body>
   <div class="reveal">
     <div class="slides">
       <section data-markdown="presentation.md"
-               data-separator="^\n---\n$"
-               data-separator-vertical="^\n--\n$"
+               data-separator="^\n\*\*\*\n$"
+               data-separator-vertical="^\n---\n$"
                data-separator-notes="^Note:"
                data-charset="utf-8">
       </section>
     </div>
   </div>
 
-  <script src="/node_modules/reveal.js/dist/reveal.js"></script>
-  <script src="/node_modules/reveal.js/plugin/markdown/markdown.js"></script>
-  <script src="/node_modules/reveal.js/plugin/notes/notes.js"></script>
-  <script src="/node_modules/reveal.js/plugin/zoom/zoom.js"></script>
-  <script src="/node_modules/reveal.js/plugin/search/search.js"></script>
-  <script>
-  
-  // Disable video backgrounds in speaker notes view (iFrames)
-  (function scrubBackgroundVideos() {
-    if (window.self !== window.top) {
-      document.querySelectorAll('.slide-background-content video').forEach(video => {
-        if (!video.hasAttribute('data-paused-by-notes')) {
-          video.pause();
-          video.remove();  // or: video.src = ""; video.load();
-          video.setAttribute('data-paused-by-notes', 'true');
-          console.log('[Notes] Paused and removed background video');
-        }
-      });
-      // Re-run after 1 second
-      setTimeout(scrubBackgroundVideos, 1000);
-    }
-  })();
-
-    // Load metadata.json and update the <title>
-    fetch('metadata.json')
-      .then(res => res.json())
-      .then(meta => {
-        document.title = meta.title || "Reveal.js Presentation";
-
-        // Load theme from metadata
-        if (meta.theme) {
-          document.getElementById('theme-stylesheet').href = meta.theme;
-        }
-      });
-
-    Reveal.initialize({
-      plugins: [
-        RevealMarkdown,
-        RevealNotes,
-        RevealZoom,
-        RevealSearch
-      ]
-    });
-  </script>
+  <script type="module" src="/js/presentations.js"></script>
 </body>
 </html>
 
