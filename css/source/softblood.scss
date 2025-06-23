@@ -140,8 +140,37 @@ $selectionColor: #fff;
       width: 100%;
       max-height: calc(50vh - 8vw);
   }
+
+  .slide-attribution {
+    display: none;
+  }
+
 }
 
 .hide-when-notes {
   display: none !important;
+}
+
+
+#fixed-overlay-wrapper {
+    position: fixed;
+    top: 0;
+    right: 0;
+    font-size: 1vh;
+    writing-mode: vertical-rl;
+    transform: rotate(-180deg);
+    text-orientation: sideways;
+    pointer-events: none;
+    z-index: 9999;
+    background: rgba(0, 0, 0, 0.2);
+    color: white;
+    padding: 0.5em;
+
+}
+
+#fixed-overlay-wrapper .attribution {
+  display: inline-block;
+  float: left;
+  padding-bottom: 0.6em;
+  padding-top: 0.6em;
 }

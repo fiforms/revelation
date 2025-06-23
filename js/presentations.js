@@ -10,7 +10,23 @@ const deck = new Reveal({
   plugins: [Markdown, Notes, Zoom, Search],
 });
 
-  
+function updateAttributionFromCurrentSlide() {
+  const currentSlide = deck.getCurrentSlide();
+  const source = event.currentSlide.querySelector('.slide-attribution');
+  const overlay = document.getElementById('fixed-overlay-wrapper');
+
+  if (source) {
+    overlay.innerHTML = source.innerHTML;
+    overlay.style.display = '';
+  } else {
+    overlay.innerHTML = '';
+    overlay.style.display = 'none';
+  }
+}
+
+deck.on('ready', updateAttributionFromCurrentSlide);       
+deck.on('slidechanged', updateAttributionFromCurrentSlide); 
+
 // Disable video backgrounds in speaker notes view (iFrames)
 (function scrubBackgroundVideos() {
     if (window.self !== window.top) {
@@ -69,8 +85,9 @@ function preprocessMarkdown(md) {
   const lines = md.split('\n');
   const macros = {};
   const processedLines = [];
+  const attributions = [];
 
-  for (const line of lines) {
+  for (var line of lines) {
     const macroDefMatch = line.match(/^\[\]\(([A-Z1-9_:]+)\)(.+)$/);
     if (macroDefMatch) {
       const [, key, value] = macroDefMatch;
@@ -83,11 +100,33 @@ function preprocessMarkdown(md) {
       const key = macroUseMatch[1].trim();
       const value = macros[key];
       if (value) {
-        processedLines.push(value);
+        line = value;
       }
       else {
 	console.log('Markdown Macro Not Found: ' + key);
       }
+    }
+	  
+    // Check for attributions and load them into the attributions array
+    const attribMatch = line.match(/^\:ATTRIB\:(.*)$/); 
+    if(attribMatch) {
+      attributions.push(attribMatch[1]);
+      continue;
+    }
+
+    // Inject attribution HTML before slide break
+    if (line.trim() === '---' || line.trim() === '***' || line.match(/^[Nn][Oo][Tt][Ee]\:/)) {
+      if (attributions.length > 0) {
+
+        processedLines.push('<div class="slide-attribution">');
+        for (const attrib of attributions) {
+          processedLines.push(`<div class="attribution">${attrib}</div>`);
+        }
+        processedLines.push('</div>');
+        processedLines.push('');
+        attributions.length = 0; // Clear the array
+      }
+      processedLines.push(line); // Preserve the slide break itself
       continue;
     }
 
