@@ -102,6 +102,22 @@ This is great for reusing background media, theming, or attributes across slides
 
 The macro call will be replaced inline with the defined HTML comment or other content.
 
+### 3. **Attribution Text**
+
+Attribution text can be added easily to any slide by simply prefixing a line with :ATTRIB:
+
+```markdown
+:ATTRIB:Photo Copyright (c) by Jane Doe
+```
+
+Attributions can also be included in macro definitions, and optionally even combined
+
+```markdown
+[](SONG):ATTRIB:Song Lyrics by Clear Voice
+
+[](VID1):ATTRIB:Background video by John Doe <!-- .slide: data-background-video="johndoe.mp4" data-background-video-loop -->
+```
+
 ---
 
 ## 📁 Directory Overview
