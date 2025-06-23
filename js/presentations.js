@@ -7,14 +7,23 @@ import RevealRemote from 'reveal.js-remote/plugin/remote.js';
 
 const style_path = '/css/';
 
+const isRemote = !['localhost', '127.0.0.1'].includes(window.location.hostname);
+
+const plugins = [Markdown, Notes, Zoom, Search];
+if (isRemote) {
+  plugins.push(RevealRemote);
+}
+
 const deck = new Reveal({
-  plugins: [Markdown, Notes, Zoom, Search, RevealRemote],
-  remote: {
+  plugins,
+  ...(isRemote && {
+    remote: {
       remote: true,
       multiplex: true,
       server: window.location.protocol + "//" + window.location.hostname + ":1947/",
       path: "/socket.io"
-  }
+    }
+  })
 });
 
 function updateAttributionFromCurrentSlide() {
@@ -93,8 +102,13 @@ function preprocessMarkdown(md) {
   const macros = {};
   const processedLines = [];
   const attributions = [];
+  const lastmacros = [];
+  const thismacros = [];
 
+  const totalLines = lines.length;
+  var index = -1;
   for (var line of lines) {
+    index++;
     const macroDefMatch = line.match(/^\[\]\(([A-Z1-9_:]+)\)(.+)$/);
     if (macroDefMatch) {
       const [, key, value] = macroDefMatch;
@@ -102,12 +116,17 @@ function preprocessMarkdown(md) {
       continue; // Skip macro definition lines
     }
 
+    if(line.match(/^\[\]\(\)$/)) {
+        lastmacros.length = 0; // Reset the list of saved macros
+    }
     const macroUseMatch = line.match(/^\[\]\(([A-Z1-9_:]+)\)$/);
     if (macroUseMatch) {
       const key = macroUseMatch[1].trim();
       const value = macros[key];
       if (value) {
         line = value;
+        lastmacros.length = 0; // Reset the list of saved macros
+	thismacros.push(value); // Save the results of this macro for the next slide
       }
       else {
 	console.log('Markdown Macro Not Found: ' + key);
@@ -121,8 +140,26 @@ function preprocessMarkdown(md) {
       continue;
     }
 
-    // Inject attribution HTML before slide break
-    if (line.trim() === '---' || line.trim() === '***' || line.match(/^[Nn][Oo][Tt][Ee]\:/)) {
+    // Inject saved macros and attribution HTML before slide break
+    if (line.trim() === '---' || line.trim() === '***' || line.match(/^[Nn][Oo][Tt][Ee]\:/) || index >= lines.length - 1) {
+      if(thismacros.length > 0) {
+	  lastmacros.length = 0;
+	  lastmacros.push(...thismacros);
+      }
+      else {
+	  for (const val of lastmacros) {
+	      const attribMatch = val.match(/^\:ATTRIB\:(.*)$/);
+    	      if(attribMatch) {
+      		attributions.push(attribMatch[1]);
+   	      }
+	      else {
+	        processedLines.push(val);
+	      }
+	  }
+	  processedLines.push('');
+      }
+      thismacros.length = 0;
+
       if (attributions.length > 0) {
 
         processedLines.push('<div class="slide-attribution">');
