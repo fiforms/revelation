@@ -12,6 +12,8 @@
 @import "reveal.js/css/theme/template/settings";
 
 // Font
+@import url(https://fonts.googleapis.com/css?family=League+Gothic);
+@import url(https://fonts.googleapis.com/css?family=Lato);
 @import url(https://fonts.googleapis.com/css?family=Ubuntu:300,700,300italic,700italic);
 
 // Colors
@@ -48,6 +50,35 @@ $selectionColor: #fff;
 
 // Slide content enhancements
 .reveal {
+
+  section[data-upper-third] {
+      display: flex !important;
+      flex-direction: column;
+      justify-content: flex-start;
+      padding: 0 0;
+      height: 100%;
+  }
+
+  section[data-upper-third] p {
+      margin: 0 auto;
+      max-width: 80%;
+      text-align: center;
+  }
+
+  section[data-lower-third] {
+      display: flex !important;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 10vh 0;
+      height: 80%;
+  }
+
+  section[data-lower-third] p {
+      margin: 0 auto;
+      max-width: 80%;
+      text-align: center;
+  }
+
   p code {
     background-color: $codeBackground;
     display: inline-block;
@@ -98,25 +129,15 @@ $selectionColor: #fff;
     padding-left: 3rem;
   }
 
+  section p em {
+    display: block;
+    font-size: 60%;
+    opacity: 0.5;
+    text-align: right;
+  }
+
+  img {
+    width: 95%;
+  }
 }
 
-/* Utility positioning classes */
-.reveal section[data-upper-third] p {
-  margin-bottom: 60vh;
-}
-
-.reveal section[data-lower-third] p {
-  margin-top: 40vh;
-}
-
-.reveal section p em {
-  display: block;
-  font-size: 60%;
-  opacity: 0.5;
-  text-align: right;
-}
-
-.reveal img {
-  max-height: 55vh;
-  max-width: 55vw;
-}
