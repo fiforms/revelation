@@ -137,7 +137,8 @@ $selectionColor: #fff;
   }
 
   img {
-    width: 95%;
+      width: 100%;
+      max-height: calc(50vh - 8vw);
   }
 }
 
