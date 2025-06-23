@@ -101,4 +101,13 @@ function preprocessMarkdown(md) {
   return processedLines.join('\n');
 }
 
+window.addEventListener('message', event => {
+  // Reveal Notes plugin sends this message from the notes window
+  let edata = JSON.parse(event.data)
+  if (edata.namespace === 'reveal-notes' && edata.type === 'connected') {
+    console.log('Speaker Notes Connected, hiding controls');
+    document.querySelector('.controls')?.classList.add('hide-when-notes');
+    document.querySelector('.progress')?.classList.add('hide-when-notes');
+  }
+});
 
