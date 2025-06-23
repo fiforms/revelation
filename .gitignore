@@ -11,8 +11,8 @@ yarn-error.log*
 .DS_Store
 
 # Ignore compiled CSS and sourcemaps from custom themes
-customtheme/*.css
-customtheme/*.css.map
+css/*.css
+css/*.css.map
 
 # Ignore user's presentation files
 presentations/*

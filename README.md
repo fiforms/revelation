@@ -117,7 +117,7 @@ js/presentations.js      # Runtime loader and preprocessor logic
 
 ## 🛠️ Customizing Further
 
-* You can add your own SCSS themes in `customtheme/source`
+* You can add your own SCSS themes in `css/source`
 * Background images, videos, and styles are all compatible with Reveal’s data-attributes
 
 ---

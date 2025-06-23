@@ -4,6 +4,8 @@ import Notes from 'reveal.js/plugin/notes/notes.esm.js';
 import Zoom from 'reveal.js/plugin/zoom/zoom.esm.js';
 import Search from 'reveal.js/plugin/search/search.esm.js';
 
+const style_path = '/css/';
+
 const deck = new Reveal({
   plugins: [Markdown, Notes, Zoom, Search],
 });
@@ -37,7 +39,7 @@ fetch(`${baseUrl}metadata.json`)
 
         // Load theme from metadata
         if (meta.theme) {
-          document.getElementById('theme-stylesheet').href = meta.theme;
+          document.getElementById('theme-stylesheet').href = style_path + meta.theme;
         }
         loadAndPreprocessMarkdown();
       });

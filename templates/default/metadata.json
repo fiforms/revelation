@@ -1,6 +1,6 @@
 {
-  "title": "A Great Start",
+  "title": "New Presentation",
   "description": "An inspiring first presentation.",
   "thumbnail": "thumbnail.webp",
-  "theme": "/customtheme/newblood.css"
+  "theme": "softblood.css"
 }
