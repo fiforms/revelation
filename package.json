@@ -1,18 +1,28 @@
 {
   "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
     "reveal.js": "^5.2.1",
+    "reveal.js-remote": "github:cologneintelligence/reveal.js-remote",
+    "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.1",
     "vite": "^6.3.5"
   },
   "scripts": {
     "dev": "npm-run-all --parallel watch:theme vite",
     "vite": "vite",
+    "vite:serve": "vite --host",
     "watch:theme": "sass --watch css/source:css --load-path=node_modules",
     "build:theme": "sass css/source:css --load-path=node_modules",
     "build": "npm-run-all build:theme vite:build",
     "vite:build": "vite build",
-    "make": "node scripts/make-presentation.js"
+    "make": "node scripts/make-presentation.js",
+    "remote-server": "node node_modules/reveal.js-remote/server/index.js --port 1947 --origin '*' --basepath '/' --presentationpath ./presentations/",
+    "postinstall": "node scripts/patch-remote.js",
+    "serve": "concurrently -n VITE,REMOTE -c cyan,green \"npm run vite:serve\" \"npm run remote-server\""
   },
   "devDependencies": {
+    "concurrently": "^9.2.0",
     "npm-run-all": "^4.1.5",
     "sass": "^1.89.1"
   }

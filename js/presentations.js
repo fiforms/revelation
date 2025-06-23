@@ -3,11 +3,18 @@ import Markdown from 'reveal.js/plugin/markdown/markdown.esm.js';
 import Notes from 'reveal.js/plugin/notes/notes.esm.js';
 import Zoom from 'reveal.js/plugin/zoom/zoom.esm.js';
 import Search from 'reveal.js/plugin/search/search.esm.js';
+import RevealRemote from 'reveal.js-remote/plugin/remote.js';
 
 const style_path = '/css/';
 
 const deck = new Reveal({
-  plugins: [Markdown, Notes, Zoom, Search],
+  plugins: [Markdown, Notes, Zoom, Search, RevealRemote],
+  remote: {
+      remote: true,
+      multiplex: true,
+      server: window.location.protocol + "//" + window.location.hostname + ":1947/",
+      path: "/socket.io"
+  }
 });
 
 function updateAttributionFromCurrentSlide() {
