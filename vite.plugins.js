@@ -5,7 +5,30 @@ const matter = require('gray-matter');
 const presentationsDir = path.resolve(__dirname, 'presentations');
 const outputFile = path.join(presentationsDir, 'index.json');
 
+const readmePresDir = path.join(presentationsDir, 'readme');
+const readmePresentationPath = path.join(readmePresDir, 'presentation.md');
+const readmeYamlPath = path.join(readmePresDir, 'header.yaml');
+const projectReadmePath = path.resolve(__dirname, 'README.md');
+
 function generatePresentationIndex() {
+  // Refresh README presentation first, if needed:
+  
+  if (fs.existsSync(readmeYamlPath) && fs.existsSync(projectReadmePath)) {
+    const shouldGenerate =
+      !fs.existsSync(readmePresentationPath) ||
+      fs.statSync(readmePresentationPath).mtime < fs.statSync(projectReadmePath).mtime;
+
+    if (shouldGenerate) {
+      const header = fs.readFileSync(readmeYamlPath, 'utf-8');
+      const body = fs.readFileSync(projectReadmePath, 'utf-8');
+  
+      const combined = `${header}\n\n${body}`;
+      fs.writeFileSync(readmePresentationPath, combined, 'utf-8');
+      console.log('📝 Regenerated presentations/readme/presentation.md');
+    }
+  }
+
+
   const dirs = fs.readdirSync(presentationsDir).filter((dir) => {
     const mdPath = path.join(presentationsDir, dir, 'presentation.md');
     const indexPath = path.join(presentationsDir, dir, 'index.html');

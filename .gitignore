@@ -17,6 +17,9 @@ css/*.css.map
 # Ignore user's presentation files
 presentations/*
 
+!presentations/readme
+presentations/readme/presentation.md
+
 # But keep the SCSS source directory
 !customtheme/source/
 !customtheme/source/**
