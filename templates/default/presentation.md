@@ -1,3 +1,10 @@
+---
+title: A Basic Presentation
+description: More information about this basic presentation
+theme: softblood.css
+thumbnail: thumbnail.webp
+---
+
 <!-- Example presentation content below: -->
 ## Some Features
 
@@ -46,5 +53,4 @@ them before you call them.
 # Testing...
 
 This slide should also fade in and out
-
 

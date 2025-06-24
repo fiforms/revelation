@@ -5,6 +5,8 @@ import Zoom from 'reveal.js/plugin/zoom/zoom.esm.js';
 import Search from 'reveal.js/plugin/search/search.esm.js';
 import RevealRemote from 'reveal.js-remote/plugin/remote.js';
 
+import yaml from 'js-yaml';
+
 const style_path = '/css/';
 
 const isRemote = !['localhost', '127.0.0.1'].includes(window.location.hostname);
@@ -26,22 +28,10 @@ const deck = new Reveal({
   })
 });
 
-function updateAttributionFromCurrentSlide() {
-  const currentSlide = deck.getCurrentSlide();
-  const source = event.currentSlide.querySelector('.slide-attribution');
-  const overlay = document.getElementById('fixed-overlay-wrapper');
-
-  if (source) {
-    overlay.innerHTML = source.innerHTML;
-    overlay.style.display = '';
-  } else {
-    overlay.innerHTML = '';
-    overlay.style.display = 'none';
-  }
-}
-
 deck.on('ready', updateAttributionFromCurrentSlide);       
 deck.on('slidechanged', updateAttributionFromCurrentSlide); 
+
+loadAndPreprocessMarkdown();
 
 // Disable video backgrounds in speaker notes view (iFrames)
 (function scrubBackgroundVideos() {
@@ -59,30 +49,41 @@ deck.on('slidechanged', updateAttributionFromCurrentSlide);
     }
 })();
 
+function updateAttributionFromCurrentSlide() {
+  const currentSlide = deck.getCurrentSlide();
+  const source = event.currentSlide.querySelector('.slide-attribution');
+  const overlay = document.getElementById('fixed-overlay-wrapper');
 
-// Get base URL of the current presentation (e.g., /presentations/sermon-1/)
+  if (source) {
+    overlay.innerHTML = source.innerHTML;
+    overlay.style.display = '';
+  } else {
+    overlay.innerHTML = '';
+    overlay.style.display = 'none';
+  }
+}
+
+// Get base URL of the current presentation
 const baseUrl = window.location.pathname.replace(/\/[^\/]*$/, '/');
-
-// Load metadata.json relative to the current presentation folder
-fetch(`${baseUrl}metadata.json`)
-      .then(res => res.json())
-      .then(meta => {
-        document.title = meta.title || "Reveal.js Presentation";
-
-        // Load theme from metadata
-        if (meta.theme) {
-          document.getElementById('theme-stylesheet').href = style_path + meta.theme;
-        }
-        loadAndPreprocessMarkdown();
-      });
-
 
 async function loadAndPreprocessMarkdown() {
   let response = await fetch('presentation.md');
-  let markdown = await response.text();
+  let rawMarkdown = await response.text();
+  const macros = {};
+
+  const { metadata, content } = extractFrontMatter(rawMarkdown);
+
+  // Update document title and theme
+  document.title = metadata.title || "Reveal.js Presentation";
+  if (metadata.theme) {
+    document.getElementById('theme-stylesheet').href = style_path + metadata.theme;
+  }
+  if (metadata.macros) {
+      Object.assign(macros, metadata.macros);
+  }
 
   // ✅ Your custom preprocessing
-  markdown = preprocessMarkdown(markdown);
+  const processedMarkdown = preprocessMarkdown(content, macros);
 
   // Create a temporary element to convert markdown into HTML slides
   const section = document.getElementById('markdown-container');
@@ -90,16 +91,26 @@ async function loadAndPreprocessMarkdown() {
   section.setAttribute('data-separator', '^\n\\*\\*\\*\n$');
   section.setAttribute('data-separator-vertical', '^\n---\n$');
   section.setAttribute('data-separator-notes', '^Note:');
-  section.innerHTML = `<textarea data-template>${markdown}</textarea>`;
+  section.innerHTML = `<textarea data-template>${processedMarkdown}</textarea>`;
 
   // Initialize Reveal.js
   deck.initialize();
 }
 
+function extractFrontMatter(md) {
+  const FRONTMATTER_RE = /^---\n([\s\S]*?)\n---\n?/;
+  const match = md.match(FRONTMATTER_RE);
+  if (match) {
+    const yamlText = match[1];
+    const content = md.slice(match[0].length);
+    const metadata = yaml.load(yamlText) || {};
+    return { metadata, content };
+  }
+  return { metadata: {}, content: md };
+}
 
-function preprocessMarkdown(md) {
+function preprocessMarkdown(md, macros = {}) {
   const lines = md.split('\n');
-  const macros = {};
   const processedLines = [];
   const attributions = [];
   const lastmacros = [];
@@ -109,24 +120,27 @@ function preprocessMarkdown(md) {
   var index = -1;
   for (var line of lines) {
     index++;
-    const macroDefMatch = line.match(/^\[\]\(([A-Z1-9_:]+)\)(.+)$/);
-    if (macroDefMatch) {
-      const [, key, value] = macroDefMatch;
-      macros[key.trim()] = value.trim();
-      continue; // Skip macro definition lines
-    }
 
-    if(line.match(/^\[\]\(\)$/)) {
+    if(line.match(/^\{\{\}\}$/)) {
         lastmacros.length = 0; // Reset the list of saved macros
     }
-    const macroUseMatch = line.match(/^\[\]\(([A-Z1-9_:]+)\)$/);
+    const macroUseMatch = line.match(/^\{\{([A-Za-z0-9_]+)\}\}$/);
     if (macroUseMatch) {
       const key = macroUseMatch[1].trim();
       const value = macros[key];
       if (value) {
-        line = value;
+	const mlines = value.split('\n');
+	for (const mline of mlines) {
+	    thismacros.push(mline); // Save the results of this macro for the next slide
+            const attribMatch = mline.match(/^\:ATTRIB\:(.*)$/);
+            if(attribMatch) {
+              attributions.push(attribMatch[1]);
+              continue;
+            }
+            processedLines.push(mline);
+	}
         lastmacros.length = 0; // Reset the list of saved macros
-	thismacros.push(value); // Save the results of this macro for the next slide
+	continue;
       }
       else {
 	console.log('Markdown Macro Not Found: ' + key);

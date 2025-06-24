@@ -1,23 +1,28 @@
 const fs = require('fs');
 const path = require('path');
+const matter = require('gray-matter');
 
 const presentationsDir = path.resolve(__dirname, 'presentations');
 const outputFile = path.join(presentationsDir, 'index.json');
 
 function generatePresentationIndex() {
   const dirs = fs.readdirSync(presentationsDir).filter((dir) => {
-    const metaPath = path.join(presentationsDir, dir, 'metadata.json');
+    const mdPath = path.join(presentationsDir, dir, 'presentation.md');
     const indexPath = path.join(presentationsDir, dir, 'index.html');
-    return fs.existsSync(metaPath) && fs.existsSync(indexPath);
+    return fs.existsSync(mdPath) && fs.existsSync(indexPath);
   });
 
   const indexData = dirs.map((dir) => {
-    const metadata = JSON.parse(
-      fs.readFileSync(path.join(presentationsDir, dir, 'metadata.json'), 'utf-8')
-    );
+    const mdPath = path.join(presentationsDir, dir, 'presentation.md');
+    const fileContent = fs.readFileSync(mdPath, 'utf-8');
+    const { data } = matter(fileContent);
+
     return {
       slug: dir,
-      ...metadata
+      title: data.title || dir,
+      description: data.description || '',
+      thumbnail: data.thumbnail || 'preview.jpg',
+      theme: data.theme || '',
     };
   });
 
@@ -34,17 +39,16 @@ module.exports = function presentationIndexPlugin() {
     configureServer(server) {
       generatePresentationIndex();
 
-      // Watch all metadata.json files in presentation subdirectories
+      // Watch all presentation.md files
       fs.readdirSync(presentationsDir).forEach((dir) => {
-        const metaFile = path.join(presentationsDir, dir, 'metadata.json');
-        if (fs.existsSync(metaFile)) {
-          server.watcher.add(metaFile);
+        const mdFile = path.join(presentationsDir, dir, 'presentation.md');
+        if (fs.existsSync(mdFile)) {
+          server.watcher.add(mdFile);
         }
       });
 
-      // Watch for any changes to metadata.json files
       server.watcher.on('change', (changedPath) => {
-        if (changedPath.includes('webroot/presentations') && changedPath.endsWith('metadata.json')) {
+        if (changedPath.includes('presentations') && changedPath.endsWith('presentation.md')) {
           generatePresentationIndex();
         }
       });

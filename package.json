@@ -2,6 +2,8 @@
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^5.1.0",
+    "gray-matter": "^4.0.3",
+    "js-yaml": "^4.1.0",
     "reveal.js": "^5.2.1",
     "reveal.js-remote": "github:cologneintelligence/reveal.js-remote",
     "socket.io": "^4.8.1",
