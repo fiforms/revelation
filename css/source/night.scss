@@ -1,0 +1,19 @@
+/**
+ * Night Theme for REVELation Snapshot Presenter
+ */
+
+@use "sass:color";
+
+// Reveal.js template base (via include path from node_modules)
+@import 'reveal.js/dist/reveal.css';
+@import "reveal.js/css/theme/template/mixins";
+@import "reveal.js/css/theme/template/settings";
+@import "./custom/layouts.scss";
+
+@import 'reveal.js/css/theme/source/night';
+
+#fixed-overlay-wrapper {
+    background: rgba(0, 0, 0, 0.2);
+    color: white;
+}
+

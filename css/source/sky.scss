@@ -1,0 +1,20 @@
+/**
+ * Sky Theme for REVELation Snapshot Presenter
+ */
+
+@use "sass:color";
+
+// Reveal.js template base (via include path from node_modules)
+@import 'reveal.js/dist/reveal.css';
+@import "reveal.js/css/theme/template/mixins";
+@import "reveal.js/css/theme/template/settings";
+@import "./custom/layouts.scss";
+
+@import 'reveal.js/css/theme/source/sky';
+
+#fixed-overlay-wrapper {
+    background: rgba(220, 240, 255, 0.2);
+    color: rgb(80,100,130);
+    font-family: "Quicksand";
+}
+
