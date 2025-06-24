@@ -159,12 +159,6 @@ function preprocessMarkdown(md, macros = {}) {
     if(line.match(/^\#/) && !blankslide) {
         // Always insert a slide break before a heading
 	autoSlide = true;
-        if(line.match(/^\###/)) {
-	  processedLines.push('---');
-	}
-	else {
-	  processedLines.push('***');
-	}
     }
     if (line.trim() !== '' && !line.trim().match(/^<!--.*?-->$/)) {
       blankslide = false;
@@ -201,11 +195,22 @@ function preprocessMarkdown(md, macros = {}) {
         processedLines.push('');
         attributions.length = 0; // Clear the array
       }
+
+      if(autoSlide) {
+        if(line.match(/^\###/)) {
+	  processedLines.push('---');
+	  processedLines.push('');
+	}
+	else {
+	  processedLines.push('***');
+	  processedLines.push('');
+	}
+      }
       processedLines.push(line); // Preserve the slide break itself
       continue;
     }
 
-    if (line.trimEnd().endsWith('++')) {
+    if (line.endsWith('++')) {
       processedLines.push(
         line.replace(/\s*\+\+$/, '') + ' <!-- .element: class="fragment" -->'
       );
