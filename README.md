@@ -1,4 +1,5 @@
-# REVELation Snapshot Presenter
+# REVELation
+**Snapshot Presenter**
 
 This project provides a modular framework for creating beautiful, interactive 
 presentations using [Reveal.js](https://revealjs.com/), enhanced with runtime 
@@ -12,8 +13,6 @@ This framework is designed to help you:
 - Manage and display a collection of presentations via a home portal
 - Enhance Markdown with expressive features like fragments and reusable macros
 - Seamlessly integrate background video, images, and theming using simple conventions
-
----
 
 ## 🚀 Getting Started
 
@@ -40,8 +39,6 @@ npm run serve
 Visit http://your.lan.ip.local:8000 to browse available presentations.
 
 
----
-
 ## 📽️ Creating a New Presentation
 
 1. Use NPM to create a new presentation
@@ -55,8 +52,6 @@ npm run make
 ```bash
 presentations/my_presentation/presentation.md
 ```
-
----
 
 ## ✨ Enhanced Markdown Features 
 
@@ -150,8 +145,6 @@ Becomes:
 - Point two <!-- .element: class="fragment" -->
 
 
----
-
 ## 📁 Directory Overview
 
 ```
@@ -161,14 +154,10 @@ assets/backgrounds/      # Shared media assets
 js/presentations.js      # Runtime loader and preprocessor logic
 ```
 
----
-
 ## 🛠️ Customizing Further
 
 * You can add your own SCSS themes in `css/source`
 * Background images, videos, and styles are all compatible with Reveal’s data-attributes
-
----
 
 ## 📜 License
 
