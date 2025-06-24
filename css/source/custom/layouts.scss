@@ -72,10 +72,38 @@
     text-align: right;
   }
 
-  img {
-      width: 100%;
-      max-height: calc(50vh - 8vw);
+
+section > section:has(img) {
+  height: 100%;  
+}
+
+ .slides section {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
   }
+
+
+  p:has(img) {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 95%;
+    width: 95%;
+    margin: 0;
+  }
+
+section img {
+  position: absolute;
+  top: 0; left: 0;
+  right: 0; bottom: 0;
+  margin: auto;
+  max-width: 95%;
+  max-height: 100%;
+  object-fit: contain;
+}
 
   .slide-attribution {
     display: none;
