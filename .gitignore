@@ -13,6 +13,7 @@ yarn-error.log*
 # Ignore compiled CSS and sourcemaps from custom themes
 css/*.css
 css/*.css.map
+css/fonts
 
 # Ignore user's presentation files
 presentations/*

@@ -58,9 +58,23 @@ presentations/my_presentation/presentation.md
 
 ---
 
-## ✨ Enhanced Markdown Features
+## ✨ Enhanced Markdown Features 
 
-We support custom extensions to standard Markdown to boost authoring power:
+
+We support custom extensions to standard Markdown to boost authoring power. Write with ease, as each
+new heading automatically becomes a new slide. Insert a horizontal rule 
+
+```end
+ ---
+```
+
+to manually create breaks for vertical slides, or use 
+
+```end
+ ***
+```
+
+to create horizontal ones.
 
 ### 1. **YAML Metadata**
 
@@ -119,21 +133,21 @@ Attribution text can be added easily to any slide by simply prefixing a line wit
  :ATTRIB:Photo Copyright (c) by Jane Doe
 ```
 
+:ATTRIB:This slide was authored by Yours Truly
+
 ### 4. **Fragments Using `++`**
 
 Any line ending with ` ++` becomes a [Reveal.js fragment](https://revealjs.com/fragments/):
 
 ```markdown
-- Point one ++
-- Point two ++
+ - Point one ++ 
+ - Point two ++ 
 ```
 
 Becomes:
 
-```html
 - Point one <!-- .element: class="fragment" -->
 - Point two <!-- .element: class="fragment" -->
-```
 
 
 ---

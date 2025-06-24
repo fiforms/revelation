@@ -14,8 +14,9 @@
     "dev": "npm-run-all --parallel watch:theme vite",
     "vite": "vite",
     "vite:serve": "vite --host",
-    "watch:theme": "sass --watch css/source:css --load-path=node_modules",
-    "build:theme": "sass css/source:css --load-path=node_modules",
+    "watch:theme": "sass --watch css/source:css --load-path=node_modules --load-path=node_modules/reveal.js/css/theme/source",
+     "build:theme": "sass css/source:css --load-path=node_modules --load-path=node_modules/reveal.js/css/theme/source",
+
     "build": "npm-run-all build:theme vite:build",
     "vite:build": "vite build",
     "make": "node scripts/make-presentation.js",
