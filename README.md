@@ -5,6 +5,12 @@ This project provides a modular framework for creating beautiful, interactive
 presentations using [Reveal.js](https://revealjs.com/), enhanced with runtime 
 Markdown loading, theming, media backgrounds, and custom syntax extensions.
 
+---
+
+You can find this project's home page on [GitHub](https://github.com/fiforms/revelation)
+
+An online demo is coming soon (hopefully).
+
 ## 🎯 Purpose
 
 This framework is designed to help you:
@@ -139,7 +145,7 @@ Any line ending with ` ++` becomes a [Reveal.js fragment](https://revealjs.com/f
  - Point two ++ 
 ```
 
-Becomes:
+Becomes its own animated line in the presentation:
 
 - Point one <!-- .element: class="fragment" -->
 - Point two <!-- .element: class="fragment" -->
