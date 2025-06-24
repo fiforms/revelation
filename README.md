@@ -88,15 +88,19 @@ You can define macros in YAML
  ...
  macros:
    fogvideo:  |
-     <!-- .slide: data-background-video="/backgrounds/fog_loop.mp4" data-background-video-loop -->
+     <!-- .slide: data-background-video="/backgrounds/fog_loop.mp4" 
+          data-background-video-loop -->
      :ATTRIB:Background video by Jane Doe
    darkbg: |
      <!-- .slide: data-darkbg -->
    morning1: |
-     <!-- .slide: data-background-image="morning.jpg" data-darkbg -->
+     <!-- .slide: data-background-image="morning.jpg" 
+          data-darkbg -->
      :ATTRIB:Background Photo by John Smith
  ---
 ```
+
+---
 
 Then reuse them anywhere:
 
@@ -112,7 +116,7 @@ The macro call will be replaced inline with the defined HTML comment or other co
 Attribution text can be added easily to any slide by simply prefixing a line with :ATTRIB:
 
 ```markdown
-:ATTRIB:Photo Copyright (c) by Jane Doe
+ :ATTRIB:Photo Copyright (c) by Jane Doe
 ```
 
 ### 4. **Fragments Using `++`**
