@@ -197,7 +197,7 @@ function preprocessMarkdown(md, macros = {}) {
       }
 
       if(autoSlide) {
-        if(line.match(/^\###/)) {
+	if (/^###\s*/.test(line)) {
 	  processedLines.push('---');
 	  processedLines.push('');
 	}
