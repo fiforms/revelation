@@ -1,6 +1,8 @@
-# Reveal.js Presentations Framework
+# REVELation Snapshot Presenter
 
-This project provides a modular framework for creating beautiful, interactive presentations using [Reveal.js](https://revealjs.com/), enhanced with runtime Markdown loading, theming, media backgrounds, and custom syntax extensions.
+This project provides a modular framework for creating beautiful, interactive 
+presentations using [Reveal.js](https://revealjs.com/), enhanced with runtime 
+Markdown loading, theming, media backgrounds, and custom syntax extensions.
 
 ## 🎯 Purpose
 
@@ -18,27 +20,34 @@ This framework is designed to help you:
 ### 1. Clone This Repo
 
 ```bash
-git clone <your-repo-url>
-cd <your-repo-folder>
+git clone https://github.com/fiforms/revelation.git
+cd revelation
 npm install
 ```
 
 ### 2. Start the Dev Server
 
+Run for local browser (remote disabled)
 ```bash
 npm run dev
 ```
-
 Visit [http://localhost:8000](http://localhost:8000) to browse available presentations.
+
+Run for the local network (remote enabled when not connected to localhost)
+```bash
+npm run serve
+```
+Visit http://your.lan.ip.local:8000 to browse available presentations.
+
 
 ---
 
 ## 📽️ Creating a New Presentation
 
-1. Copy the starter template:
+1. Use NPM to create a new presentation
 
 ```bash
-cp -r presentation-templates/a_great_start presentations/my_presentation
+npm run make
 ```
 
 2. Edit your new presentation’s content:
@@ -47,18 +56,66 @@ cp -r presentation-templates/a_great_start presentations/my_presentation
 presentations/my_presentation/presentation.md
 ```
 
-3. Optionally update:
-
-   * `index.html` (if you want custom settings per presentation)
-   * `metadata.json` (to control the title, description, and thumbnail for the portal UI)
-
 ---
 
 ## ✨ Enhanced Markdown Features
 
 We support custom extensions to standard Markdown to boost authoring power:
 
-### 1. **Fragments Using `++`**
+### 1. **YAML Metadata**
+
+Use YAML to define metadata and set styles and macros at the beginning of each markdown file
+
+```end
+
+ ---
+ title: My Presentation
+ description: Some very important information
+ author: John Doe
+ theme: softblood.css
+ thumbnail: thumbnail.webp
+ created: 2025-06-24
+ ---
+
+```
+
+### 2. **Macro Expansion**
+
+You can define macros in YAML
+
+```yaml
+ ---
+ ...
+ macros:
+   fogvideo:  |
+     <!-- .slide: data-background-video="/backgrounds/fog_loop.mp4" data-background-video-loop -->
+     :ATTRIB:Background video by Jane Doe
+   darkbg: |
+     <!-- .slide: data-darkbg -->
+   morning1: |
+     <!-- .slide: data-background-image="morning.jpg" data-darkbg -->
+     :ATTRIB:Background Photo by John Smith
+ ---
+```
+
+Then reuse them anywhere:
+
+```markdown
+{{fogvideo}}
+```
+
+This is great for reusing background media, theming, or attributes across slides.
+The macro call will be replaced inline with the defined HTML comment or other content.
+
+### 3. **Attribution Text**
+
+Attribution text can be added easily to any slide by simply prefixing a line with :ATTRIB:
+
+```markdown
+:ATTRIB:Photo Copyright (c) by Jane Doe
+```
+
+### 4. **Fragments Using `++`**
 
 Any line ending with ` ++` becomes a [Reveal.js fragment](https://revealjs.com/fragments/):
 
@@ -74,49 +131,6 @@ Becomes:
 - Point two <!-- .element: class="fragment" -->
 ```
 
-### 2. **Macro Expansion**
-
-You can define macros using the syntax:
-
-```markdown
-[](STYLE:MYMACRO)<!-- any content you want injected later -->
-```
-
-Then reuse them anywhere:
-
-```markdown
-[](STYLE:MYMACRO)
-```
-
-This is great for reusing background media, theming, or attributes across slides.
-
-#### Example:
-
-```markdown
-[](STYLE:VIDEO1)<!-- .slide: data-background-video="/backgrounds/loop.mp4" data-background-video-loop -->
-
-## Title Slide
-
-[](STYLE:VIDEO1)
-```
-
-The macro call will be replaced inline with the defined HTML comment or other content.
-
-### 3. **Attribution Text**
-
-Attribution text can be added easily to any slide by simply prefixing a line with :ATTRIB:
-
-```markdown
-:ATTRIB:Photo Copyright (c) by Jane Doe
-```
-
-Attributions can also be included in macro definitions, and optionally even combined
-
-```markdown
-[](SONG):ATTRIB:Song Lyrics by Clear Voice
-
-[](VID1):ATTRIB:Background video by John Doe <!-- .slide: data-background-video="johndoe.mp4" data-background-video-loop -->
-```
 
 ---
 
