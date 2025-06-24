@@ -1,0 +1,109 @@
+/**
+ * Layouts Customized for media-rich backgrounds
+ */
+
+
+// Slide content enhancements
+.reveal {
+
+  section[data-upper-third] {
+      display: flex !important;
+      flex-direction: column;
+      justify-content: flex-start;
+      padding: 0 0;
+      height: 100%;
+  }
+
+  section[data-upper-third] p {
+      margin: 0 auto;
+      max-width: 80%;
+      text-align: center;
+  }
+
+  section[data-lower-third] {
+      display: flex !important;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 10vh 0;
+      height: 80%;
+  }
+
+  section[data-lower-third] p {
+      margin: 0 auto;
+      max-width: 80%;
+      text-align: center;
+  }
+
+  // Only apply paragraph backgrounds on slides with backgrounds
+
+  section[data-darkbg] p,
+  section[data-darkbg] ul {
+    background-color: rgba(0, 0, 0, 0.75);
+    color: #fff;
+    padding: 1rem;
+    border-radius: 8px;
+    display: inline-block;
+    line-height: 1.5;
+    font-weight: 300;
+  }
+  
+  section[data-lightbg] p,
+  section[data-lightbg] ul {
+    background-color: rgba(255, 255, 255, 0.4);
+    color: #000;
+    padding: 1rem;
+    border-radius: 8px;
+    display: inline-block;
+    line-height: 1.5;
+    font-weight: 300;
+    text-shadow: 1px 1px #ccc;
+  }
+
+  section[data-lightbg] ul,
+  section[data-darkbg] ul {
+    padding-left: 3rem;
+  }
+
+  /* Italicized words become their own blocks, useful for references */
+  section p em {
+    display: block;
+    font-size: 60%;
+    opacity: 0.5;
+    text-align: right;
+  }
+
+  img {
+      width: 100%;
+      max-height: calc(50vh - 8vw);
+  }
+
+  .slide-attribution {
+    display: none;
+  }
+
+}
+
+.hide-when-notes {
+  display: none !important;
+}
+
+
+#fixed-overlay-wrapper {
+    position: fixed;
+    top: 0;
+    right: 0;
+    font-size: 1.3vh;
+    writing-mode: vertical-rl;
+    transform: rotate(-180deg);
+    text-orientation: sideways;
+    pointer-events: none;
+    z-index: 9999;
+    padding: 0.5em;
+}
+
+#fixed-overlay-wrapper .attribution {
+  display: inline-block;
+  float: left;
+  padding-bottom: 0.6em;
+  padding-top: 0.6em;
+}

@@ -1,0 +1,20 @@
+/**
+ * White Theme for REVELation Snapshot Presenter
+ * Leveraging White them for Reveal.js
+ */
+
+// Reveal.js template base (via include path from node_modules)
+@import 'reveal.js/dist/reveal.css';
+@import "reveal.js/css/theme/template/mixins";
+@import "reveal.js/css/theme/template/settings";
+
+@import 'reveal.js/css/theme/source/white.scss';
+
+@import "./custom/layouts.scss";
+
+#fixed-overlay-wrapper {
+    background: rgba(255, 255, 255, 0.2);
+    color: rgb(80,80,80);
+}
+
+

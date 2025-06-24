@@ -1,5 +1,5 @@
 /**
- * SoftBlood Theme for Reveal.js
+ * SoftBlood Theme for REVELation Snapshot Presenter
  * Based on Blood by Walther
  * Customized for media-rich backgrounds
  */
@@ -10,167 +10,33 @@
 @import 'reveal.js/dist/reveal.css';
 @import "reveal.js/css/theme/template/mixins";
 @import "reveal.js/css/theme/template/settings";
+@import "./custom/layouts.scss";
 
 // Font
 @import url(https://fonts.googleapis.com/css?family=League+Gothic);
 @import url(https://fonts.googleapis.com/css?family=Lato);
 @import url(https://fonts.googleapis.com/css?family=Ubuntu:300,700,300italic,700italic);
 
-// Colors
-$blood: #a23;
-$coal: #222;
-$codeBackground: #23241f;
+@import 'reveal.js/css/theme/source/blood.scss';
 
-$backgroundColor: $coal;
-
-
-// Theme template ------------------------------
-@import "reveal.js/css/theme/template/theme";
-// ---------------------------------------------
-
-$mainFont: Ubuntu, 'sans-serif';
-$mainColor: #eee;
-
-$headingFont: Ubuntu, 'sans-serif';
-$headingTextShadow: 2px 2px 2px $coal;
-
-$heading1TextShadow: 0 1px 0 #ccc, 0 2px 0 #c9c9c9, 0 3px 0 #bbb,
-  0 4px 0 #b9b9b9, 0 5px 0 #aaa, 0 6px 1px rgba(0, 0, 0, 0.1),
-  0 0 5px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.3),
-  0 3px 5px rgba(0, 0, 0, 0.2), 0 5px 10px rgba(0, 0, 0, 0.25),
-  0 20px 20px rgba(0, 0, 0, 0.15);
-
-$linkColor: $blood;
-$linkColorHover: color.scale($linkColor, $lightness: 20%);
-$selectionBackgroundColor: $blood;
-$selectionColor: #fff;
-
-// Ensure readable text on light backgrounds
-@include light-bg-text-color(#222);
 
 // Slide content enhancements
 .reveal {
 
-  section[data-upper-third] {
-      display: flex !important;
-      flex-direction: column;
-      justify-content: flex-start;
-      padding: 0 0;
-      height: 100%;
-  }
-
-  section[data-upper-third] p {
-      margin: 0 auto;
-      max-width: 80%;
-      text-align: center;
-  }
-
-  section[data-lower-third] {
-      display: flex !important;
-      flex-direction: column;
-      justify-content: flex-end;
-      padding: 10vh 0;
-      height: 80%;
-  }
-
-  section[data-lower-third] p {
-      margin: 0 auto;
-      max-width: 80%;
-      text-align: center;
-  }
-
-  p code {
-    background-color: $codeBackground;
-    display: inline-block;
-    border-radius: 7px;
-  }
-
-  small code {
-    vertical-align: baseline;
-  }
-
-  h1,
+    h1,
   h2,
   h3,
   h4,
   h5,
   h6 {
     font-weight: 700;
-  }
-
-  // Only apply paragraph backgrounds on slides with backgrounds
-
-  section[data-darkbg] p,
-  section[data-darkbg] ul {
-    background-color: rgba(0, 0, 0, 0.75);
-    color: #fff;
-    padding: 1rem;
-    border-radius: 8px;
-    display: inline-block;
-    line-height: 1.5;
-    font-weight: 300;
-    text-shadow: 1px 1px $coal;
-  }
-  
-  section[data-lightbg] p,
-  section[data-lightbg] ul {
-    background-color: rgba(255, 255, 255, 0.4);
-    color: #000;
-    padding: 1rem;
-    border-radius: 8px;
-    display: inline-block;
-    line-height: 1.5;
-    font-weight: 300;
-    text-shadow: 1px 1px #ccc;
-  }
-
-  section[data-lightbg] ul,
-  section[data-darkbg] ul {
-    padding-left: 3rem;
-  }
-
-  section p em {
-    display: block;
-    font-size: 60%;
-    opacity: 0.5;
-    text-align: right;
-  }
-
-  img {
-      width: 100%;
-      max-height: calc(50vh - 8vw);
-  }
-
-  .slide-attribution {
-    display: none;
+    font-family: "League Gothic";
   }
 
 }
-
-.hide-when-notes {
-  display: none !important;
-}
-
 
 #fixed-overlay-wrapper {
-    position: fixed;
-    top: 0;
-    right: 0;
-    font-size: 1.3vh;
-    writing-mode: vertical-rl;
-    transform: rotate(-180deg);
-    text-orientation: sideways;
-    pointer-events: none;
-    z-index: 9999;
     background: rgba(0, 0, 0, 0.2);
     color: white;
-    padding: 0.5em;
-
 }
 
-#fixed-overlay-wrapper .attribution {
-  display: inline-block;
-  float: left;
-  padding-bottom: 0.6em;
-  padding-top: 0.6em;
-}
