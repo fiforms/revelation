@@ -118,6 +118,7 @@ function preprocessMarkdown(md, macros = {}) {
 
   const totalLines = lines.length;
   var index = -1;
+  var blankslide = true;
   for (var line of lines) {
     index++;
 
@@ -154,8 +155,24 @@ function preprocessMarkdown(md, macros = {}) {
       continue;
     }
 
+    var autoSlide = false;
+    if(line.match(/^\#/) && !blankslide) {
+        // Always insert a slide break before a heading
+	autoSlide = true;
+        if(line.match(/^\###/)) {
+	  processedLines.push('---');
+	}
+	else {
+	  processedLines.push('***');
+	}
+    }
+    if (line.trim() !== '' && !line.trim().match(/^<!--.*?-->$/)) {
+      blankslide = false;
+    }
+
     // Inject saved macros and attribution HTML before slide break
-    if (line.trim() === '---' || line.trim() === '***' || line.match(/^[Nn][Oo][Tt][Ee]\:/) || index >= lines.length - 1) {
+    if (autoSlide || line === '---' || line === '***' || line.match(/^[Nn][Oo][Tt][Ee]\:/) || index >= lines.length - 1) {
+      var blankslide = true;
       if(thismacros.length > 0) {
 	  lastmacros.length = 0;
 	  lastmacros.push(...thismacros);
