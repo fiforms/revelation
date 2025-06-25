@@ -3,6 +3,10 @@ title: A Basic Presentation
 description: More information about this basic presentation
 theme: softblood.css
 thumbnail: thumbnail.webp
+config:
+  transition: fade
+  transitionSpeed: slow
+  controls: false
 macros:
   fade: |
     <!-- .slide: data-transition="fade" -->

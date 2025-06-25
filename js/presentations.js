@@ -94,7 +94,7 @@ async function loadAndPreprocessMarkdown() {
   section.innerHTML = `<textarea data-template>${processedMarkdown}</textarea>`;
 
   // Initialize Reveal.js
-  deck.initialize();
+  deck.initialize(metadata.config);
 }
 
 function extractFrontMatter(md) {
