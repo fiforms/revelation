@@ -124,6 +124,7 @@ function preprocessMarkdown(md, macros = {}) {
 
     if(line.match(/^\{\{\}\}$/)) {
         lastmacros.length = 0; // Reset the list of saved macros
+	continue;
     }
     const macroUseMatch = line.match(/^\{\{([A-Za-z0-9_]+)\}\}$/);
     if (macroUseMatch) {
