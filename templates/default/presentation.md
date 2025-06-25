@@ -20,17 +20,13 @@ You can use all the features of markdown in the slides
 
 New slides start with headings or a horizontal rule
 
----
+***
 
 Use stars for regular slides, but...
 
-***
-
-...dashes for vertical slides.
-
 ---
 
-You can make as many slides as you want
+...dashes for vertical slides.
 
 ## Formatting
 
