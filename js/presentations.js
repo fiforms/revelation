@@ -49,6 +49,17 @@ loadAndPreprocessMarkdown();
     }
 })();
 
+function sanitizeMarkdownFilename(filename) {
+  const mdPattern = /^[a-zA-Z0-9_.-]+\.md$/;
+
+  if (!filename || !mdPattern.test(filename)) {
+    console.warn(`Blocked invalid markdown filename: ${filename}`);
+    return null;
+  }
+
+  return filename;
+}
+
 function updateAttributionFromCurrentSlide() {
   const currentSlide = deck.getCurrentSlide();
   const source = event.currentSlide.querySelector('.slide-attribution');
@@ -63,11 +74,21 @@ function updateAttributionFromCurrentSlide() {
   }
 }
 
-// Get base URL of the current presentation
-const baseUrl = window.location.pathname.replace(/\/[^\/]*$/, '/');
+  // Get base URL of the current presentation
+  const baseUrl = window.location.pathname.replace(/\/[^\/]*$/, '/');
 
-async function loadAndPreprocessMarkdown() {
-  let response = await fetch('presentation.md');
+  async function loadAndPreprocessMarkdown() {
+  const defaultFile = 'presentation.md';
+  const urlParams = new URLSearchParams(window.location.search);
+  const customFile = sanitizeMarkdownFilename(urlParams.get('p'));
+
+  const markdownFile = customFile || defaultFile;
+  let response = await fetch(markdownFile);
+  if (!response.ok) {
+    console.warn(`Could not load ${markdownFile}, falling back to ${defaultFile}`);
+    response = await fetch(defaultFile);
+  }
+
   let rawMarkdown = await response.text();
   const macros = {};
 

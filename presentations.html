@@ -68,7 +68,7 @@
         const container = document.getElementById('presentation-list');
         presentations.forEach(pres => {
           const card = document.createElement('a');
-          card.href = `./presentations/${pres.slug}/index.html`;
+	  card.href = `./presentations/${pres.slug}/index.html?p=${pres.md}`;
           card.target = '_blank';
           card.className = 'card';
           card.innerHTML = `

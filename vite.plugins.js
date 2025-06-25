@@ -28,29 +28,36 @@ function generatePresentationIndex() {
     }
   }
 
+    // Generate presentation manifest
+    const dirs = fs.readdirSync(presentationsDir).filter((dir) => {
+      const indexPath = path.join(presentationsDir, dir, 'index.html');
+      return fs.existsSync(indexPath) && fs.lstatSync(path.join(presentationsDir, dir)).isDirectory();
+    });
 
-  const dirs = fs.readdirSync(presentationsDir).filter((dir) => {
-    const mdPath = path.join(presentationsDir, dir, 'presentation.md');
-    const indexPath = path.join(presentationsDir, dir, 'index.html');
-    return fs.existsSync(mdPath) && fs.existsSync(indexPath);
-  });
+    const indexData = [];
 
-  const indexData = dirs.map((dir) => {
-    const mdPath = path.join(presentationsDir, dir, 'presentation.md');
-    const fileContent = fs.readFileSync(mdPath, 'utf-8');
-    const { data } = matter(fileContent);
+    dirs.forEach((dir) => {
+      const folderPath = path.join(presentationsDir, dir);
+      const files = fs.readdirSync(folderPath).filter((file) => file.endsWith('.md'));
 
-    return {
-      slug: dir,
-      title: data.title || dir,
-      description: data.description || '',
-      thumbnail: data.thumbnail || 'preview.jpg',
-      theme: data.theme || '',
-    };
-  });
+      files.forEach((mdFile) => {
+        const mdPath = path.join(folderPath, mdFile);
+        const fileContent = fs.readFileSync(mdPath, 'utf-8');
+        const { data } = matter(fileContent);
 
-  fs.writeFileSync(outputFile, JSON.stringify(indexData, null, 2), 'utf-8');
-  console.log(`📄 presentations/index.json regenerated`);
+        indexData.push({
+          slug: dir,
+          md: mdFile,
+          title: data.title || `${dir}/${mdFile}`,
+          description: data.description || '',
+          thumbnail: data.thumbnail || 'preview.jpg',
+          theme: data.theme || '',
+        });
+      });
+    });
+
+    fs.writeFileSync(outputFile, JSON.stringify(indexData, null, 2), 'utf-8');
+    console.log(`📄 presentations/index.json regenerated`);
 }
 
 module.exports = function presentationIndexPlugin() {
