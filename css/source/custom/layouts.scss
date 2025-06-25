@@ -64,15 +64,6 @@
     padding-left: 3rem;
   }
 
-  /* Italicized words become their own blocks, useful for references */
-  section p em {
-    display: block;
-    font-size: 60%;
-    opacity: 0.5;
-    text-align: right;
-  }
-
-
 section > section:has(img) {
   height: 100%;  
 }
@@ -114,7 +105,6 @@ section img {
 .hide-when-notes {
   display: none !important;
 }
-
 
 #fixed-overlay-wrapper {
     position: fixed;
