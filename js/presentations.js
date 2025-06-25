@@ -126,29 +126,34 @@ function preprocessMarkdown(md, macros = {}) {
         lastmacros.length = 0; // Reset the list of saved macros
 	continue;
     }
-    const macroUseMatch = line.match(/^\{\{([A-Za-z0-9_]+)\}\}$/);
+    
+    const macroUseMatch = line.match(/^\{\{([A-Za-z0-9_]+)(?::([^}]+))?\}\}$/);
+
     if (macroUseMatch) {
       const key = macroUseMatch[1].trim();
-      const value = macros[key];
-      if (value) {
-	const mlines = value.split('\n');
-	for (const mline of mlines) {
-	    thismacros.push(mline); // Save the results of this macro for the next slide
-            const attribMatch = mline.match(/^\:ATTRIB\:(.*)$/);
-            if(attribMatch) {
-              attributions.push(attribMatch[1]);
-              continue;
-            }
-            processedLines.push(mline);
-	}
-        lastmacros.length = 0; // Reset the list of saved macros
-	continue;
-      }
-      else {
-	console.log('Markdown Macro Not Found: ' + key);
+      const paramString = macroUseMatch[2];
+      const params = paramString ? paramString.split(':') : [];
+      const template = macros[key];
+      if (template) {
+        // Replace $1, $2, ... with provided params
+        let expanded = template.replace(/\$(\d+)/g, (_, n) => params[+n - 1] ?? '');
+        const mlines = expanded.split('\n');
+        for (const mline of mlines) {
+          thismacros.push(mline);
+          const attribMatch = mline.match(/^\:ATTRIB\:(.*)$/);
+          if (attribMatch) {
+            attributions.push(attribMatch[1]);
+            continue;
+          }
+          processedLines.push(mline);
+        }
+        lastmacros.length = 0;
+        continue;
+      } else {
+        console.log('Markdown Macro Not Found: ' + key);
       }
     }
-	  
+
     // Check for attributions and load them into the attributions array
     const attribMatch = line.match(/^\:ATTRIB\:(.*)$/); 
     if(attribMatch) {
