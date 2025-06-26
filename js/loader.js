@@ -72,7 +72,7 @@ function createAlternativeSelector(deck, alternatives) {
 }
 
 
-function extractFrontMatter(md) {
+export function extractFrontMatter(md) {
   const FRONTMATTER_RE = /^---\n([\s\S]*?)\n---\n?/;
   const match = md.match(FRONTMATTER_RE);
   if (match) {
@@ -84,7 +84,7 @@ function extractFrontMatter(md) {
   return { metadata: {}, content: md };
 }
 
-function preprocessMarkdown(md, macros = {}) {
+export function preprocessMarkdown(md, macros = {}) {
   const lines = md.split('\n');
   const processedLines = [];
   const attributions = [];

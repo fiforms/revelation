@@ -54,6 +54,7 @@ async function main() {
 
     // Copy basic files
     fs.copyFileSync(path.join(templateDir, 'index.html'), path.join(presDir, 'index.html'));
+    fs.copyFileSync(path.join(templateDir, 'handout.html'), path.join(presDir, 'handout.html'));
     fs.copyFileSync(path.join(templateDir, 'style.css'), path.join(presDir, 'style.css'));
     fs.copyFileSync(path.join(templateDir, 'thumbnail.webp'), path.join(presDir, 'thumbnail.webp'));
 

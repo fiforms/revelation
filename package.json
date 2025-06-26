@@ -4,6 +4,7 @@
     "express": "^5.1.0",
     "gray-matter": "^4.0.3",
     "js-yaml": "^4.1.0",
+    "marked": "^15.0.12",
     "reveal.js": "^5.2.1",
     "reveal.js-remote": "github:cologneintelligence/reveal.js-remote",
     "socket.io": "^4.8.1",
@@ -15,8 +16,7 @@
     "vite": "vite",
     "vite:serve": "vite --host",
     "watch:theme": "sass --watch css/source:css --load-path=node_modules --load-path=node_modules/reveal.js/css/theme/source",
-     "build:theme": "sass css/source:css --load-path=node_modules --load-path=node_modules/reveal.js/css/theme/source",
-
+    "build:theme": "sass css/source:css --load-path=node_modules --load-path=node_modules/reveal.js/css/theme/source",
     "build": "npm-run-all build:theme vite:build",
     "vite:build": "vite build",
     "make": "node scripts/make-presentation.js",

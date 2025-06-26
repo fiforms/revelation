@@ -4,84 +4,14 @@
   <meta charset="UTF-8" />
   <title>Presentations</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <style>
-    body {
-      font-family: sans-serif;
-      background: #111;
-      color: #eee;
-      margin: 0;
-      padding: 2rem;
-    }
-    h1,h2 {
-      text-align: center;
-      margin-bottom: 2rem;
-    }
-    h2 {
-      font-size: 11pt;
-    }
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-      gap: 2rem;
-    }
-    .card {
-      background: #222;
-      border-radius: 12px;
-      overflow: hidden;
-      box-shadow: 0 0 10px #000;
-      transition: transform 0.2s ease;
-    }
-    .card:hover {
-      transform: scale(1.02);
-    }
-    .card img {
-      width: 100%;
-      height: 160px;
-      object-fit: cover;
-    }
-    .card-content {
-      padding: 1rem;
-    }
-    .card-title {
-      font-size: 1.2rem;
-      margin-bottom: 0.5rem;
-      color: #fff;
-    }
-    .card-desc {
-      font-size: 0.95rem;
-      color: #bbb;
-    }
-    a {
-      text-decoration: none;
-    }
-  </style>
+  <link rel="stylesheet" href="css/presentations.css" />
 </head>
 <body>
   <h1>REVELation Snapshot Presenter</h1>
   <h2>Available Presentations</h2>
   <div class="grid" id="presentation-list"></div>
 
-  <script type="module">
-    fetch('./presentations/index.json')
-      .then(res => res.json())
-      .then(presentations => {
-        const container = document.getElementById('presentation-list');
-        presentations.forEach(pres => {
-          const card = document.createElement('a');
-	  card.href = `./presentations/${pres.slug}/index.html?p=${pres.md}`;
-          card.target = '_blank';
-          card.className = 'card';
-          card.innerHTML = `
-            <img src="./presentations/${pres.slug}/${pres.thumbnail}" alt="${pres.title}">
-            <div class="card-content">
-              <div class="card-title">${pres.title}</div>
-              <div class="card-desc">${pres.description}</div>
-            </div>
-          `;
-          container.appendChild(card);
-        });
-      });
-  </script>
+  <script type="module" src="/js/presentationlist.js"></script>
 </body>
 </html>
 
