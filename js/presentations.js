@@ -79,12 +79,12 @@ function updateAttributionFromCurrentSlide() {
     }
 }
 
-async function loadAndPreprocessMarkdown() {
+async function loadAndPreprocessMarkdown(selectedFile = null) {
       const defaultFile = 'presentation.md';
       const urlParams = new URLSearchParams(window.location.search);
       const customFile = sanitizeMarkdownFilename(urlParams.get('p'));
 
-      const markdownFile = customFile || defaultFile;
+      const markdownFile = selectedFile || customFile || defaultFile;
       let response = await fetch(markdownFile);
       if (!response.ok) {
         console.warn(`Could not load ${markdownFile}, falling back to ${defaultFile}`);
@@ -92,11 +92,17 @@ async function loadAndPreprocessMarkdown() {
       }
 
       let rawMarkdown = await response.text();
-      const currentMarkdownFile = markdownFile; // Keep for reference in alternative loader
 
       const macros = {};
 
       const { metadata, content } = extractFrontMatter(rawMarkdown);
+
+      // check for alternative versions, create a selector drop-down
+      if (!selectedFile && metadata.alternatives && typeof metadata.alternatives === 'object') {
+         createAlternativeSelector(metadata.alternatives);
+         document.title = "Waiting for Selection";
+         return 1;
+      }
 
       // Update document title and theme
       document.title = metadata.title || "Reveal.js Presentation";
@@ -107,7 +113,6 @@ async function loadAndPreprocessMarkdown() {
           Object.assign(macros, metadata.macros);
       }
 
-      // ✅ Your custom preprocessing
       const processedMarkdown = preprocessMarkdown(content, macros);
 
       // Create a temporary element to convert markdown into HTML slides
@@ -121,6 +126,26 @@ async function loadAndPreprocessMarkdown() {
       // Initialize Reveal.js
       deck.initialize(metadata.config);
 }
+
+function createAlternativeSelector(alternatives) {
+    console.log('Showing Selector for Alternative Version');
+    const selector = document.createElement('div');
+    selector.style = 'position: fixed; top: 40%; left: 40%; background: rgba(0,0,0,0.85); color: white; padding: 1rem; border-radius: 8px; z-index: 9999; font-family: sans-serif;';
+    selector.innerHTML = `<strong style="display:block;margin-bottom:0.5rem;">Select Version:</strong>`;
+
+    for (const [file, label] of Object.entries(alternatives)) {
+      const btn = document.createElement('button');
+      btn.textContent = label;
+      btn.style = 'display: block; width: 100%; margin: 0.25rem 0; background: #444; color: white; border: none; padding: 0.5rem; border-radius: 4px; cursor: pointer;';
+      btn.onclick = async () => {
+          selector.remove();
+          loadAndPreprocessMarkdown(file);
+      }
+      selector.appendChild(btn);
+    }
+    document.body.appendChild(selector);
+}
+
 
 function extractFrontMatter(md) {
   const FRONTMATTER_RE = /^---\n([\s\S]*?)\n---\n?/;

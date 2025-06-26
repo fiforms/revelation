@@ -44,15 +44,17 @@ function generatePresentationIndex() {
         const mdPath = path.join(folderPath, mdFile);
         const fileContent = fs.readFileSync(mdPath, 'utf-8');
         const { data } = matter(fileContent);
+	if(data.alternatives !== 'hidden') {
 
-        indexData.push({
-          slug: dir,
-          md: mdFile,
-          title: data.title || `${dir}/${mdFile}`,
-          description: data.description || '',
-          thumbnail: data.thumbnail || 'preview.jpg',
-          theme: data.theme || '',
-        });
+          indexData.push({
+            slug: dir,
+            md: mdFile,
+            title: data.title || `${dir}/${mdFile}`,
+            description: data.description || '',
+            thumbnail: data.thumbnail || 'preview.jpg',
+            theme: data.theme || '',
+          });
+	}
       });
     });
 
