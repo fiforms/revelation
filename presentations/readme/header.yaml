@@ -5,6 +5,9 @@ author: Daniel McFeeters
 date: 2025-06-24
 theme: night.css
 thumbnail: icon.webp
+config:
+  slideNumber: c
+  showSlideNumber: speaker
 ---
 <!-- DO NOT EDIT THIS presentation.md FILE DIRECTLY AS IT WILL BE OVERWRITTEN -->
 

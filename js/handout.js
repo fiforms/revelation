@@ -27,7 +27,10 @@ if (!mdFile) {
           const slideHTML = marked.parse(cleanedMarkdown);
           const cleanedNote = (lines.length > 1) ? lines[1].replace(/^\s*(\*\*\*|---)\s*$/gm, '').trim() : '';
           const noteHTML = marked.parse(cleanedNote);
-	  if((!cleanedMarkdown || (/^#+$/).test(cleanedMarkdown)) && !cleanedNote) {
+	  if((!cleanedMarkdown || 
+		   /^#+$/.test(cleanedMarkdown) ||
+		   /^\s*<!--[\s\S]*?-->\s*$/.test(cleanedMarkdown)
+	          ) && !cleanedNote) {
 	    continue;
           }
 	  slideno++;

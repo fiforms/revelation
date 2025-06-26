@@ -7,6 +7,8 @@ config:
   transition: fade
   transitionSpeed: slow
   controls: false
+  slideNumber: c
+  showSlideNumber: speaker
 macros:
   fade: |
     <!-- .slide: data-transition="fade" -->
