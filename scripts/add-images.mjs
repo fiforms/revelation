@@ -35,7 +35,8 @@ async function getImageFiles(presPath) {
 }
 
 function createSlideContent(filename) {
-  return `![](${filename})\n\n---\n`;
+  const encodedFilename = encodeURIComponent(filename);
+  return `![](${encodedFilename})\n\n---\n`;
 }
 
 async function appendSlides(presPath, imageFiles) {
