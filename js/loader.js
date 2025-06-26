@@ -61,12 +61,14 @@ function createAlternativeSelector(deck, alternatives) {
       btn.textContent = label;
       btn.style = 'display: block; width: 100%; margin: 0.25rem 0; background: #444; color: white; border: none; padding: 0.5rem; border-radius: 4px; cursor: pointer;';
       btn.onclick = async () => {
+          document.body.classList.add('hidden');
           selector.remove();
           loadAndPreprocessMarkdown(deck, file);
       }
       selector.appendChild(btn);
     }
     document.body.appendChild(selector);
+    document.body.classList.remove('hidden');
 }
 
 

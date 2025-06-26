@@ -31,3 +31,11 @@ loadAndPreprocessMarkdown(deck);
 
 revealTweaks(deck);
 
+deck.on('ready', () => {
+  // Let browser layout settle first
+  window.setTimeout(() => {
+    document.body.classList.remove('hidden');
+    document.body.classList.add('reveal-ready');
+  }, 500); // adjust if needed (100–300ms is usually enough)
+});
+

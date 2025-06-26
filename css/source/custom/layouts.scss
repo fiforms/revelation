@@ -2,6 +2,16 @@
  * Layouts Customized for media-rich backgrounds
  */
 
+// Fixing FOUC (Flash of Unstyled Content)
+body.hidden {
+  opacity: 0;
+  transition: opacity 0.8s ease-in-out;
+}
+
+body.reveal-ready {
+  opacity: 1;
+}
+
 
 // Slide content enhancements
 .reveal {
