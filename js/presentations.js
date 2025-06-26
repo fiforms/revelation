@@ -33,8 +33,13 @@ deck.on('slidechanged', updateAttributionFromCurrentSlide);
 
 loadAndPreprocessMarkdown();
 
+scrubBackgroundVideos();
+hideControlsOnSpeakerNotes();
+doubleClickFullScreen();
+
+
 // Disable video backgrounds in speaker notes view (iFrames)
-(function scrubBackgroundVideos() {
+function scrubBackgroundVideos() {
     if (window.self !== window.top) {
       document.querySelectorAll('.slide-background-content video').forEach(video => {
         if (!video.hasAttribute('data-paused-by-notes')) {
@@ -47,7 +52,7 @@ loadAndPreprocessMarkdown();
       // Re-run after 1 second
       setTimeout(scrubBackgroundVideos, 1000);
     }
-})();
+}
 
 function sanitizeMarkdownFilename(filename) {
   const mdPattern = /^[a-zA-Z0-9_.-]+\.md$/;
@@ -61,61 +66,60 @@ function sanitizeMarkdownFilename(filename) {
 }
 
 function updateAttributionFromCurrentSlide() {
-  const currentSlide = deck.getCurrentSlide();
-  const source = event.currentSlide.querySelector('.slide-attribution');
-  const overlay = document.getElementById('fixed-overlay-wrapper');
+    const currentSlide = deck.getCurrentSlide();
+    const source = event.currentSlide.querySelector('.slide-attribution');
+    const overlay = document.getElementById('fixed-overlay-wrapper');
 
-  if (source) {
+    if (source) {
     overlay.innerHTML = source.innerHTML;
     overlay.style.display = '';
-  } else {
+    } else {
     overlay.innerHTML = '';
     overlay.style.display = 'none';
-  }
+    }
 }
 
-  // Get base URL of the current presentation
-  const baseUrl = window.location.pathname.replace(/\/[^\/]*$/, '/');
+async function loadAndPreprocessMarkdown() {
+      const defaultFile = 'presentation.md';
+      const urlParams = new URLSearchParams(window.location.search);
+      const customFile = sanitizeMarkdownFilename(urlParams.get('p'));
 
-  async function loadAndPreprocessMarkdown() {
-  const defaultFile = 'presentation.md';
-  const urlParams = new URLSearchParams(window.location.search);
-  const customFile = sanitizeMarkdownFilename(urlParams.get('p'));
+      const markdownFile = customFile || defaultFile;
+      let response = await fetch(markdownFile);
+      if (!response.ok) {
+        console.warn(`Could not load ${markdownFile}, falling back to ${defaultFile}`);
+        response = await fetch(defaultFile);
+      }
 
-  const markdownFile = customFile || defaultFile;
-  let response = await fetch(markdownFile);
-  if (!response.ok) {
-    console.warn(`Could not load ${markdownFile}, falling back to ${defaultFile}`);
-    response = await fetch(defaultFile);
-  }
+      let rawMarkdown = await response.text();
+      const currentMarkdownFile = markdownFile; // Keep for reference in alternative loader
 
-  let rawMarkdown = await response.text();
-  const macros = {};
+      const macros = {};
 
-  const { metadata, content } = extractFrontMatter(rawMarkdown);
+      const { metadata, content } = extractFrontMatter(rawMarkdown);
 
-  // Update document title and theme
-  document.title = metadata.title || "Reveal.js Presentation";
-  if (metadata.theme) {
-    document.getElementById('theme-stylesheet').href = style_path + metadata.theme;
-  }
-  if (metadata.macros) {
-      Object.assign(macros, metadata.macros);
-  }
+      // Update document title and theme
+      document.title = metadata.title || "Reveal.js Presentation";
+      if (metadata.theme) {
+        document.getElementById('theme-stylesheet').href = style_path + metadata.theme;
+      }
+      if (metadata.macros) {
+          Object.assign(macros, metadata.macros);
+      }
 
-  // ✅ Your custom preprocessing
-  const processedMarkdown = preprocessMarkdown(content, macros);
+      // ✅ Your custom preprocessing
+      const processedMarkdown = preprocessMarkdown(content, macros);
 
-  // Create a temporary element to convert markdown into HTML slides
-  const section = document.getElementById('markdown-container');
-  section.setAttribute('data-markdown', '');
-  section.setAttribute('data-separator', '^\n\\*\\*\\*\n$');
-  section.setAttribute('data-separator-vertical', '^\n---\n$');
-  section.setAttribute('data-separator-notes', '^Note:');
-  section.innerHTML = `<textarea data-template>${processedMarkdown}</textarea>`;
+      // Create a temporary element to convert markdown into HTML slides
+      const section = document.getElementById('markdown-container');
+      section.setAttribute('data-markdown', '');
+      section.setAttribute('data-separator', '^\n\\*\\*\\*\n$');
+      section.setAttribute('data-separator-vertical', '^\n---\n$');
+      section.setAttribute('data-separator-notes', '^Note:');
+      section.innerHTML = `<textarea data-template>${processedMarkdown}</textarea>`;
 
-  // Initialize Reveal.js
-  deck.initialize(metadata.config);
+      // Initialize Reveal.js
+      deck.initialize(metadata.config);
 }
 
 function extractFrontMatter(md) {
@@ -249,13 +253,31 @@ function preprocessMarkdown(md, macros = {}) {
   return processedLines.join('\n');
 }
 
-window.addEventListener('message', event => {
-  // Reveal Notes plugin sends this message from the notes window
-  let edata = JSON.parse(event.data)
-  if (edata.namespace === 'reveal-notes' && edata.type === 'connected') {
-    console.log('Speaker Notes Connected, hiding controls');
-    document.querySelector('.controls')?.classList.add('hide-when-notes');
-    document.querySelector('.progress')?.classList.add('hide-when-notes');
-  }
-});
+function hideControlsOnSpeakerNotes() {
+    window.addEventListener('message', event => {
+      // Reveal Notes plugin sends this message from the notes window
+      let edata = JSON.parse(event.data)
+      if (edata.namespace === 'reveal-notes' && edata.type === 'connected') {
+        console.log('Speaker Notes Connected, hiding controls');
+        document.querySelector('.controls')?.classList.add('hide-when-notes');
+        document.querySelector('.progress')?.classList.add('hide-when-notes');
+      }
+    });
+}
 
+function doubleClickFullScreen() {
+    document.addEventListener('dblclick', () => {
+      const elem = document.documentElement;
+      if (!document.fullscreenElement) {
+        if (elem.requestFullscreen) {
+          elem.requestFullscreen();
+        } else if (elem.webkitRequestFullscreen) { /* Safari */
+          elem.webkitRequestFullscreen();
+        } 
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        }
+      }
+    });
+}
