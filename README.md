@@ -155,14 +155,14 @@ Becomes its own animated line in the presentation:
 
 ```
 presentations/           # All presentation folders live here
-presentation-templates/  # Templates for new presentations
+templates/               # Templates for new presentations
 assets/backgrounds/      # Shared media assets
-js/presentations.js      # Runtime loader and preprocessor logic
 ```
 
 ## 🛠️ Customizing Further
 
-* You can add your own SCSS themes in `css/source`
+* You can add your own css styling to each presentation
+* All configuration options of Reveal.js as accessible via the presentation YAML
 * Background images, videos, and styles are all compatible with Reveal’s data-attributes
 
 ## 📜 License
