@@ -3,7 +3,8 @@ export function revealTweaks(deck) {
     const updateAttribution = () => updateAttributionFromCurrentSlide(deck);
 
     deck.on('ready', updateAttribution);       
-    deck.on('slidechanged', updateAttributionFromCurrentSlide);
+    deck.on('slidechanged', () => updateAttributionFromCurrentSlide(deck));
+
     
     scrubBackgroundVideos();
     hideControlsOnSpeakerNotes();
