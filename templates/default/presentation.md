@@ -9,6 +9,7 @@ config:
   controls: false
   slideNumber: c
   showSlideNumber: speaker
+stylesheet: style.css
 macros:
   fade: |
     <!-- .slide: data-transition="fade" -->
