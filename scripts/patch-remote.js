@@ -42,6 +42,13 @@ if (fs.existsSync(serverPath)) {
       `app.use(prefix + "_remote/ui/", express.static(path.resolve(__dirname, "../server-ui")));`
     );
 
+    // 🔧 Fix invalid CORS handling in Socket.IO setup
+    content = content.replace(
+      "origin: (args.origin === '*') ? true : args.origin.split(/\\s*,\\s/)",
+      "origin: (args.origin === '*') ? '*' : args.origin.split(/\\s*,\\s/)"
+    );
+
+
     // Replace single app.get(prefix...) with full folder-routing logic
     content = content.replace(
       /app\.get\(prefix, \(_req, res\) => index\(res, args\.presentationpath\)\);/,
