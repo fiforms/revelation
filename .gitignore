@@ -33,3 +33,5 @@ presentations/index.json
 assets/backgrounds/
 assets/tmp/
 
+# Generated output for llm helper
+revelation_file_summary.txt

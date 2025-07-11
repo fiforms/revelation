@@ -21,6 +21,7 @@
     "vite:build": "vite build",
     "make": "node scripts/make-presentation.js",
     "addimages": "node scripts/add-images.mjs",
+    "llm:dump": "node scripts/dump-for-llm.js revelation_file_summary.txt",
     "remote-server": "node node_modules/reveal.js-remote/server/index.js --port 1947 --origin '*' --basepath '/' --presentationpath ./presentations/",
     "postinstall": "node scripts/patch-remote.js",
     "serve": "concurrently -n VITE,REMOTE -c cyan,green \"npm run vite:serve\" \"npm run remote-server\""
