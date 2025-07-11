@@ -73,7 +73,7 @@ function createAlternativeSelector(deck, alternatives) {
 
 
 export function extractFrontMatter(md) {
-  const FRONTMATTER_RE = /^---\n([\s\S]*?)\n---\n?/;
+  const FRONTMATTER_RE = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/;
   const match = md.match(FRONTMATTER_RE);
   if (match) {
     const yamlText = match[1];
