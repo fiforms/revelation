@@ -30,8 +30,7 @@ function generatePresentationIndex() {
 
     // Generate presentation manifest
     const dirs = fs.readdirSync(presentationsDir).filter((dir) => {
-      const indexPath = path.join(presentationsDir, dir, 'index.html');
-      return fs.existsSync(indexPath) && fs.lstatSync(path.join(presentationsDir, dir)).isDirectory();
+      return fs.lstatSync(path.join(presentationsDir, dir)).isDirectory();
     });
 
     const indexData = [];
@@ -84,6 +83,21 @@ module.exports = function presentationIndexPlugin() {
         if (changedPath.includes('presentations') && changedPath.endsWith('presentation.md')) {
           generatePresentationIndex();
         }
+      });
+
+      // Rewrite `/presentations/foo/index.html` to `/presentation.html?slug=foo`
+      server.middlewares.use((req, res, next) => {
+	const match = req.url.match(/^\/presentations\/([^\/]+)\/(?:index\.html)?(?:\?.*)?$/);
+        if (match) {
+          const slug = match[1];
+          req.url = `/presentation.html?slug=${slug}`;
+        }
+	const hmatch = req.url.match(/^\/presentations\/([^\/]+)\/handout(?:\.html)?(?:\?.*)?$/);
+        if (hmatch) {
+          const slug = hmatch[1];
+          req.url = `/handout.html?slug=${slug}`;
+        }
+        next();
       });
     }
   };

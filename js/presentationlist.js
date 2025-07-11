@@ -5,7 +5,7 @@ fetch('./presentations/index.json')
         const container = document.getElementById('presentation-list');
         presentations.forEach(pres => {
           const card = document.createElement('a');
-          card.href = `./presentations/${pres.slug}/index.html?p=${pres.md}`;
+          card.href = `./presentations/${pres.slug}/?p=${pres.md}`;
           card.target = '_blank';
           card.className = 'card';
           card.innerHTML = `
@@ -48,7 +48,7 @@ function showCustomContextMenu(x, y, pres) {
   const options = [
     { label: 'Open in New Tab', action: () => window.open(`./presentations/${pres.slug}/index.html?p=${pres.md}`, '_blank') },
     { label: 'Print / Export PDF', action: () => window.open(`./presentations/${pres.slug}/index.html?print-pdf&p=${pres.md}`, '_blank') },
-    { label: 'Handout View', action: () => window.open(`./presentations/${pres.slug}/handout.html?p=${pres.md}`, '_blank') }
+    { label: 'Handout View', action: () => window.open(`./presentations/${pres.slug}/handout?p=${pres.md}`, '_blank') }
   ];
 
   for (const opt of options) {
