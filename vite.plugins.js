@@ -71,19 +71,28 @@ module.exports = function presentationIndexPlugin() {
       copyFonts();
       generatePresentationIndex();
 
-      // Watch all presentation.md files
-      fs.readdirSync(presentationsDir).forEach((dir) => {
-        const mdFile = path.join(presentationsDir, dir, 'presentation.md');
-        if (fs.existsSync(mdFile)) {
-          server.watcher.add(mdFile);
-        }
-      });
+    // Watch all *.md files in each presentation subdirectory
+    fs.readdirSync(presentationsDir).forEach((dir) => {
+      const folder = path.join(presentationsDir, dir);
+      if (fs.lstatSync(folder).isDirectory()) {
+        fs.readdirSync(folder).forEach((file) => {
+          if (file.endsWith('.md')) {
+            const mdPath = path.join(folder, file);
+            server.watcher.add(mdPath);
+          }
+        });
+      }
+    });
 
-      server.watcher.on('change', (changedPath) => {
-        if (changedPath.includes('presentations') && changedPath.endsWith('presentation.md')) {
-          generatePresentationIndex();
-        }
-      });
+    server.watcher.on('change', (changedPath) => {
+      if (
+        changedPath.includes('presentations') &&
+        changedPath.endsWith('.md')
+      ) {
+        generatePresentationIndex();
+	server.ws.send({ type: 'full-reload' });
+      }
+    });
 
       // Rewrite `/presentations/foo/index.html` to `/presentation.html?slug=foo`
       server.middlewares.use((req, res, next) => {

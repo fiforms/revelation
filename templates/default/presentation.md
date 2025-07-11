@@ -9,6 +9,7 @@ config:
   controls: false
   slideNumber: c
   showSlideNumber: speaker
+  hash: true
 stylesheet: style.css
 macros:
   fade: |
