@@ -1,0 +1,108 @@
+body {
+  font-family: "Georgia", serif;
+  background: #f9f9f9;
+  color: #222;
+  padding: 2rem;
+  max-width: 800px;
+  margin: auto;
+  line-height: 1.6;
+}
+
+h1, h2, h3 {
+  margin-top: 2em;
+  color: #333;
+}
+
+img {
+  max-width: 800px;
+  
+}
+
+.slide {
+  border-bottom: 1px solid #ddd;
+}
+
+.slide-attribution {
+  font-style: italic;
+  font-size: 0.9em;
+  color: #666;
+  margin-top: 1em;
+  border-left: 4px solid #ccc;
+  padding-left: 1em;
+}
+
+.attribution {
+  margin-bottom: 0.5em;
+}
+
+code {
+  background: #eee;
+  padding: 0.2em 0.4em;
+  border-radius: 4px;
+}
+
+pre code {
+  display: block;
+  padding: 1em;
+  background: #333;
+  color: #eee;
+  overflow-x: auto;
+}
+
+.slide-number {
+  display: inline-block;
+  float: right;
+  font-size: smaller;
+  font-family: sans-serif;
+  color: #aaa;
+}
+
+.note, .speaker-note {
+  background: #fff8dc;
+  border-left: 4px solid #f90;
+  padding: 0.75em;
+  margin: 1.5em 0;
+  font-style: italic;
+}
+
+#handout-options {
+  background: #eee;
+  padding: 1em;
+  border-bottom: 1px solid #ccc;
+  font-family: sans-serif;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  gap: 2rem;
+  justify-content: center;
+}
+
+#handout-options label {
+  font-size: 0.95rem;
+  color: #333;
+}
+
+@media print {
+  #handout-options {
+    display: none !important;
+  }
+
+  section.slide, .note {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  section.slide {
+    margin-bottom: 2em;
+  }
+
+  .note {
+    margin-top: 1em;
+    margin-bottom: 2em;
+    border-left: 3px solid #999;
+    background: #f8f8f8;
+    color: #333;
+  }
+}
+
