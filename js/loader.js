@@ -32,6 +32,13 @@ export async function loadAndPreprocessMarkdown(deck,selectedFile = null) {
       if (metadata.theme) {
         document.getElementById('theme-stylesheet').href = style_path + metadata.theme;
       }
+      if (metadata.stylesheet) {
+        const styleEl = document.createElement('link');
+        styleEl.rel = 'stylesheet';
+        styleEl.href = metadata.stylesheet;
+        document.head.appendChild(styleEl);
+      }
+
       if (metadata.macros) {
           Object.assign(macros, metadata.macros);
       }
