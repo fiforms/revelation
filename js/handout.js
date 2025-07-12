@@ -62,7 +62,7 @@ if (!mdFile) {
 	  const slideno = incremental ? slideCount : `${hIndex}.${vIndex}` ;
 
           output.push('<section class="slide">');
-	  output.push(`<div class="slide-number">${slideno}</div>`);
+	  output.push(`<div class="slide-number"><a href="index.html?p=${mdFile}#${hIndex}/${vIndex}" target="_blank">${slideno}</a></div>`);
           output.push(slideHTML);
 	  if(cleanedNote) {
               output.push(`<div class="note">${noteHTML}</div>`);
