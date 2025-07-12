@@ -18,8 +18,12 @@ if (!mdFile) {
       const processed = preprocessMarkdown(content, metadata.macros || {});
       const slides = processed.split(/\n(?=(\*\*\*|---|#\s))/g);
       const output = [];
+      const incremental = metadata && metadata.config && (metadata.config.slideNumber === 'c' || metadata.config.slideNumber === 'c/t');
 	
-      var slideno = 0;
+      let hIndex = 0;
+      let vIndex = 1;
+      let slideCount = 0;
+      let lastBreakWasVertical = false;
 
       for (let rawSlide of slides) {
           const lines = rawSlide.trim().split('\nNote:');
@@ -27,13 +31,36 @@ if (!mdFile) {
           const slideHTML = marked.parse(cleanedMarkdown);
           const cleanedNote = (lines.length > 1) ? lines[1].replace(/^\s*(\*\*\*|---)\s*$/gm, '').trim() : '';
           const noteHTML = marked.parse(cleanedNote);
+
+      // Determine what kind of break this is
+      const isHorizontalBreak = rawSlide.match(/^\s*\*\*\*/m);
+      const isVerticalBreak = rawSlide.match(/^\s*---/m);
+      const startsWithHeading = /^\s{0,3}#{1,2}\s/.test(cleanedMarkdown);
+	  if (isVerticalBreak) {
+    	      lastBreakWasVertical = true;
+	  }
 	  if((!cleanedMarkdown || 
 		   /^#+$/.test(cleanedMarkdown) ||
 		   /^\s*<!--[\s\S]*?-->\s*$/.test(cleanedMarkdown)
 	          ) && !cleanedNote) {
 	    continue;
           }
-	  slideno++;
+
+      if (isHorizontalBreak || (startsWithHeading && !lastBreakWasVertical)) {
+        hIndex++;
+        vIndex = 1;
+      } else if (isVerticalBreak || (startsWithHeading && lastBreakWasVertical)) {
+        vIndex++;
+      } else {
+        // Catch-all: assume horizontal
+        hIndex++;
+        vIndex = 1;
+      }
+      
+	  slideCount++;
+          lastBreakWasVertical = false;
+	  const slideno = incremental ? slideCount : `${hIndex}.${vIndex}` ;
+
           output.push('<section class="slide">');
 	  output.push(`<div class="slide-number">${slideno}</div>`);
           output.push(slideHTML);
