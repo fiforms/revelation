@@ -1,4 +1,5 @@
 import yaml from 'js-yaml';
+import convertSmartQuotes from './smart-quotes';
 
 const style_path = '/css/';
 
@@ -43,7 +44,8 @@ export async function loadAndPreprocessMarkdown(deck,selectedFile = null) {
           Object.assign(macros, metadata.macros);
       }
 
-      const processedMarkdown = preprocessMarkdown(content, macros);
+      const partProcessedMarkdown = preprocessMarkdown(content, macros);
+      const processedMarkdown = metadata.convertSmartQuotes === false ? partProcessedMarkdown : convertSmartQuotes(partProcessedMarkdown);
 
       // Create a temporary element to convert markdown into HTML slides
       const section = document.getElementById('markdown-container');
