@@ -71,34 +71,40 @@ module.exports = function presentationIndexPlugin() {
       copyFonts();
       generatePresentationIndex();
 
-    server.watcher.add('presentations/**/*.md');
+    const chokidar = require('chokidar');
+    const path = require('path');
+    const fs = require('fs');
 
-    server.watcher.on('change', (changedPath) => {
-      if (
-        changedPath.includes('presentations') &&
-        changedPath.endsWith('.md')
-      ) {
-        generatePresentationIndex();
-	server.ws.send({ type: 'full-reload' });
-      }
+    const watcher = chokidar.watch('presentations', {
+      ignored: /(^|[/\\])\../, // Ignore dotfiles
+      persistent: true,
+      ignoreInitial: true,  
+      depth: 5
     });
 
-    server.watcher.on('add', (addedPath) => {
-      if (addedPath.endsWith('.md') && addedPath.includes('presentations')) {
+    const triggerReload = (event, filePath) => {
+      if (filePath.endsWith('.md') && filePath.includes('presentations')) {
+        console.log(`📦 ${event.toUpperCase()}:`, filePath);
         generatePresentationIndex();
-	server.ws.send({ type: 'full-reload' });
+        server.ws.send({ type: 'full-reload' });
       }
-    });
+    };
 
-    server.watcher.on('unlink', (addedPath) => {
-      if (addedPath.endsWith('.md') && addedPath.includes('presentations')) {
-        generatePresentationIndex();
-	server.ws.send({ type: 'full-reload' });
-      }
-    });
-
-      // Rewrite `/presentations/foo/index.html` to `/presentation.html?slug=foo`
-      server.middlewares.use((req, res, next) => {
+    watcher
+      .on('add',    filePath => triggerReload('add', filePath))
+      .on('change', filePath => triggerReload('change', filePath))
+      .on('unlink', filePath => triggerReload('unlink', filePath))
+      .on('addDir', dirPath => console.log('📁 Folder added:', dirPath))
+      .on('unlinkDir', dirPath => {
+        if (dirPath.includes('presentations')) {
+          console.log('📁 Folder deleted:', dirPath);
+          generatePresentationIndex();
+          server.ws.send({ type: 'full-reload' });
+        }
+      });
+      
+    // Rewrite `/presentations/foo/index.html` to `/presentation.html?slug=foo`
+    server.middlewares.use((req, res, next) => {
 	const match = req.url.match(/^\/presentations\/([^\/]+)\/(?:index\.html)?(?:\?.*)?$/);
         if (match) {
           const slug = match[1];
