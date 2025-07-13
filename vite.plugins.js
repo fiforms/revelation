@@ -71,24 +71,27 @@ module.exports = function presentationIndexPlugin() {
       copyFonts();
       generatePresentationIndex();
 
-    // Watch all *.md files in each presentation subdirectory
-    fs.readdirSync(presentationsDir).forEach((dir) => {
-      const folder = path.join(presentationsDir, dir);
-      if (fs.lstatSync(folder).isDirectory()) {
-        fs.readdirSync(folder).forEach((file) => {
-          if (file.endsWith('.md')) {
-            const mdPath = path.join(folder, file);
-            server.watcher.add(mdPath);
-          }
-        });
-      }
-    });
+    server.watcher.add('presentations/**/*.md');
 
     server.watcher.on('change', (changedPath) => {
       if (
         changedPath.includes('presentations') &&
         changedPath.endsWith('.md')
       ) {
+        generatePresentationIndex();
+	server.ws.send({ type: 'full-reload' });
+      }
+    });
+
+    server.watcher.on('add', (addedPath) => {
+      if (addedPath.endsWith('.md') && addedPath.includes('presentations')) {
+        generatePresentationIndex();
+	server.ws.send({ type: 'full-reload' });
+      }
+    });
+
+    server.watcher.on('unlink', (addedPath) => {
+      if (addedPath.endsWith('.md') && addedPath.includes('presentations')) {
         generatePresentationIndex();
 	server.ws.send({ type: 'full-reload' });
       }
