@@ -61,12 +61,18 @@ function showCustomContextMenu(x, y, pres) {
     { label: 'Handout View', action: () => window.open(`./presentations/${pres.slug}/handout?p=${pres.md}`, '_blank') }
   ];
 
-  if (window.electronAPI?.showPresentationFolder) {
+
+  if (window.electronAPI?.editPresentation) {
+    options.push({
+      label: 'Edit Markdown',
+      action: () => window.electronAPI.editPresentation(pres.slug, pres.md)
+    });
     options.push({
       label: 'Show Presentation Files',
       action: () => window.electronAPI.showPresentationFolder(pres.slug)
     });
   }
+
 
   for (const opt of options) {
     const item = document.createElement('div');
