@@ -94,7 +94,11 @@ module.exports = function presentationIndexPlugin() {
       .on('add',    filePath => triggerReload('add', filePath))
       .on('change', filePath => triggerReload('change', filePath))
       .on('unlink', filePath => triggerReload('unlink', filePath))
-      .on('addDir', dirPath => console.log('📁 Folder added:', dirPath))
+      .on('addDir', dirPath => {
+	  console.log('📁 Folder added:', dirPath);
+          generatePresentationIndex();
+          server.ws.send({ type: 'full-reload' });
+        })
       .on('unlinkDir', dirPath => {
         if (dirPath.includes('presentations')) {
           console.log('📁 Folder deleted:', dirPath);
