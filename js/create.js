@@ -73,23 +73,59 @@ form.appendChild(submitBtn);
 
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
-  const formData = new FormData(form);
-  const yamlData = {};
 
-  for (const [key, value] of formData.entries()) {
-    const keys = key.split('.');
-    let cur = yamlData;
-    while (keys.length > 1) {
-      const part = keys.shift();
-      cur[part] = cur[part] || {};
-      cur = cur[part];
+  const result = document.getElementById('result');
+  result.textContent = ''; // clear previous message
+
+  try {
+    const formData = new FormData(form);
+    const yamlData = {};
+
+    for (const [key, value] of formData.entries()) {
+      const keys = key.split('.');
+      let cur = yamlData;
+      while (keys.length > 1) {
+        const part = keys.shift();
+        cur[part] = cur[part] || {};
+        cur = cur[part];
+      }
+      // Parse booleans and numbers intelligently
+      const finalKey = keys[0];
+      if (value === 'true') {
+        cur[finalKey] = true;
+      } else if (value === 'false') {
+        cur[finalKey] = false;
+      } else if (!isNaN(value) && value.trim() !== '') {
+        cur[finalKey] = parseFloat(value);
+      } else {
+        cur[finalKey] = value;
+      }
     }
-    cur[keys[0]] = value;
+
+    // Special-case checkboxes (not included in FormData if unchecked)
+    form.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+      const keys = cb.name.split('.');
+      let cur = yamlData;
+      while (keys.length > 1) {
+        const part = keys.shift();
+        cur[part] = cur[part] || {};
+        cur = cur[part];
+      }
+      cur[keys[0]] = cb.checked;
+    });
+
+    const res = await window.electronAPI.createPresentation(yamlData);
+    result.textContent = res.message;
+    result.style.color = 'limegreen';
+
+  } catch (err) {
+    console.error('Submission error:', err);
+    result.innerHTML = `
+      <div style="color: red; font-weight: bold;">
+        ❌ Error: ${err.message || 'Unknown error'}<br>
+        <pre>${(err.stack || err).toString()}</pre>
+      </div>
+    `;
   }
-
-  // Convert checkbox values
-  yamlData.config.controls = form.controls.checked;
-
-  const res = await window.electronAPI.createPresentation(yamlData);
-  document.getElementById('result').textContent = res.message;
 });
+
