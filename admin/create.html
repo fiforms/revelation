@@ -32,7 +32,7 @@
     const author = document.getElementById('author').value;
 
     try {
-      const res = await window.snapshotAPI.createPresentation({ title, description, author });
+      const res = await window.electronAPI.createPresentation({ title, description, author });
       result.textContent = res.message;
     } catch (err) {
       result.textContent = `❌ ${err.message}`;

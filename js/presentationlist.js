@@ -15,11 +15,21 @@ fetch('./presentations/index.json')
               <div class="card-desc">${pres.description}</div>
             </div>
           `;
-          container.appendChild(card);
+
+          card.addEventListener('click', (e) => {
+            if (window.electronAPI?.openPresentation) {
+              e.preventDefault(); // Prevent default navigation
+              window.electronAPI.openPresentation(pres.slug, pres.md);
+            }
+            // otherwise allow default browser behavior
+          });
+
  	  card.addEventListener('contextmenu', (e) => {
             e.preventDefault();
             showCustomContextMenu(e.pageX, e.pageY, pres);
           });
+
+          container.appendChild(card);
 
         });
 });
