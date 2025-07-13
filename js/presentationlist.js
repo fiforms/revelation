@@ -61,6 +61,13 @@ function showCustomContextMenu(x, y, pres) {
     { label: 'Handout View', action: () => window.open(`./presentations/${pres.slug}/handout?p=${pres.md}`, '_blank') }
   ];
 
+  if (window.electronAPI?.showPresentationFolder) {
+    options.push({
+      label: 'Show Presentation Files',
+      action: () => window.electronAPI.showPresentationFolder(pres.slug)
+    });
+  }
+
   for (const opt of options) {
     const item = document.createElement('div');
     item.textContent = opt.label;
