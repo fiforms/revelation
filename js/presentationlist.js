@@ -10,8 +10,23 @@ if(!url_key) {
 }
 
 fetch(`${url_prefix}/index.json`)
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) {
+          if (res.status === 403) {
+            throw new Error('Access denied. This presentation list is restricted.');
+          } else {
+            throw new Error(`Failed to load presentations: ${res.status} ${res.statusText}`);
+          }
+        }
+        return res.json();
+      })
       .then(presentations => {
+
+        if (!presentations.length) {
+          container.innerHTML = '<p>No presentations available.</p>';
+          return;
+        }
+
         presentations.forEach(pres => {
           const card = document.createElement('a');
           card.href = `${url_prefix}/${pres.slug}/?p=${pres.md}`;
@@ -42,8 +57,16 @@ fetch(`${url_prefix}/index.json`)
           });
 
           container.appendChild(card);
-
         });
+	})
+        .catch(err => {
+          container.innerHTML = `
+            <div style="color: red; font-weight: bold; padding: 1rem;">
+              ❌ ${err.message}
+            </div>
+          `;
+          console.error('[Presentation Load Error]', err);
+
 });
 
 // Display hostname in top-right corner
