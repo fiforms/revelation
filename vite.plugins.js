@@ -2,6 +2,8 @@ const os = require('os');
 const fs = require('fs');
 const path = require('path');
 const matter = require('gray-matter');
+const ip = require('ip');
+const localIp = ip.address(); // Gets the LAN IP
 
 const baseDir = __dirname;
 const prefix = 'presentations_';
@@ -158,6 +160,34 @@ module.exports = function presentationIndexPlugin() {
 
         next();
       });
+
+      // Restrict access to presentation listing from other hosts by default
+      server.middlewares.use((req, res, next) => {
+          const restrictedPath = `/${folderName}/index.json`;
+
+          if (req.url === restrictedPath) {
+            const rawIp = req.socket.remoteAddress;
+
+            // Normalize to raw IPv4 if in IPv6-mapped format
+            const clientIp = rawIp.startsWith('::ffff:') ? rawIp.replace('::ffff:', '') : rawIp;
+
+            // Normalize IPv6 localhost
+            const normalizedClientIp = clientIp === '::1' ? '127.0.0.1' : clientIp;
+
+            const isLocalhost = normalizedClientIp === '127.0.0.1';
+            const isSameAsServer = normalizedClientIp === localIp;
+
+            if (!isLocalhost && !isSameAsServer) {
+              console.log(`Attempted access from ${normalizedClientIp} blocked.`);
+              res.writeHead(403, { 'Content-Type': 'text/plain' });
+              res.end('403 Forbidden: index.json access denied');
+              return;
+            }
+          }
+
+          next();
+       });
+	    
     }
   };
 };
