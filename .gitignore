@@ -17,7 +17,7 @@ css/fonts
 css/custom
 
 # Ignore user's presentation files
-presentations/*
+presentations_*
 
 !presentations/readme
 presentations/readme/presentation.md
