@@ -107,6 +107,22 @@ function showCustomContextMenu(x, y, pres) {
 	    }
         }
       },
+    { 
+        label: 'Copy Link',
+        action: () => {
+                const link = `${window.location.origin}${url_prefix}/${pres.slug}/index.html?p=${pres.md}`;
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                  navigator.clipboard.writeText(link)
+                    .then(() => console.log('✅ Link copied to clipboard'))
+                    .catch(err => {
+                      console.error('❌ Clipboard error:', err);
+                      fallbackCopyText(link);
+                    });
+                } else {
+                  fallbackCopyText(link);
+                }
+              }
+       },
     { label: 'Print / Export PDF', action: () => window.open(`${url_prefix}/${pres.slug}/index.html?print-pdf&p=${pres.md}`, '_blank') },
     { label: 'Handout View', action: () => window.open(`${url_prefix}/${pres.slug}/handout?p=${pres.md}`, '_blank') }
   ];
@@ -153,3 +169,19 @@ function showCustomContextMenu(x, y, pres) {
   document.addEventListener('click', () => menu.remove(), { once: true });
 }
 
+function fallbackCopyText(text) {
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  textarea.style.position = 'fixed';  // avoid scroll jump
+  document.body.appendChild(textarea);
+  textarea.focus();
+  textarea.select();
+  try {
+    document.execCommand('copy');
+    console.log('✅ Link copied (fallback)');
+  } catch (err) {
+    console.error('❌ Fallback copy failed', err);
+    alert('Failed to copy the link. You can do it manually:\n' + text);
+  }
+  document.body.removeChild(textarea);
+}
