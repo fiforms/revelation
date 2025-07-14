@@ -34,6 +34,12 @@ fetch('./presentations/index.json')
         });
 });
 
+// Display hostname in top-right corner
+const hostnameDiv = document.getElementById('hostname-indicator');
+if (hostnameDiv) {
+  hostnameDiv.textContent = window.location.hostname;
+}
+
 
 function showCustomContextMenu(x, y, pres) {
   const existing = document.getElementById('custom-context-menu');

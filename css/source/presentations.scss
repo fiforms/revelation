@@ -47,3 +47,15 @@
     a {
       text-decoration: none;
     }
+
+    #hostname-indicator {
+      position: fixed;
+      top: 0.5em;
+      right: 0.75em;
+      font-size: 0.75em;
+      color: #888;
+      font-family: monospace;
+      pointer-events: none;
+      z-index: 9999;
+    }
+
