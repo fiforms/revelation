@@ -89,6 +89,17 @@ function showCustomContextMenu(x, y, pres) {
       label: 'Show Presentation Files',
       action: () => window.electronAPI.showPresentationFolder(pres.slug)
     });
+    options.push({
+      label: 'Export Presentation',
+      action: async () => {
+        const result = await window.electronAPI.exportPresentation(pres.slug);
+        if (result?.success) {
+          alert(`✅ Exported to: ${result.filePath}`);
+        } else if (!result?.canceled) {
+          alert(`❌ Export failed: ${result?.error || 'Unknown error'}`);
+        }
+      }
+    });
   }
 
 
