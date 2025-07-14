@@ -6,16 +6,23 @@ const style_path = '/css/';
 export async function loadAndPreprocessMarkdown(deck,selectedFile = null) {
       const defaultFile = 'presentation.md';
       const urlParams = new URLSearchParams(window.location.search);
-      const customFile = sanitizeMarkdownFilename(urlParams.get('p'));
 
-      const markdownFile = selectedFile || customFile || defaultFile;
-      let response = await fetch(markdownFile);
-      if (!response.ok) {
-        console.warn(`Could not load ${markdownFile}, falling back to ${defaultFile}`);
-        response = await fetch(defaultFile);
+      let rawMarkdown;
+
+      // 🧠 Check for global offlineMarkdown
+      if (typeof window.offlineMarkdown === 'string') {
+        rawMarkdown = window.offlineMarkdown;
+      } else {
+        const customFile = sanitizeMarkdownFilename(urlParams.get('p'));
+
+        const markdownFile = selectedFile || customFile || defaultFile;
+        let response = await fetch(markdownFile);
+        if (!response.ok) {
+          console.warn(`Could not load ${markdownFile}, falling back to ${defaultFile}`);
+          response = await fetch(defaultFile);
+        }
+        rawMarkdown = await response.text();
       }
-
-      let rawMarkdown = await response.text();
 
       const macros = {};
 
