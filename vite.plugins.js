@@ -49,7 +49,7 @@ function generatePresentationIndex() {
   
       const combined = `${header}\n\n${body}`;
       fs.writeFileSync(readmePresentationPath, combined, 'utf-8');
-      console.log('📝 Regenerated presentations/readme/presentation.md');
+      console.log(`📝 Regenerated ${readmePresentationPath}`);
     }
   }
 
