@@ -108,7 +108,7 @@ module.exports = function presentationIndexPlugin() {
     const path = require('path');
     const fs = require('fs');
 
-    const watcher = chokidar.watch('presentations', {
+    const watcher = chokidar.watch(folderName, {
       ignored: /(^|[/\\])\../, // Ignore dotfiles
       persistent: true,
       ignoreInitial: true,  
@@ -116,7 +116,7 @@ module.exports = function presentationIndexPlugin() {
     });
 
     const triggerReload = (event, filePath) => {
-      if (filePath.endsWith('.md') && filePath.includes('presentations')) {
+      if (filePath.endsWith('.md') && filePath.includes(folderName)) {
         console.log(`📦 ${event.toUpperCase()}:`, filePath);
         generatePresentationIndex();
         server.ws.send({ type: 'full-reload' });
@@ -133,7 +133,7 @@ module.exports = function presentationIndexPlugin() {
           server.ws.send({ type: 'full-reload' });
         })
       .on('unlinkDir', dirPath => {
-        if (dirPath.includes('presentations')) {
+        if (dirPath.includes(folderName)) {
           console.log('📁 Folder deleted:', dirPath);
           generatePresentationIndex();
           server.ws.send({ type: 'full-reload' });
