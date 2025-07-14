@@ -7,6 +7,7 @@ import RevealRemote from 'reveal.js-remote/plugin/remote.js';
 
 import { loadAndPreprocessMarkdown } from './loader.js';
 import { revealTweaks } from './tweaks.js';
+import { contextMenu } from './contextmenu.js';
 
 const isRemote = !['localhost', '127.0.0.1'].includes(window.location.hostname);
 
@@ -30,6 +31,7 @@ const deck = new Reveal({
 loadAndPreprocessMarkdown(deck);
 
 revealTweaks(deck);
+contextMenu(deck);
 
 deck.on('ready', () => {
   // Let browser layout settle first
