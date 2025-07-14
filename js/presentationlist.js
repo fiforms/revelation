@@ -1,15 +1,24 @@
 
-fetch('./presentations/index.json')
+const urlParams = new URLSearchParams(window.location.search);
+const url_key = urlParams.get('key');
+const url_prefix = `/presentations_${url_key}`;
+
+const container = document.getElementById('presentation-list');
+
+if(!url_key) {
+    container.innerHTML = 'No key specified, unable to load presentation list';
+}
+
+fetch(`${url_prefix}/index.json`)
       .then(res => res.json())
       .then(presentations => {
-        const container = document.getElementById('presentation-list');
         presentations.forEach(pres => {
           const card = document.createElement('a');
-          card.href = `./presentations/${pres.slug}/?p=${pres.md}`;
+          card.href = `${url_prefix}/${pres.slug}/?p=${pres.md}`;
           card.target = '_blank';
           card.className = 'card';
           card.innerHTML = `
-            <img src="./presentations/${pres.slug}/${pres.thumbnail}" alt="${pres.title}">
+            <img src="${url_prefix}/${pres.slug}/${pres.thumbnail}" alt="${pres.title}">
             <div class="card-content">
               <div class="card-title">${pres.title}</div>
               <div class="card-desc">${pres.description}</div>
@@ -22,7 +31,7 @@ fetch('./presentations/index.json')
               window.electronAPI.openPresentation(pres.slug, pres.md, true);
             }
 	    else {
-	        window.open(`./presentations/${pres.slug}/index.html?p=${pres.md}`, 'revelation_presentation',
+	        window.open(`${url_prefix}/${pres.slug}/index.html?p=${pres.md}`, 'revelation_presentation',
 		'toolbar=no,location=no,status=no,menubar=no,scrollbars=no,resizable=yes,width=1920,height=1080')
 	    }
           });
@@ -71,12 +80,12 @@ function showCustomContextMenu(x, y, pres) {
 	        window.electronAPI.openPresentation(pres.slug, pres.md, false);
 	    }
 	    else {
-	        window.open(`./presentations/${pres.slug}/index.html?p=${pres.md}`, '_blank')
+	        window.open(`${url_prefix}/${pres.slug}/index.html?p=${pres.md}`, '_blank')
 	    }
         }
       },
-    { label: 'Print / Export PDF', action: () => window.open(`./presentations/${pres.slug}/index.html?print-pdf&p=${pres.md}`, '_blank') },
-    { label: 'Handout View', action: () => window.open(`./presentations/${pres.slug}/handout?p=${pres.md}`, '_blank') }
+    { label: 'Print / Export PDF', action: () => window.open(`${url_prefix}/${pres.slug}/index.html?print-pdf&p=${pres.md}`, '_blank') },
+    { label: 'Handout View', action: () => window.open(`${url_prefix}/${pres.slug}/handout?p=${pres.md}`, '_blank') }
   ];
 
 

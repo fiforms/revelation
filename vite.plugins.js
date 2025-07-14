@@ -1,14 +1,39 @@
+const os = require('os');
 const fs = require('fs');
 const path = require('path');
 const matter = require('gray-matter');
 
-const presentationsDir = path.resolve(__dirname, 'presentations');
+const baseDir = __dirname;
+const prefix = 'presentations_';
+
+const folderName = fs.readdirSync(baseDir).find(name =>
+  fs.statSync(path.join(baseDir, name)).isDirectory() && name.startsWith(prefix)
+);
+
+if (!folderName) throw new Error('No presentations_<key> folder found');
+
+const presentationsDir = path.join(baseDir, folderName); // full path
+const key = folderName.replace(prefix, '');
+const presentationsWebPath = `/${folderName}`;
+
 const outputFile = path.join(presentationsDir, 'index.json');
 
 const readmePresDir = path.join(presentationsDir, 'readme');
 const readmePresentationPath = path.join(readmePresDir, 'presentation.md');
 const readmeYamlPath = path.join(readmePresDir, 'header.yaml');
 const projectReadmePath = path.resolve(__dirname, 'README.md');
+
+function getLocalIp() {
+  const nets = os.networkInterfaces();
+  for (const name of Object.keys(nets)) {
+    for (const net of nets[name]) {
+      if (net.family === 'IPv4' && !net.internal) {
+        return net.address;
+      }
+    }
+  }
+  return 'localhost';
+}
 
 function generatePresentationIndex() {
   // Refresh README presentation first, if needed:
@@ -71,6 +96,14 @@ module.exports = function presentationIndexPlugin() {
       copyFonts();
       generatePresentationIndex();
 
+     // 👇 Find out if Vite was started with --host (network mode)
+     const isNetwork = process.argv.includes('--host');
+
+     const host = isNetwork ? getLocalIp() : 'localhost';
+     const url = `http://${host}:8000/presentations.html?key=${key}`;
+    console.log(`\n🌐 Open your presentations at:\n   \x1b[36m${url}\x1b[0m\n`);
+
+
     const chokidar = require('chokidar');
     const path = require('path');
     const fs = require('fs');
@@ -109,16 +142,20 @@ module.exports = function presentationIndexPlugin() {
       
     // Rewrite `/presentations/foo/index.html` to `/presentation.html?slug=foo`
     server.middlewares.use((req, res, next) => {
-	const match = req.url.match(/^\/presentations\/([^\/]+)\/(?:index\.html)?(?:\?.*)?$/);
-        if (match) {
-          const slug = match[1];
-          req.url = `/presentation.html?slug=${slug}`;
-        }
-	const hmatch = req.url.match(/^\/presentations\/([^\/]+)\/handout(?:\.html)?(?:\?.*)?$/);
-        if (hmatch) {
-          const slug = hmatch[1];
-          req.url = `/handout.html?slug=${slug}`;
-        }
+      const escaped = presentationsWebPath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // escape for regex
+
+      const match = req.url.match(new RegExp(`^${escaped}/([^/]+)/(?:index\\.html)?(?:\\?.*)?$`));
+      if (match) {
+        const slug = match[1];
+        req.url = `/presentation.html?slug=${slug}&key=${key}`;
+      }
+
+      const hmatch = req.url.match(new RegExp(`^${escaped}/([^/]+)/handout(?:\\.html)?(?:\\?.*)?$`));
+      if (hmatch) {
+        const slug = hmatch[1];
+        req.url = `/handout.html?slug=${slug}&key=${key}`;
+      }
+
         next();
       });
     }
