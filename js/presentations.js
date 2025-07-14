@@ -9,7 +9,9 @@ import { loadAndPreprocessMarkdown } from './loader.js';
 import { revealTweaks } from './tweaks.js';
 import { contextMenu } from './contextmenu.js';
 
-const isRemote = !['localhost', '127.0.0.1'].includes(window.location.hostname);
+const isRemote = window.location.protocol !== 'file:' &&
+                 !['localhost', '127.0.0.1'].includes(window.location.hostname);
+
 
 const plugins = [Markdown, Notes, Zoom, Search];
 if (isRemote) {

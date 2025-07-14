@@ -1,7 +1,7 @@
 import yaml from 'js-yaml';
 import convertSmartQuotes from './smart-quotes';
 
-const style_path = '/css/';
+let style_path = '/css/';
 
 export async function loadAndPreprocessMarkdown(deck,selectedFile = null) {
       const defaultFile = 'presentation.md';
@@ -12,6 +12,7 @@ export async function loadAndPreprocessMarkdown(deck,selectedFile = null) {
       // 🧠 Check for global offlineMarkdown
       if (typeof window.offlineMarkdown === 'string') {
         rawMarkdown = window.offlineMarkdown;
+	style_path = "_resources/css/";
       } else {
         const customFile = sanitizeMarkdownFilename(urlParams.get('p'));
 
