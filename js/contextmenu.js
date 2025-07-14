@@ -35,6 +35,30 @@ export function contextMenu(deck) {
         { label: 'Close Presentation', action: () => closePresentation() }
       ];
 
+      if (e.target.tagName === 'A' && e.target.href) {
+        const link = e.target.href;
+        items.unshift(
+          { label: 'Open Link in New Tab', action: () => window.open(link, '_blank') },
+		  {
+              label: 'Copy Link Address',
+              action: () => {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                  navigator.clipboard.writeText(link)
+                    .then(() => console.log('✅ Link copied to clipboard'))
+                    .catch(err => {
+                      console.error('❌ Clipboard error:', err);
+                      fallbackCopyText(link);
+                    });
+                } else {
+                  fallbackCopyText(link);
+                }
+              }
+            }
+
+        );
+      }
+
+
       items.forEach(({ label, action }) => {
         const item = document.createElement('div');
         item.textContent = label;
@@ -52,6 +76,25 @@ export function contextMenu(deck) {
       document.addEventListener('click', () => menu.remove(), { once: true });
     });
 }
+
+function fallbackCopyText(text) {
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  textarea.style.position = 'fixed';  // avoid scroll jump
+  document.body.appendChild(textarea);
+  textarea.focus();
+  textarea.select();
+  try {
+    document.execCommand('copy');
+    console.log('✅ Link copied (fallback)');
+  } catch (err) {
+    console.error('❌ Fallback copy failed', err);
+    alert('Failed to copy the link. You can do it manually:\n' + text);
+  }
+  document.body.removeChild(textarea);
+}
+
+
 
 function toggleFullscreen() {
   if (window.electronAPI?.toggleFullScreen) {
