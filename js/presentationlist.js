@@ -17,11 +17,14 @@ fetch('./presentations/index.json')
           `;
 
           card.addEventListener('click', (e) => {
+            e.preventDefault(); // Prevent default navigation
             if (window.electronAPI?.openPresentation) {
-              e.preventDefault(); // Prevent default navigation
-              window.electronAPI.openPresentation(pres.slug, pres.md);
+              window.electronAPI.openPresentation(pres.slug, pres.md, true);
             }
-            // otherwise allow default browser behavior
+	    else {
+	        window.open(`./presentations/${pres.slug}/index.html?p=${pres.md}`, 'revelation_presentation',
+		'toolbar=no,location=no,status=no,menubar=no,scrollbars=no,resizable=yes,width=1920,height=1080')
+	    }
           });
 
  	  card.addEventListener('contextmenu', (e) => {
@@ -61,8 +64,17 @@ function showCustomContextMenu(x, y, pres) {
     box-shadow: 0 0 10px #000;
   `;
 
+  const target = window.electronAPI?.editPresentation ? 'Window' : 'Tab';
   const options = [
-    { label: 'Open in New Tab', action: () => window.open(`./presentations/${pres.slug}/index.html?p=${pres.md}`, '_blank') },
+    { label: `Open in ${target}`, action: () => {
+            if (window.electronAPI?.openPresentation) {
+	        window.electronAPI.openPresentation(pres.slug, pres.md, false);
+	    }
+	    else {
+	        window.open(`./presentations/${pres.slug}/index.html?p=${pres.md}`, '_blank')
+	    }
+        }
+      },
     { label: 'Print / Export PDF', action: () => window.open(`./presentations/${pres.slug}/index.html?print-pdf&p=${pres.md}`, '_blank') },
     { label: 'Handout View', action: () => window.open(`./presentations/${pres.slug}/handout?p=${pres.md}`, '_blank') }
   ];

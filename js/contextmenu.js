@@ -20,14 +20,18 @@ export function contextMenu(deck) {
         box-shadow: 0 0 8px #000;
       `;
 
+      const isLocal = window.location.hostname === 'localhost';
+
       const items = [
         { label: 'Show Reveal.js Help (?)', action: () => deck.toggleHelp() },
         { label: 'Show Speaker Notes (s)', action: () => deck.getPlugins().notes.open() },
-        { label: 'Toggle Fullscreen', action: () => fireRevealKey('f') },
-        { label: 'Toggle Remote Follower Link (a)', action: () => fireRevealKey('a') },
-        { label: 'Toggle Remote Control Link (r)', action: () => fireRevealKey('r') },
+        { label: 'Toggle Fullscreen', action: () => toggleFullscreen() },
+        ...(!isLocal ? [
+          { label: 'Toggle Remote Follower Link (a)', action: () => fireRevealKey('a') },
+          { label: 'Toggle Remote Control Link (r)', action: () => fireRevealKey('r') }
+	  ] : []),
         { label: deck.isOverview() ? 'Close Overview (ESC)' : 'Overview (ESC)', action: () => deck.toggleOverview() },
-        { label: deck.isPaused() ? 'Unpause (b)' : 'Pause/Blank (b)', action: () => deck.togglePause() },
+        { label: deck.isPaused() ? 'Unpause/Unblank (b)' : 'Pause/Blank (b)', action: () => deck.togglePause() },
         { label: 'Close Presentation', action: () => closePresentation() }
       ];
 
@@ -47,6 +51,25 @@ export function contextMenu(deck) {
       document.body.appendChild(menu);
       document.addEventListener('click', () => menu.remove(), { once: true });
     });
+}
+
+function toggleFullscreen() {
+  if (window.electronAPI?.toggleFullScreen) {
+    window.electronAPI.toggleFullScreen();
+  } else {
+      const elem = document.documentElement;
+      if (!document.fullscreenElement) {
+        if (elem.requestFullscreen) {
+          elem.requestFullscreen();
+        } else if (elem.webkitRequestFullscreen) { /* Safari */
+          elem.webkitRequestFullscreen();
+        }
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        }
+      }
+  }
 }
 
 function closePresentation() {
