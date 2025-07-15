@@ -25,7 +25,14 @@ export async function loadAndPreprocessMarkdown(deck,selectedFile = null) {
         rawMarkdown = await response.text();
       }
 
-      const macros = {};
+      const defaultMacros = {
+        darkbg: `<!-- .slide: data-darkbg -->`,
+        lightbg: `<!-- .slide: data-lightbg -->`,
+        lowerthird: `<!-- .slide: data-lower-third -->`,
+        upperthird: `<!-- .slide: data-upper-third -->`
+      };
+
+      const macros = { ...defaultMacros }; // Start with defaults
 
       const { metadata, content } = extractFrontMatter(rawMarkdown);
 
@@ -48,8 +55,8 @@ export async function loadAndPreprocessMarkdown(deck,selectedFile = null) {
         document.head.appendChild(styleEl);
       }
 
-      if (metadata.macros) {
-          Object.assign(macros, metadata.macros);
+      if (metadata.macros && typeof metadata.macros === 'object') {
+        Object.assign(macros, metadata.macros); // User-defined macros override defaults
       }
 
       const partProcessedMarkdown = preprocessMarkdown(content, macros);
@@ -116,9 +123,36 @@ export function preprocessMarkdown(md, macros = {}) {
 
     if(line.match(/^\{\{\}\}$/)) {
         lastmacros.length = 0; // Reset the list of saved macros
-	continue;
+	      continue;
     }
-    
+
+    const magicImageHandlers = {
+      background: (src) => {
+        const isVideo = /\.(webm|mp4|mov|m4v)$/i.test(src);
+        return isVideo
+          ? `<!-- .slide: data-background-video="${src}" data-background-video-loop -->`
+          : `<!-- .slide: data-background-image="${src}" -->`;
+      },
+      youtube: (src) => {
+        const match = src.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|watch\?v=))([\w-]+)/);
+        const id = match ? match[1] : null;
+        return id
+          ? `<iframe width="960" height="540" src="https://www.youtube.com/embed/${id}?autoplay=1&mute=1&loop=1&playlist=${id}" frameborder="0" allowfullscreen></iframe>`
+          : `<!-- Invalid YouTube URL: ${src} -->`;
+      }
+    };
+
+    const magicImageMatch = line.match(/^!\[([a-zA-Z0-9_-]+)\]\((.+?)\)$/);
+    if (magicImageMatch) {
+      const keyword = magicImageMatch[1].toLowerCase();
+      const src = magicImageMatch[2];
+      const handler = magicImageHandlers[keyword];
+      if (handler) {
+        processedLines.push(handler(src));
+        continue;
+      }
+    }
+
     const macroUseMatch = line.match(/^\{\{([A-Za-z0-9_]+)(?::([^}]+))?\}\}$/);
 
     if (macroUseMatch) {
@@ -156,7 +190,7 @@ export function preprocessMarkdown(md, macros = {}) {
     var autoSlide = false;
     if(line.match(/^\#/) && !blankslide) {
         // Always insert a slide break before a heading
-	autoSlide = true;
+	      autoSlide = true;
     }
     if (line.trim() !== '' && !line.trim().match(/^<!--.*?-->$/)) {
       blankslide = false;
@@ -166,8 +200,8 @@ export function preprocessMarkdown(md, macros = {}) {
     if (autoSlide || line === '---' || line === '***' || line.match(/^[Nn][Oo][Tt][Ee]\:/) || index >= lines.length - 1) {
       var blankslide = true;
       if(thismacros.length > 0) {
-	  lastmacros.length = 0;
-	  lastmacros.push(...thismacros);
+        lastmacros.length = 0;
+        lastmacros.push(...thismacros);
       }
       else {
 	  for (const val of lastmacros) {
@@ -216,7 +250,6 @@ export function preprocessMarkdown(md, macros = {}) {
       processedLines.push(line);
     }
   }
-
   return processedLines.join('\n');
 }
 
