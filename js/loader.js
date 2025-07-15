@@ -25,14 +25,7 @@ export async function loadAndPreprocessMarkdown(deck,selectedFile = null) {
         rawMarkdown = await response.text();
       }
 
-      const defaultMacros = {
-        darkbg: `<!-- .slide: data-darkbg -->`,
-        lightbg: `<!-- .slide: data-lightbg -->`,
-        lowerthird: `<!-- .slide: data-lower-third -->`,
-        upperthird: `<!-- .slide: data-upper-third -->`
-      };
-
-      const macros = { ...defaultMacros }; // Start with defaults
+      const macros = {};
 
       const { metadata, content } = extractFrontMatter(rawMarkdown);
 
@@ -56,7 +49,7 @@ export async function loadAndPreprocessMarkdown(deck,selectedFile = null) {
       }
 
       if (metadata.macros && typeof metadata.macros === 'object') {
-        Object.assign(macros, metadata.macros); // User-defined macros override defaults
+        Object.assign(macros, metadata.macros); // User-defined macros from front matter 
       }
 
       const partProcessedMarkdown = preprocessMarkdown(content, macros);
@@ -108,12 +101,21 @@ export function extractFrontMatter(md) {
   return { metadata: {}, content: md };
 }
 
-export function preprocessMarkdown(md, macros = {}) {
+export function preprocessMarkdown(md, userMacros = {}, forHandout = false) {
   const lines = md.split('\n');
   const processedLines = [];
   const attributions = [];
   const lastmacros = [];
   const thismacros = [];
+
+  const defaultMacros = {
+    darkbg: `<!-- .slide: data-darkbg -->`,
+    lightbg: `<!-- .slide: data-lightbg -->`,
+    lowerthird: `<!-- .slide: data-lower-third -->`,
+    upperthird: `<!-- .slide: data-upper-third -->`
+  };
+
+  const macros = { ...defaultMacros, ...userMacros };
 
   const totalLines = lines.length;
   var index = -1;
@@ -126,21 +128,23 @@ export function preprocessMarkdown(md, macros = {}) {
 	      continue;
     }
 
-    const magicImageHandlers = {
-      background: (src) => {
+    const magicImageHandlers = {}
+    if (!forHandout) {
+      magicImageHandlers.background = (src) => {
         const isVideo = /\.(webm|mp4|mov|m4v)$/i.test(src);
         return isVideo
           ? `<!-- .slide: data-background-video="${src}" data-background-video-loop -->`
           : `<!-- .slide: data-background-image="${src}" -->`;
-      },
-      youtube: (src) => {
+      };
+
+      magicImageHandlers.youtube = (src) => {
         const match = src.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|watch\?v=))([\w-]+)/);
         const id = match ? match[1] : null;
         return id
           ? `<iframe width="960" height="540" src="https://www.youtube.com/embed/${id}?autoplay=1&mute=1&loop=1&playlist=${id}" frameborder="0" allowfullscreen></iframe>`
           : `<!-- Invalid YouTube URL: ${src} -->`;
-      }
-    };
+      };
+    }
 
     const magicImageMatch = line.match(/^!\[([a-zA-Z0-9_-]+)\]\((.+?)\)$/);
     if (magicImageMatch) {
