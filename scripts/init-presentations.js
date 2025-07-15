@@ -2,15 +2,13 @@
 const fs = require('fs');
 const path = require('path');
 
-const baseDir = path.resolve(__dirname, '..');
 const prefix = 'presentations_';
-const templateReadme = path.join(baseDir, 'templates', 'readme');
 
 function generateKey(length = 10) {
   return [...Array(length)].map(() => Math.random().toString(36)[2]).join('');
 }
 
-function getExistingPresentationFolder() {
+function getExistingPresentationFolder(baseDir) {
   const match = fs.readdirSync(baseDir).find(name =>
     fs.statSync(path.join(baseDir, name)).isDirectory() && name.startsWith(prefix)
   );
@@ -30,8 +28,13 @@ function copyRecursiveSync(src, dest) {
   }
 }
 
-function main() {
-  let folderName = getExistingPresentationFolder();
+function main(baseDirParameter = false) {
+  let baseDir = baseDirParameter;
+  if(baseDir === false) {
+    baseDir = path.resolve(__dirname, '..');
+  }
+  const templateReadme = path.join(baseDir, 'templates', 'readme');
+  let folderName = getExistingPresentationFolder(baseDir);
 
   if (folderName) {
     console.log(`📁 Presentations folder exists: ${folderName}`);
