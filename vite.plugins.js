@@ -99,12 +99,15 @@ module.exports = function presentationIndexPlugin() {
       generatePresentationIndex();
 
      // 👇 Find out if Vite was started with --host (network mode)
-     const isNetwork = process.argv.includes('--host');
+    const isNetwork = process.argv.includes('--host');
+    const host = isNetwork ? getLocalIp() : 'localhost';
 
-     const host = isNetwork ? getLocalIp() : 'localhost';
-     const url = `http://${host}:8000/presentations.html?key=${key}`;
-    console.log(`\n🌐 Open your presentations at:\n   \x1b[36m${url}\x1b[0m\n`);
-
+    // 👇 Dynamically get port from server.httpServer
+    server.httpServer?.once('listening', () => {
+      const actualPort = server.httpServer.address().port;
+      const url = `http://${host}:${actualPort}/presentations.html?key=${key}`;
+      console.log(`\n🌐 Open your presentations at:\n   \x1b[36m${url}\x1b[0m\n`);
+    });
 
     const chokidar = require('chokidar');
     const path = require('path');
