@@ -62,7 +62,8 @@ if (!mdFile) {
 	  const slideno = incremental ? slideCount : `${hIndex}.${vIndex}` ;
 
           output.push('<section class="slide">');
-	  output.push(`<div class="slide-number"><a href="index.html?p=${mdFile}#${hIndex}/${vIndex}" target="_blank">${slideno}</a></div>`);
+	  output.push(`<div class="slide-number slide-number-link" style="display: none"><a href="index.html?p=${mdFile}#${hIndex}/${vIndex}" target="_blank">${slideno}</a></div>`);
+	  output.push(`<div class="slide-number slide-number-nolink">${slideno}</div>`);
           output.push(slideHTML);
 	  if(cleanedNote) {
               output.push(`<div class="note">${noteHTML}</div>`);
@@ -102,3 +103,11 @@ document.getElementById('toggle-attributions').addEventListener('change', e => {
   });
 });
 
+document.getElementById('toggle-links').addEventListener('change', e => {
+  document.querySelectorAll('.slide-number-link').forEach(el => {
+    el.style.display = e.target.checked ? '' : 'none';
+  });
+  document.querySelectorAll('.slide-number-nolink').forEach(el => {
+    el.style.display = e.target.checked ? 'none' : '';
+  });
+});

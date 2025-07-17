@@ -123,8 +123,7 @@ function showCustomContextMenu(x, y, pres) {
                 }
               }
        },
-    { label: 'Print / Export PDF', action: () => window.open(`${url_prefix}/${pres.slug}/index.html?print-pdf&p=${pres.md}`, '_blank') },
-    { label: 'Handout View', action: () => window.open(`${url_prefix}/${pres.slug}/handout?p=${pres.md}`, '_blank') }
+    { label: 'Handout View', action: () => handoutView(pres.slug,pres.md) }
   ];
 
 
@@ -138,7 +137,7 @@ function showCustomContextMenu(x, y, pres) {
       action: () => window.electronAPI.showPresentationFolder(pres.slug)
     });
     options.push({
-      label: 'Export Presentation',
+      label: 'Export as ZIP',
       action: async () => {
         const result = await window.electronAPI.exportPresentation(pres.slug);
         if (result?.success) {
@@ -149,6 +148,10 @@ function showCustomContextMenu(x, y, pres) {
       }
     });
   }
+  options.push({
+    label: 'Export as PDF',
+    action: () => exportPDF(pres.slug, pres.md)
+  });
 
 
   for (const opt of options) {
@@ -167,6 +170,35 @@ function showCustomContextMenu(x, y, pres) {
   document.body.appendChild(menu);
 
   document.addEventListener('click', () => menu.remove(), { once: true });
+}
+
+function handoutView(slug, mdFile) {
+  if (window.electronAPI?.openHandoutView) {
+    window.electronAPI.openHandoutView(slug, mdFile);
+  } else {
+    window.open(`${url_prefix}/${slug}/handout?p=${mdFile}`, '_blank');
+  } 
+}
+
+
+function exportPDF(slug, mdFile) {
+  if(window.electronAPI?.exportPresentationPDF) {
+    window.electronAPI.exportPresentationPDF(slug, mdFile)
+      .then(result => {
+        if (result.success) {
+          alert(`✅ PDF exported to: ${result.filePath}`);
+        } else {
+          // alert('❌ PDF export failed');
+        }
+      })
+      .catch(err => {
+        console.error('PDF Export Error:', err);
+        // alert('❌ PDF export failed: ' + err.message);
+      });
+    } 
+    else {
+      window.open(`${url_prefix}/${slug}/index.html?print-pdf&p=${mdFile}`, '_blank') 
+    }
 }
 
 function fallbackCopyText(text) {
