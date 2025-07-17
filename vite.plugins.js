@@ -187,6 +187,23 @@ module.exports = function presentationIndexPlugin() {
 
           next();
        });
+
+        // Middleware to serve files from revelation_electron-wrapper/http_admin
+        // This allows serving static files from the external folder
+
+        const adminDir = path.resolve(__dirname, '../http_admin');
+        if (fs.existsSync(adminDir)) {
+          const serveStatic = require('serve-static');
+          server.middlewares.use(
+            '/admin',
+            serveStatic(adminDir, {
+              index: false,
+              fallthrough: true,
+            })
+          );
+        } else {
+          console.warn('⚠️  External /http_admin folder not found — skipping mount.');
+        }
 	    
     }
   };
