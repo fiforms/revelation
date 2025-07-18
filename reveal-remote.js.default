@@ -1,0 +1,3 @@
+// Default location
+
+window.revealRemoteServer = window.location.protocol + "//" + window.location.hostname + ":1947/";

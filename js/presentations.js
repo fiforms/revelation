@@ -20,11 +20,11 @@ if (isRemote) {
 
 const deck = new Reveal({
   plugins,
-  ...(isRemote && {
+  ...((isRemote && window.revealRemoteServer) && {
     remote: {
       remote: true,
       multiplex: true,
-      server: window.location.protocol + "//" + window.location.hostname + ":1947/",
+      server: window.revealRemoteServer,
       path: "/socket.io"
     }
   })

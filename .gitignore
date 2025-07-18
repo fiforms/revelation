@@ -10,6 +10,9 @@ yarn-debug.log*
 yarn-error.log*
 .DS_Store
 
+# Reveal Remote Running Config
+reveal-remote.js
+
 # Ignore compiled CSS and sourcemaps from custom themes
 css/*.css
 css/*.css.map

@@ -28,7 +28,8 @@
     "postinstall": "run-s patch-remote init-presentations",
     "patch-remote": "node scripts/patch-remote.js",
     "init-presentations": "node scripts/init-presentations.js",
-    "serve": "concurrently -n VITE,REMOTE -c cyan,green \"npm run vite:serve\" \"npm run remote-server\""
+    "copy-remote": "node scripts/copy-remote.js",
+    "serve": "npm run copy-remote && concurrently -n VITE,REMOTE -c cyan,green \"npm run vite:serve\" \"npm run remote-server\""
   },
   "devDependencies": {
     "concurrently": "^9.2.0",
