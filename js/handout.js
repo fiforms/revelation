@@ -4,6 +4,16 @@ import { marked } from 'marked';
 const urlParams = new URLSearchParams(window.location.search);
 const mdFile = urlParams.get('p');
 
+// VITE Hot Reloading Hook
+if (import.meta.hot) {
+  import.meta.hot.on('reload-presentations', (data) => {
+    if(window.location.href.includes(`${data.slug}/handout?`) && mdFile === data.mdFile) {
+      console.log('[HMR] Reloading presentation handout');
+      location.reload();
+    }
+  });
+}
+
 const container = document.getElementById('handout-content');
 
 if (!mdFile) {

@@ -9,6 +9,14 @@ if(!url_key) {
     container.innerHTML = 'No key specified, unable to load presentation list';
 }
 
+// VITE Hot Reloading Hook
+if (import.meta.hot) {
+  import.meta.hot.on('reload-presentations', () => {
+    console.log('[HMR] Reloading presentation list');
+    location.reload();
+  });
+}
+
 fetch(`${url_prefix}/index.json`)
       .then(res => {
         if (!res.ok) {

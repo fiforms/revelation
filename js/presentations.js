@@ -30,6 +30,16 @@ const deck = new Reveal({
   })
 });
 
+// VITE Hot Reloading Hook
+if (import.meta.hot) {
+  import.meta.hot.on('reload-presentations', (data) => {
+    if(window.location.href.includes(`${data.slug}/handout?`) && mdFile === data.mdFile) {
+      console.log('[HMR] Reloading presentation handout');
+      location.reload();
+    }
+  });
+}
+
 loadAndPreprocessMarkdown(deck);
 
 revealTweaks(deck);

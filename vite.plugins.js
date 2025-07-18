@@ -124,7 +124,17 @@ module.exports = function presentationIndexPlugin() {
       if (filePath.endsWith('.md') && filePath.includes(folderName)) {
         console.log(`📦 ${event.toUpperCase()}:`, filePath);
         generatePresentationIndex();
-        server.ws.send({ type: 'full-reload' });
+        const parts = filePath.split(path.sep);
+        const slugIndex = parts.findIndex(p => p === folderName) + 1;
+        const slug = parts[slugIndex]; 
+        const mdFile = parts[slugIndex + 1];
+
+
+        server.ws.send({
+          type: 'custom',
+          event: 'reload-presentations',
+          data: { slug, mdFile }
+        });
       }
     };
 
