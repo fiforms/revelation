@@ -17,6 +17,11 @@ if (import.meta.hot) {
   });
 }
 
+electronAPI?.onShowToast((msg) => {
+  showToast(msg);
+});
+
+
 fetch(`${url_prefix}/index.json`)
       .then(res => {
         if (!res.ok) {
@@ -224,4 +229,42 @@ function fallbackCopyText(text) {
     alert('Failed to copy the link. You can do it manually:\n' + text);
   }
   document.body.removeChild(textarea);
+}
+
+function showToast(message) {
+  const existing = document.getElementById('toast-message');
+  if (existing) existing.remove(); // Only one toast at a time
+
+  const toast = document.createElement('div');
+  toast.id = 'toast-message';
+  toast.textContent = message;
+
+  toast.style = `
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.85);
+    color: #fff;
+    padding: 0.8rem 1.2rem;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-family: sans-serif;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.4);
+    opacity: 0;
+    transition: opacity 0.5s ease-in-out;
+    z-index: 9999;
+  `;
+
+  document.body.appendChild(toast);
+  // Trigger fade-in
+  requestAnimationFrame(() => {
+    toast.style.opacity = '1';
+  });
+
+  // Fade out after 5 seconds
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.addEventListener('transitionend', () => toast.remove(), { once: true });
+  }, 5000);
 }

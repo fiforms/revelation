@@ -30,11 +30,14 @@ const deck = new Reveal({
   })
 });
 
+const urlParams = new URLSearchParams(window.location.search);
+const mdFile = urlParams.get('p');
+
 // VITE Hot Reloading Hook
 if (import.meta.hot) {
   import.meta.hot.on('reload-presentations', (data) => {
-    if(window.location.href.includes(`${data.slug}/handout?`) && mdFile === data.mdFile) {
-      console.log('[HMR] Reloading presentation handout');
+    if(window.location.href.includes(`${data.slug}/`) && mdFile === data.mdFile) {
+      console.log('[HMR] Reloading presentation');
       location.reload();
     }
   });
@@ -46,6 +49,9 @@ revealTweaks(deck);
 contextMenu(deck);
 
 deck.on('ready', () => {
+  const indices = deck.getIndices();
+  deck.slide(indices.h, indices.v);  // Force refresh of current slide
+
   // Let browser layout settle first
   window.setTimeout(() => {
     document.body.classList.remove('hidden');
