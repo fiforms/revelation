@@ -95,19 +95,28 @@ function showCustomContextMenu(x, y, pres) {
 
   const menu = document.createElement('div');
   menu.id = 'custom-context-menu';
-  menu.style = `
-    position: absolute;
-    top: ${y}px;
-    left: ${x}px;
-    background: #222;
-    border: 1px solid #555;
-    border-radius: 8px;
-    color: white;
-    z-index: 9999;
-    font-family: sans-serif;
-    min-width: 200px;
-    box-shadow: 0 0 10px #000;
-  `;
+const menuWidth = 220;
+const menuHeight = 240; // Estimate or measure depending on items
+
+const maxLeft = window.innerWidth - menuWidth - 10;
+const maxTop = window.innerHeight - menuHeight - 10;
+
+const clampedX = Math.min(x, maxLeft);
+const clampedY = Math.min(y, maxTop);
+
+menu.style = `
+  position: absolute;
+  top: ${clampedY}px;
+  left: ${clampedX}px;
+  background: #222;
+  border: 1px solid #555;
+  border-radius: 8px;
+  color: white;
+  z-index: 9999;
+  font-family: sans-serif;
+  min-width: ${menuWidth}px;
+  box-shadow: 0 0 10px #000;
+`;
 
   const target = window.electronAPI?.editPresentation ? 'Window' : 'Tab';
   const options = [
