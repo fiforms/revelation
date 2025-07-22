@@ -60,7 +60,7 @@ export async function loadAndPreprocessMarkdown(deck,selectedFile = null) {
       section.setAttribute('data-markdown', '');
       section.setAttribute('data-separator', '^\n\\*\\*\\*\n$');
       section.setAttribute('data-separator-vertical', '^\n---\n$');
-      section.setAttribute('data-separator-notes', '^Note:');
+      section.setAttribute('data-separator-notes', '^Note:$');
       section.innerHTML = `<textarea data-template>${processedMarkdown}</textarea>`;
 
       // Initialize Reveal.js
@@ -138,8 +138,32 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
   const totalLines = lines.length;
   var index = -1;
   var blankslide = true;
+  let insideCodeBlock = false;
+  let currentFence = '';
   for (var line of lines) {
     index++;
+
+  const fenceMatch = line.match(/^(`{3,})(.*)$/);  // Matches ``` or more
+
+    if (fenceMatch) {
+      const fence = fenceMatch[1];
+      
+      if (!insideCodeBlock) {
+        insideCodeBlock = true;
+        currentFence = fence;
+      } else if (fence === currentFence) {
+        insideCodeBlock = false;
+        currentFence = '';
+      }
+
+      processedLines.push(line);
+      continue;
+    }
+
+    if (insideCodeBlock) {
+      processedLines.push(line);
+      continue;  // 🛑 Skip transformation inside code blocks
+    }
 
     if(line.match(/^\{\{\}\}$/)) {
         lastmacros.length = 0; // Reset the list of saved macros
