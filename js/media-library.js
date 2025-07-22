@@ -13,6 +13,14 @@ if (url_key) {
   backLink.appendChild(a);
 }
 
+// VITE Hot Reloading Hook
+if (import.meta.hot) {
+  import.meta.hot.on('reload-media', () => {
+    console.log('[HMR] Reloading media list');
+    location.reload();
+  });
+}
+
 fetch(`/presentations_${url_key}/_media/index.json`)
   .then(res => res.json())
   .then(media => {

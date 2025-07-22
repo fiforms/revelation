@@ -142,6 +142,12 @@ function presentationIndexPlugin() {
       if (filePath.endsWith('.json') && filePath.includes('_media')) {
         console.log(`🧩 ${event.toUpperCase()}: Media JSON changed →`, filePath);
         generateMediaIndex();
+
+        server.ws.send({
+          type: 'custom',
+          event: 'reload-media',
+          data: { filePath }
+        });
       }
     };
 
