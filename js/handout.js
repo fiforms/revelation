@@ -25,8 +25,8 @@ if (!mdFile) {
       const { metadata, content } = extractFrontMatter(rawMarkdown);
       document.title = metadata.title || "Presentation Handout";
 
-      const processed = preprocessMarkdown(content, metadata.macros || {}, true);
-      const slides = processed.split(/\n(?=(\*\*\*|---|#\s))/g);
+      const processed = preprocessMarkdown(content, metadata.macros || {}, true, metadata.media);
+      const slides = processed.split(/\n(?=^(?:\*\*\*|---)$|^#\s)/gm);
       const output = [];
       const incremental = metadata && metadata.config && (metadata.config.slideNumber === 'c' || metadata.config.slideNumber === 'c/t');
 	
@@ -36,7 +36,7 @@ if (!mdFile) {
       let lastBreakWasVertical = false;
 
       for (let rawSlide of slides) {
-          const lines = rawSlide.trim().split('\nNote:');
+          const lines = rawSlide.trim().split('\nNote:\n');
           const cleanedMarkdown = lines[0].replace(/^\s*(\*\*\*|---)\s*$/gm, '').trim();
           const slideHTML = marked.parse(cleanedMarkdown);
           const cleanedNote = (lines.length > 1) ? lines[1].replace(/^\s*(\*\*\*|---)\s*$/gm, '').trim() : '';
