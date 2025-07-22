@@ -52,7 +52,7 @@ export async function loadAndPreprocessMarkdown(deck,selectedFile = null) {
         Object.assign(macros, metadata.macros); // User-defined macros from front matter 
       }
 
-      const partProcessedMarkdown = preprocessMarkdown(content, macros);
+      const partProcessedMarkdown = preprocessMarkdown(content, macros, false, metadata.media);
       const processedMarkdown = metadata.convertSmartQuotes === false ? partProcessedMarkdown : convertSmartQuotes(partProcessedMarkdown);
 
       // Create a temporary element to convert markdown into HTML slides
@@ -101,7 +101,7 @@ export function extractFrontMatter(md) {
   return { metadata: {}, content: md };
 }
 
-export function preprocessMarkdown(md, userMacros = {}, forHandout = false) {
+export function preprocessMarkdown(md, userMacros = {}, forHandout = false, media = {}) {
   const lines = md.split('\n');
   const processedLines = [];
   const attributions = [];
@@ -117,6 +117,24 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false) {
 
   const macros = { ...defaultMacros, ...userMacros };
 
+  const magicImageHandlers = {}
+  if (!forHandout) {
+    magicImageHandlers.background = (src) => {
+      const isVideo = /\.(webm|mp4|mov|m4v)$/i.test(src);
+      return isVideo
+        ? `<!-- .slide: data-background-video="${src}" data-background-video-loop -->`
+        : `<!-- .slide: data-background-image="${src}" -->`;
+    };
+
+    magicImageHandlers.youtube = (src) => {
+      const match = src.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|watch\?v=))([\w-]+)/);
+      const id = match ? match[1] : null;
+      return id
+        ? `<iframe width="960" height="540" src="https://www.youtube.com/embed/${id}?autoplay=1&mute=1&loop=1&playlist=${id}" frameborder="0" allowfullscreen></iframe>`
+        : `<!-- Invalid YouTube URL: ${src} -->`;
+    };
+  }
+
   const totalLines = lines.length;
   var index = -1;
   var blankslide = true;
@@ -128,22 +146,18 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false) {
 	      continue;
     }
 
-    const magicImageHandlers = {}
-    if (!forHandout) {
-      magicImageHandlers.background = (src) => {
-        const isVideo = /\.(webm|mp4|mov|m4v)$/i.test(src);
-        return isVideo
-          ? `<!-- .slide: data-background-video="${src}" data-background-video-loop -->`
-          : `<!-- .slide: data-background-image="${src}" -->`;
-      };
-
-      magicImageHandlers.youtube = (src) => {
-        const match = src.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|watch\?v=))([\w-]+)/);
-        const id = match ? match[1] : null;
-        return id
-          ? `<iframe width="960" height="540" src="https://www.youtube.com/embed/${id}?autoplay=1&mute=1&loop=1&playlist=${id}" frameborder="0" allowfullscreen></iframe>`
-          : `<!-- Invalid YouTube URL: ${src} -->`;
-      };
+    const mediaAliasMatch = line.match(/[\(\"]media:([a-zA-Z0-9_-]+)[\)\"]/);
+    if (mediaAliasMatch && media) {
+      const alias = mediaAliasMatch[1];
+      const item = media[alias];
+      if (item?.filename) {
+        const resolvedSrc = `../_media/${item.filename}`;
+        line = line.replace(/\((media:[a-zA-Z0-9_-]+)\)/, `(${resolvedSrc})`);
+        line = line.replace(/\"(media:[a-zA-Z0-9_-]+)\"/, `"${resolvedSrc}"`);
+        if (item.copyright) {
+          attributions.push(item.copyright);
+        }
+      }
     }
 
     const magicImageMatch = line.match(/^!\[([a-zA-Z0-9_-]+)\]\((.+?)\)$/);
