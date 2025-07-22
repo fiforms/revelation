@@ -7,10 +7,19 @@ export function contextMenu(deck) {
 
       const menu = document.createElement('div');
       menu.id = 'reveal-context-menu';
+      const menuWidth = 220;
+      const menuHeight = 280;
+
+      const maxLeft = window.innerWidth - menuWidth - 10;
+      const maxTop = window.innerHeight - menuHeight - 10;
+
+      const clampedX = Math.min(e.clientX, maxLeft);
+      const clampedY = Math.min(e.clientY, maxTop);
+
       menu.style = `
         position: fixed;
-        top: ${e.clientY}px;
-        left: ${e.clientX}px;
+        top: ${clampedY}px;
+        left: ${clampedX}px;
         background: #222;
         border: 1px solid #444;
         border-radius: 6px;
