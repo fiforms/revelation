@@ -89,6 +89,16 @@ if (hostnameDiv) {
   hostnameDiv.textContent = window.location.hostname;
 }
 
+const mediaLinkDiv = document.getElementById('media-library-link');
+if (url_key && mediaLinkDiv) {
+  const link = document.createElement('a');
+  link.href = `/media-library.html?key=${url_key}`;
+  link.textContent = '📁 View Media Library';
+  link.style = 'color: #4da6ff; font-size: 1rem; text-decoration: none;';
+  link.onmouseover = () => link.style.textDecoration = 'underline';
+  link.onmouseout = () => link.style.textDecoration = 'none';
+  mediaLinkDiv.appendChild(link);
+}
 
 function showCustomContextMenu(x, y, pres) {
   const existing = document.getElementById('custom-context-menu');
