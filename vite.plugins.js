@@ -88,15 +88,17 @@ function generatePresentationIndex() {
     console.log(`📄 presentations/index.json regenerated`);
 }
 
-module.exports = function presentationIndexPlugin() {
+function presentationIndexPlugin() {
   return {
     name: 'generate-presentation-index',
     buildStart() {
       generatePresentationIndex();
+      generateMediaIndex();
     },
     configureServer(server) {
       copyFonts();
       generatePresentationIndex();
+      generateMediaIndex();
 
      // 👇 Find out if Vite was started with --host (network mode)
     const isNetwork = process.argv.includes('--host');
@@ -135,6 +137,11 @@ module.exports = function presentationIndexPlugin() {
           event: 'reload-presentations',
           data: { slug, mdFile }
         });
+      }
+
+      if (filePath.endsWith('.json') && filePath.includes('_media')) {
+        console.log(`🧩 ${event.toUpperCase()}: Media JSON changed →`, filePath);
+        generateMediaIndex();
       }
     };
 
@@ -249,3 +256,29 @@ function copyRecursiveSync(src, dest) {
     }
   }
 }
+
+function generateMediaIndex() {
+  const mediaDir = path.join(presentationsDir, '_media');
+  if (!fs.existsSync(mediaDir)) return;
+
+  const files = fs.readdirSync(mediaDir).filter(f =>
+    f.endsWith('.json') && f !== 'index.json'
+  );
+
+  const index = {};
+  for (const file of files) {
+    const fullPath = path.join(mediaDir, file);
+    try {
+      const data = JSON.parse(fs.readFileSync(fullPath, 'utf-8'));
+      const key = path.basename(file, '.json');
+      index[key] = data;
+    } catch (e) {
+      console.warn(`⚠️ Failed to parse ${file}: ${e.message}`);
+    }
+  }
+
+  fs.writeFileSync(path.join(mediaDir, 'index.json'), JSON.stringify(index, null, 2));
+  console.log(`📁 _media/index.json updated with ${Object.keys(index).length} entries`);
+}
+
+module.exports = presentationIndexPlugin;
