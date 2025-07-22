@@ -17,10 +17,11 @@ if (import.meta.hot) {
   });
 }
 
-electronAPI?.onShowToast((msg) => {
-  showToast(msg);
-});
-
+if(window.electronAPI) {
+  window.electronAPI.onShowToast((msg) => {
+    showToast(msg);
+  });
+}
 
 fetch(`${url_prefix}/index.json`)
       .then(res => {

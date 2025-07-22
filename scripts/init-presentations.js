@@ -43,6 +43,11 @@ function main(baseDirParameter = false) {
     folderName = `${prefix}${key}`;
     fs.mkdirSync(path.join(baseDir, folderName));
     console.log(`✅ Created presentations folder: ${folderName}`);
+    const mediaFolder = path.join(baseDir, folderName, '_media');
+    if (!fs.existsSync(mediaFolder)) {
+      fs.mkdirSync(mediaFolder, { recursive: true });
+      console.log(`📁 Created _media folder inside ${folderName}`);
+    }
   }
 
   const destReadmePath = path.join(baseDir, folderName, 'readme');
@@ -55,6 +60,7 @@ function main(baseDirParameter = false) {
   } else {
     console.log('ℹ️ Readme folder already exists in target. Skipping copy.');
   }
+  return folderName;
 }
 
 if (require.main === module) {
