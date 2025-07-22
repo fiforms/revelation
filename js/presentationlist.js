@@ -146,6 +146,10 @@ function showCustomContextMenu(x, y, pres) {
       action: () => window.electronAPI.editPresentation(pres.slug, pres.md)
     });
     options.push({
+      label: 'Edit Presentation Metadata',
+      action: () => window.electronAPI.editPresentationMetadata(pres.slug, pres.md)
+    });
+    options.push({
       label: 'Show Presentation Files',
       action: () => window.electronAPI.showPresentationFolder(pres.slug)
     });
