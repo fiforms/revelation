@@ -50,10 +50,10 @@ contextMenu(deck);
 
 deck.on('ready', () => {
   const indices = deck.getIndices();
-  deck.slide(indices.h, indices.v);  // Force refresh of current slide
 
   // Let browser layout settle first
   window.setTimeout(() => {
+    deck.slide(indices.h, indices.v);  // Force refresh of current slide
     document.body.classList.remove('hidden');
     document.body.classList.add('reveal-ready');
   }, 800); // adjust if needed 
