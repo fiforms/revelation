@@ -13,7 +13,9 @@ const excludePatterns = [
   /node_modules\//, /dist\//,
   /package\-lock\.json/,
   /.gitignore/,
-  /\.lock$/, /\.log$/i
+  /\.lock$/, /\.log$/i,
+  /^assets\//,
+  /^http_admin\/.*\.(css|html|js|json)$/, // Electron admin GUI
 ];
 
 // 1. Capture all files from git
