@@ -59,3 +59,7 @@
       z-index: 9999;
     }
 
+    #lightbox-overlay video, #lightbox-overlay img {
+      border-radius: 6px;
+      box-shadow: 0 0 10px #000;
+    }
