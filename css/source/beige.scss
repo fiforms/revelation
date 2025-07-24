@@ -17,4 +17,7 @@
     color: rgb(0,0,0);
 }
 
-
+.reveal figure.captioned-image figcaption {
+    background-color: rgba(0, 0, 0, 0.6);  // tweak for your theme
+    color: #fff;
+}

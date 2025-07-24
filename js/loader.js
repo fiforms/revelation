@@ -119,14 +119,27 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
 
   const magicImageHandlers = {}
   if (!forHandout) {
-    magicImageHandlers.background = (src) => {
+    magicImageHandlers.background = (src, modifier) => {
       const isVideo = /\.(webm|mp4|mov|m4v)$/i.test(src);
       return isVideo
         ? `<!-- .slide: data-background-video="${src}" data-background-video-loop -->`
         : `<!-- .slide: data-background-image="${src}" -->`;
     };
 
-    magicImageHandlers.youtube = (src) => {
+    magicImageHandlers.fit = (src, modifier) => {
+      return `![](${src})<!-- .element data-imagefit -->`;
+    }
+
+   magicImageHandlers.caption = (src, modifier) => {
+     return `
+<figure class="captioned-image">
+  <img src="${src}" alt="">
+  <figcaption>${modifier}</figcaption>
+</figure>
+  `.trim();
+    };
+
+    magicImageHandlers.youtube = (src, modifier) => {
       const match = src.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|watch\?v=))([\w-]+)/);
       const id = match ? match[1] : null;
       return id
@@ -184,13 +197,14 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
       }
     }
 
-    const magicImageMatch = line.match(/^!\[([a-zA-Z0-9_-]+)\]\((.+?)\)$/);
+    const magicImageMatch = line.match(/^!\[([a-zA-Z0-9_-]+)(?::([a-zA-Z0-9_ -]+))?\]\((.+?)\)$/);
     if (magicImageMatch) {
       const keyword = magicImageMatch[1].toLowerCase();
-      const src = magicImageMatch[2];
+      const modifier = magicImageMatch[2]?.trim() || '';
+      const src = magicImageMatch[3];
       const handler = magicImageHandlers[keyword];
       if (handler) {
-        processedLines.push(handler(src));
+        processedLines.push(handler(src, modifier));
         continue;
       }
     }
@@ -230,7 +244,7 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
     }
 
     var autoSlide = false;
-    if(line.match(/^\#/) && !blankslide) {
+    if(line.match(/^#{1,3} (?!#)/) && !blankslide) {
         // Always insert a slide break before a heading
 	      autoSlide = true;
     }
@@ -240,22 +254,22 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
 
     // Inject saved macros and attribution HTML before slide break
     if (autoSlide || line === '---' || line === '***' || line.match(/^[Nn][Oo][Tt][Ee]\:/) || index >= lines.length - 1) {
-      var blankslide = true;
+      var blankslide = !autoSlide;
       if(thismacros.length > 0) {
         lastmacros.length = 0;
         lastmacros.push(...thismacros);
       }
       else {
-	  for (const val of lastmacros) {
-	      const attribMatch = val.match(/^\:ATTRIB\:(.*)$/);
-    	      if(attribMatch) {
-      		attributions.push(attribMatch[1]);
-   	      }
-	      else {
-	        processedLines.push(val);
-	      }
-	  }
-	  processedLines.push('');
+        for (const val of lastmacros) {
+            const attribMatch = val.match(/^\:ATTRIB\:(.*)$/);
+                if(attribMatch) {
+              attributions.push(attribMatch[1]);
+              }
+            else {
+              processedLines.push(val);
+            }
+        }
+        processedLines.push('');
       }
       thismacros.length = 0;
 
@@ -271,14 +285,14 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
       }
 
       if(autoSlide) {
-	if (/^###\s*/.test(line)) {
-	  processedLines.push('---');
-	  processedLines.push('');
-	}
-	else {
-	  processedLines.push('***');
-	  processedLines.push('');
-	}
+        if (/^###\s*/.test(line)) {
+          processedLines.push('---');
+          processedLines.push('');
+        }
+        else {
+          processedLines.push('***');
+          processedLines.push('');
+        }
       }
       processedLines.push(line); // Preserve the slide break itself
       continue;
