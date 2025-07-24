@@ -25,7 +25,7 @@ if (!mdFile) {
       const { metadata, content } = extractFrontMatter(rawMarkdown);
       document.title = metadata.title || "Presentation Handout";
 
-      const processed = preprocessMarkdown(content, metadata.macros || {}, true, metadata.media);
+      const processed = preprocessMarkdown(content, metadata.macros || {}, true, metadata.media, metadata.newSlideOnHeading);
       const slides = processed.split(/\n(?=^(?:\*\*\*|---)$|^#\s)/gm);
       const output = [];
       const incremental = metadata && metadata.config && (metadata.config.slideNumber === 'c' || metadata.config.slideNumber === 'c/t');

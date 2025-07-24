@@ -52,7 +52,7 @@ export async function loadAndPreprocessMarkdown(deck,selectedFile = null) {
         Object.assign(macros, metadata.macros); // User-defined macros from front matter 
       }
 
-      const partProcessedMarkdown = preprocessMarkdown(content, macros, false, metadata.media);
+      const partProcessedMarkdown = preprocessMarkdown(content, macros, false, metadata.media, metadata.newSlideOnHeading);
       const processedMarkdown = metadata.convertSmartQuotes === false ? partProcessedMarkdown : convertSmartQuotes(partProcessedMarkdown);
 
       // Create a temporary element to convert markdown into HTML slides
@@ -101,7 +101,7 @@ export function extractFrontMatter(md) {
   return { metadata: {}, content: md };
 }
 
-export function preprocessMarkdown(md, userMacros = {}, forHandout = false, media = {}) {
+export function preprocessMarkdown(md, userMacros = {}, forHandout = false, media = {}, newSlideOnHeading = true) {
   const lines = md.split('\n');
   const processedLines = [];
   const attributions = [];
@@ -247,7 +247,7 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
     }
 
     var autoSlide = false;
-    if(line.match(/^#{1,3} (?!#)/) && !blankslide) {
+    if(newSlideOnHeading && line.match(/^#{1,3} (?!#)/) && !blankslide) {
         // Always insert a slide break before a heading
 	      autoSlide = true;
     }
