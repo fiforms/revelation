@@ -124,9 +124,15 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
   if (!forHandout) {
     magicImageHandlers.background = (src, modifier) => {
       const isVideo = /\.(webm|mp4|mov|m4v)$/i.test(src);
-      return isVideo
+
+      const tag = isVideo
         ? `<!-- .slide: data-background-video="${src}" data-background-video-loop -->`
         : `<!-- .slide: data-background-image="${src}" -->`;
+      if(modifier === 'sticky') {
+        thismacros.push(tag);
+        lastmacros.length = 0;  // Sticky background resets previous macros
+      }
+      return tag;
     };
 
     magicImageHandlers.fit = (src, modifier) => {
@@ -137,7 +143,7 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
       const match = src.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|watch\?v=))([\w-]+)/);
       const id = match ? match[1] : null;
       return id
-        ? `<iframe width="960" height="540" src="https://www.youtube.com/embed/${id}?autoplay=1&mute=1&loop=1&playlist=${id}" frameborder="0" allowfullscreen></iframe>`
+        ? `<iframe width="960" height="540" src="https://www.youtube.com/embed/${id}?autoplay=0&mute=1&loop=1&playlist=${id}" frameborder="0" allowfullscreen></iframe>`
         : `<!-- Invalid YouTube URL: ${src} -->`;
     };
   }
