@@ -83,6 +83,13 @@ pre code {
   color: #333;
 }
 
+figure.captioned-image figcaption {
+  text-align: center;
+}
+
+figure.captioned-image {
+
+}
 @media print {
   #handout-options {
     display: none !important;

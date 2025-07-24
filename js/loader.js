@@ -130,15 +130,6 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
       return `![](${src})<!-- .element data-imagefit -->`;
     }
 
-   magicImageHandlers.caption = (src, modifier) => {
-     return `
-<figure class="captioned-image">
-  <img src="${src}" alt="">
-  <figcaption>${modifier}</figcaption>
-</figure>
-  `.trim();
-    };
-
     magicImageHandlers.youtube = (src, modifier) => {
       const match = src.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|watch\?v=))([\w-]+)/);
       const id = match ? match[1] : null;
@@ -147,6 +138,15 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
         : `<!-- Invalid YouTube URL: ${src} -->`;
     };
   }
+
+  magicImageHandlers.caption = (src, modifier) => {
+     return `
+<figure class="captioned-image">
+  <img src="${src}" alt="">
+  <figcaption>${modifier}</figcaption>
+</figure>
+  `.trim();
+    };
 
   const totalLines = lines.length;
   var index = -1;
