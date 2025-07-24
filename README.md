@@ -44,7 +44,7 @@ npm run dev         # localhost only
 npm run serve       # LAN-ready with remote control features
 ```
 
-Visit [http://localhost:8000](http://localhost:8000) to access your presentation hub.
+The link to access your presentation hub will show on the terminal.
 
 ### 2. Create a Presentation
 
