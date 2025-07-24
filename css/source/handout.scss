@@ -88,8 +88,9 @@ figure.captioned-image figcaption {
 }
 
 figure.captioned-image {
-
+  margin: 0;
 }
+
 @media print {
   #handout-options {
     display: none !important;
