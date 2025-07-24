@@ -24,6 +24,7 @@ const readmePresDir = path.join(presentationsDir, 'readme');
 const readmePresentationPath = path.join(readmePresDir, 'presentation.md');
 const readmeYamlPath = path.join(readmePresDir, 'header.yaml');
 const projectReadmePath = path.resolve(__dirname, 'README.md');
+const referencePath = path.resolve(__dirname, 'doc/REFERENCE.md');
 
 function getLocalIp() {
   const nets = os.networkInterfaces();
@@ -49,7 +50,12 @@ function generatePresentationIndex() {
       const header = fs.readFileSync(readmeYamlPath, 'utf-8');
       const body = fs.readFileSync(projectReadmePath, 'utf-8');
   
-      const combined = `${header}\n\n${body}`;
+      let combined = `${header}\n\n${body}`;
+      if (fs.existsSync(referencePath)) {
+        const reference = fs.readFileSync(referencePath, 'utf-8');
+        combined += `\n\n***\n\n${reference}`;
+      }
+      
       fs.writeFileSync(readmePresentationPath, combined, 'utf-8');
       console.log(`📝 Regenerated ${readmePresentationPath}`);
     }

@@ -1,28 +1,32 @@
 # REVELation
-**Snapshot Presenter**
 
-This project provides a modular framework for creating beautiful, interactive 
-presentations using [Reveal.js](https://revealjs.com/), enhanced with runtime 
-Markdown loading, theming, media backgrounds, and custom syntax extensions.
+**Snapshot Presenter Framework**
+
+A modular system for building, styling, and presenting 
+Markdown-based [Reveal.js](https://revealjs.com/) slide 
+decks. Easily theme, enhance, and share beautiful 
+presentations — ideal for speakers, teachers, and content 
+creators.
 
 ---
 
-You can find this project's home page on [GitHub](https://github.com/fiforms/revelation)
+REVELation Snapshot Presenter is the easiest way to create 
+and deliver elegant, media-rich presentations using Reveal.js 
+— no web dev skills required. It gets you up and running out 
+of the box with zero config, extended Markdown support, and a 
+simple file-based system. Whether you're a teacher, speaker, or 
+content creator, REVELation helps you focus on your message — 
+not your markup — with features like background videos, reusable 
+macros, and one-command presentation scaffolding. Use it 
+directly (to incorporate into your web development project)
+or download our companion [GUI app](https://github.com/fiforms/revelation-electron-wrapper)
+for a seamless authoring experience.
 
-An online demo is coming soon (hopefully).
+## 🔧 Quick Start
 
-## 🎯 Purpose
+### 1. Install and Launch
 
-This framework is designed to help you:
-
-- Quickly scaffold new Reveal.js presentations from a customizable template
-- Manage and display a collection of presentations via a home portal
-- Enhance Markdown with expressive features like fragments and reusable macros
-- Seamlessly integrate background video, images, and theming using simple conventions
-
-## 🚀 Getting Started
-
-### 1. Clone This Repo
+Clone and install the framework:
 
 ```bash
 git clone https://github.com/fiforms/revelation.git
@@ -30,142 +34,60 @@ cd revelation
 npm install
 ```
 
-### 2. Start the Dev Server
+---
 
-Run for local browser (remote disabled)
+Start the local server:
+
 ```bash
-npm run dev
+npm run dev         # localhost only
+# OR
+npm run serve       # LAN-ready with remote control features
 ```
-Visit [http://localhost:8000](http://localhost:8000) to browse available presentations.
 
-Run for the local network (remote enabled when not connected to localhost)
-```bash
-npm run serve
-```
-Visit http://your.lan.ip.local:8000 to browse available presentations.
+Visit [http://localhost:8000](http://localhost:8000) to access your presentation hub.
 
-
-## 📽️ Creating a New Presentation
-
-1. Use NPM to create a new presentation
+### 2. Create a Presentation
 
 ```bash
 npm run make
 ```
 
-2. Edit your new presentation’s content:
+This will scaffold a new presentation folder under `presentations_<key>/`.
 
-```bash
-presentations/my_presentation/presentation.md
-```
+Edit the `presentation.md` file in your new folder to start creating content.
 
-## ✨ Enhanced Markdown Features 
+## 🎁 Features
 
+* 🧩 **Extended Markdown** — Use YAML frontmatter, slide macros, and attribution tags
+* 🎥 **Media Management** — Simplified media handling compared to native Reveal.js
+* 🧰 **Macros** — Reuse content and slide attributes using `{{macroname}}` calls
+* 📲 **Remote Control** — Keep multiple screens in sync with built-in remote
 
-We support custom extensions to standard Markdown to boost authoring power. Write with ease, as each
-new heading automatically becomes a new slide. Insert a horizontal rule 
+## 📘 Reference
 
-```end
- ---
-```
-
-to manually create breaks for vertical slides, or use 
-
-```end
- ***
-```
-
-to create horizontal ones.
-
-### 1. **YAML Metadata**
-
-Use YAML to define metadata and set styles and macros at the beginning of each markdown file
-
-```end
-
- ---
- title: My Presentation
- description: Some very important information
- author: John Doe
- theme: softblood.css
- thumbnail: thumbnail.webp
- created: 2025-06-24
- ---
+Full documentation of the Markdown features, YAML schema, 
+macros, and layout conventions is available in:
 
 ```
-
-### 2. **Macro Expansion**
-
-You can define macros in YAML
-
-```yaml
- ---
- ...
- macros:
-   fogvideo:  |
-     <!-- .slide: data-background-video="/backgrounds/fog_loop.mp4" 
-          data-background-video-loop -->
-     :ATTRIB:Background video by Jane Doe
-   darkbg: |
-     <!-- .slide: data-darkbg -->
-   morning1: |
-     <!-- .slide: data-background-image="morning.jpg" 
-          data-darkbg -->
-     :ATTRIB:Background Photo by John Smith
- ---
+doc/REFERENCE.md
 ```
+
+## 💻 GUI Application (Recommended)
+
+For easier authoring and media management, install the companion desktop app:
+
+👉 **[REVELation Snapshot Builder](https://github.com/fiforms/revelation-electron-wrapper)**
+*(Cross-platform Electron GUI with presentation manager, editor, and offline export)
 
 ---
 
-Then reuse them anywhere:
-
-```markdown
-{{fogvideo}}
-```
-
-This is great for reusing background media, theming, or attributes across slides.
-The macro call will be replaced inline with the defined HTML comment or other content.
-
-### 3. **Attribution Text**
-
-Attribution text can be added easily to any slide by simply prefixing a line with :ATTRIB:
-
-```markdown
- :ATTRIB:Photo Copyright (c) by Jane Doe
-```
-
-:ATTRIB:This slide was authored by Yours Truly
-
-### 4. **Fragments Using `++`**
-
-Any line ending with ` ++` becomes a [Reveal.js fragment](https://revealjs.com/fragments/):
-
-```markdown
- - Point one ++ 
- - Point two ++ 
-```
-
-Becomes its own animated line in the presentation:
-
-- Point one <!-- .element: class="fragment" -->
-- Point two <!-- .element: class="fragment" -->
 
 
-## 📁 Directory Overview
+This offers:
 
-```
-presentations/           # All presentation folders live here
-templates/               # Templates for new presentations
-assets/backgrounds/      # Shared media assets
-```
-
-## 🛠️ Customizing Further
-
-* You can add your own css styling to each presentation
-* All configuration options of Reveal.js as accessible via the presentation YAML
-* Background images, videos, and styles are all compatible with Reveal’s data-attributes
+* 📁 **Presentation Portal** — Browse and launch all presentations from a central UI
+* 📦 **Export** — Export handouts, offline HTML, or ZIPs for sharing
 
 ## 📜 License
 
-Licensed under an MIT License. You are free to use and redistribute this software
-
+MIT License — Free to use, modify, and distribute. See LICENSE.md for details.
