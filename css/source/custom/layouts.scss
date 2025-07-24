@@ -104,6 +104,35 @@ body.reveal-ready {
     display: none;
   }
 
+  section div.flexcontainer {
+    display: flex; 
+    align-items: center; 
+    gap: 2rem; 
+    height: 100%;
+  }
+
+  section div.flexcontainer div.first {
+    flex: 0 0 50%; 
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  section div.flexcontainer div.second {
+    flex: 1;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  section div.flexcontainer img {
+    max-width: 100%; 
+    height: auto; 
+    object-fit: contain;
+  }
+
   figure.captioned-image {
     display: block;
     position: absolute;
