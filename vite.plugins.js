@@ -3,20 +3,34 @@ const fs = require('fs');
 const path = require('path');
 const matter = require('gray-matter');
 const ip = require('ip');
+const serveStatic = require('serve-static');
+
 const localIp = ip.address(); // Gets the LAN IP
 
 const baseDir = __dirname;
 const prefix = 'presentations_';
 
-const folderName = fs.readdirSync(baseDir).find(name =>
-  fs.statSync(path.join(baseDir, name)).isDirectory() && name.startsWith(prefix)
-);
+let presentationsWebPath = '';
+let presentationsDir = '';
+let key = '';
+let customPath = false;
 
-if (!folderName) throw new Error('No presentations_<key> folder found');
+if(process.env.PRESENTATIONS_DIR_OVERRIDE && process.env.PRESENTATIONS_KEY_OVERRIDE) {
+    presentationsDir = process.env.PRESENTATIONS_DIR_OVERRIDE;
+    key = process.env.PRESENTATIONS_KEY_OVERRIDE;
+    presentationsWebPath = `/${prefix}${key}`;
+    customPath = true;
+}
+else {
+    const folderName = fs.readdirSync(baseDir).find(name =>
+        fs.statSync(path.join(baseDir, name)).isDirectory() && name.startsWith(prefix)
+    );
+    if (!folderName) throw new Error('No presentations folder found');
 
-const presentationsDir = path.join(baseDir, folderName); // full path
-const key = folderName.replace(prefix, '');
-const presentationsWebPath = `/${folderName}`;
+    presentationsDir = path.join(baseDir, folderName); // full path
+    key = folderName.replace(prefix, '');
+    presentationsWebPath = `/${folderName}`;
+}
 
 const outputFile = path.join(presentationsDir, 'index.json');
 
@@ -121,7 +135,7 @@ function presentationIndexPlugin() {
     const path = require('path');
     const fs = require('fs');
 
-    const watcher = chokidar.watch(folderName, {
+    const watcher = chokidar.watch(presentationsDir, {
       ignored: /(^|[/\\])\../, // Ignore dotfiles
       persistent: true,
       ignoreInitial: true,  
@@ -129,11 +143,11 @@ function presentationIndexPlugin() {
     });
 
     const triggerReload = (event, filePath) => {
-      if (filePath.endsWith('.md') && filePath.includes(folderName)) {
+      if (filePath.endsWith('.md') && filePath.includes(presentationsDir)) {
         console.log(`📦 ${event.toUpperCase()}:`, filePath);
         generatePresentationIndex();
         const parts = filePath.split(path.sep);
-        const slugIndex = parts.findIndex(p => p === folderName) + 1;
+        const slugIndex = parts.findIndex(p => p === presentationsDir) + 1;
         const slug = parts[slugIndex]; 
         const mdFile = parts[slugIndex + 1];
 
@@ -167,7 +181,7 @@ function presentationIndexPlugin() {
           server.ws.send({ type: 'full-reload' });
         })
       .on('unlinkDir', dirPath => {
-        if (dirPath.includes(folderName)) {
+        if (dirPath.includes(presentationsDir)) {
           console.log('📁 Folder deleted:', dirPath);
           generatePresentationIndex();
           server.ws.send({ type: 'full-reload' });
@@ -195,9 +209,8 @@ function presentationIndexPlugin() {
 
       // Restrict access to presentation listing from other hosts by default
       server.middlewares.use((req, res, next) => {
-          const restrictedPath = `/${folderName}/index.json`;
 
-          if (req.url === restrictedPath) {
+            if (req.url?.toLowerCase().includes('index.json')) {
             const rawIp = req.socket.remoteAddress;
 
             // Normalize to raw IPv4 if in IPv6-mapped format
@@ -220,12 +233,26 @@ function presentationIndexPlugin() {
           next();
        });
 
+       // Serve presentations from a custom path
+
+       if(customPath && fs.existsSync(presentationsDir)) {
+          console.log(`Serving ${presentationsWebPath} from custom presentations directory ${presentationsDir}`);
+          server.middlewares.use(presentationsWebPath, 
+            serveStatic(
+              presentationsDir,
+              {
+                  index: false,
+                  fallthrough: true,
+              }
+            )
+          );
+        }
+
         // Middleware to serve files from revelation_electron-wrapper/http_admin
         // This allows serving static files from the external folder
 
         const adminDir = path.resolve(__dirname, '../http_admin');
         if (fs.existsSync(adminDir)) {
-          const serveStatic = require('serve-static');
           server.middlewares.use(
             '/admin',
             serveStatic(adminDir, {

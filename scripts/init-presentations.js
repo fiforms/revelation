@@ -28,14 +28,18 @@ function copyRecursiveSync(src, dest) {
   }
 }
 
-function main(baseDirParameter = false) {
+function main(baseDirParameter = false, folderNameParameter = false) {
   let baseDir = baseDirParameter;
   if(baseDir === false) {
     baseDir = path.resolve(__dirname, '..');
   }
-  const templateReadme = path.join(baseDir, 'templates', 'readme');
-  let folderName = getExistingPresentationFolder(baseDir);
-
+  const templateReadme = path.join(__dirname,'..', 'templates', 'readme');
+  let folderName = folderNameParameter;
+  
+  if(!folderName) {
+    folderName = getExistingPresentationFolder(baseDir);
+  }
+  
   if (folderName) {
     console.log(`📁 Presentations folder exists: ${folderName}`);
   } else {
