@@ -9,6 +9,7 @@ const outputFile = process.argv[2] || 'relevant_files_for_llm.txt';
 const excludePatterns = [
   /\.jpg$/i, /\.jpeg$/i, /\.png$/i, /\.gif$/i, /\.webp/,
   /\.webm$/i, /\.mp4$/i, /\.ico$/i,
+  /README\.md$/i,
   /\.sass$/i, /\.scss$/i,
   /node_modules\//, /dist\//,
   /package\-lock\.json/,
