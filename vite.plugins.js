@@ -146,12 +146,10 @@ function presentationIndexPlugin() {
       if (filePath.endsWith('.md') && filePath.includes(presentationsDir)) {
         console.log(`📦 ${event.toUpperCase()}:`, filePath);
         generatePresentationIndex();
-        const parts = filePath.split(path.sep);
-        const slugIndex = parts.findIndex(p => p === presentationsDir) + 1;
-        const slug = parts[slugIndex]; 
-        const mdFile = parts[slugIndex + 1];
+        mdFile = path.basename(filePath);
+        slug = path.basename(path.dirname(filePath));
 
-        console.log('Triggering reload-presentations');
+        console.log(`Triggering reload-presentations for slug: ${slug}, md: ${mdFile}`);
         server.ws.send({
           type: 'custom',
           event: 'reload-presentations',
