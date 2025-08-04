@@ -151,7 +151,7 @@ function presentationIndexPlugin() {
         const slug = parts[slugIndex]; 
         const mdFile = parts[slugIndex + 1];
 
-
+        console.log('Triggering reload-presentations');
         server.ws.send({
           type: 'custom',
           event: 'reload-presentations',
@@ -176,14 +176,20 @@ function presentationIndexPlugin() {
       .on('change', filePath => triggerReload('change', filePath))
       .on('unlink', filePath => triggerReload('unlink', filePath))
       .on('addDir', dirPath => {
-	  console.log('📁 Folder added:', dirPath);
+        // This code not needed as the creation of the .md file also triggers
+        // and sets up a race condition
+        /*
+	        console.log('📁 Folder added:', dirPath);
           generatePresentationIndex();
+          console.log('Triggering full-reload');
           server.ws.send({ type: 'full-reload' });
+        */
         })
       .on('unlinkDir', dirPath => {
         if (dirPath.includes(presentationsDir)) {
           console.log('📁 Folder deleted:', dirPath);
           generatePresentationIndex();
+          console.log('Triggering full-reload');
           server.ws.send({ type: 'full-reload' });
         }
       });

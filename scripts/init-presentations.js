@@ -40,11 +40,11 @@ function main(baseDirParameter = false, folderNameParameter = false) {
     folderName = getExistingPresentationFolder(baseDir);
   }
   
-  if (folderName) {
+  if (folderName && fs.existsSync(folderName)) {
     console.log(`📁 Presentations folder exists: ${folderName}`);
   } else {
     const key = generateKey();
-    folderName = `${prefix}${key}`;
+    folderName = folderNameParameter ? folderNameParameter : `${prefix}${key}`;
     fs.mkdirSync(path.join(baseDir, folderName));
     console.log(`✅ Created presentations folder: ${folderName}`);
     const mediaFolder = path.join(baseDir, folderName, '_media');
