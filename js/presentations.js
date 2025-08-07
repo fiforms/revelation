@@ -31,6 +31,8 @@ for (const plugin of Object.values(window.RevelationPlugins)) {
   }
 }
 
+console.log(plugins);
+
 const deck = new Reveal({
   plugins,
   ...((isRemote && window.revealRemoteServer) && {
