@@ -14,12 +14,16 @@ let presentationsWebPath = '';
 let presentationsDir = '';
 let key = '';
 let customPath = false;
+let pluginsDir = '';
+let pluginsWebPath = '';
 
 if(process.env.PRESENTATIONS_DIR_OVERRIDE && process.env.PRESENTATIONS_KEY_OVERRIDE) {
     presentationsDir = process.env.PRESENTATIONS_DIR_OVERRIDE;
     key = process.env.PRESENTATIONS_KEY_OVERRIDE;
     presentationsWebPath = `/${prefix}${key}`;
     customPath = true;
+    pluginsDir = path.resolve(__dirname,'..','plugins');
+    pluginsWebPath = `/plugins_${key}`
 }
 else {
     const folderName = fs.readdirSync(baseDir).find(name =>
@@ -250,6 +254,12 @@ function presentationIndexPlugin() {
               }
             )
           );
+          if(fs.existsSync(pluginsDir)) {
+            console.log(`Serving ${pluginsWebPath} from plugins directory ${pluginsDir}`);
+            server.middlewares.use(pluginsWebPath, 
+              serveStatic(pluginsDir,{})
+            );
+          }
         }
 
         // Middleware to serve files from revelation_electron-wrapper/http_admin

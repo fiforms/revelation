@@ -4,6 +4,7 @@ const url_key = urlParams.get('key');
 const url_prefix = `/presentations_${url_key}`;
 
 const container = document.getElementById('presentation-list');
+let globalPlugins = null;
 
 if(!url_key) {
     container.innerHTML = 'No key specified, unable to load presentation list';
@@ -21,6 +22,26 @@ if(window.electronAPI) {
   window.electronAPI.onShowToast((msg) => {
     showToast(msg);
   });
+
+  // Register electronAPI Plugins
+  window.electronAPI.getPluginList().then(pluginList => {
+    globalPlugins = pluginList;
+
+    // Loop over plugins
+    for (const [name, plugin] of Object.entries(globalPlugins)) {
+      if (plugin.baseURL && plugin.clientHookJS) {
+        const scriptURL = `${plugin.baseURL}/${plugin.clientHookJS}`;
+        const script = document.createElement('script');
+        script.src = scriptURL;
+        script.type = 'text/javascript';
+        script.async = true;
+        script.onload = () => console.log(`✅ Plugin loaded: ${name}`);
+        script.onerror = () => window.alert(`❌ Failed to load plugin: ${name} (${scriptURL})`);
+        document.head.appendChild(script);
+      }
+    }
+  });  
+
 }
 
 fetch(`${url_prefix}/index.json`)
