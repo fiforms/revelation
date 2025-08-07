@@ -11,7 +11,7 @@ import { contextMenu } from './contextmenu.js';
 import { pluginLoader } from './pluginloader.js';
 
 
-pluginLoader('presentations');
+await pluginLoader('presentations');
 
 const isRemote = window.location.protocol !== 'file:' &&
                  !['localhost', '127.0.0.1'].includes(window.location.hostname);
@@ -20,6 +20,15 @@ const isRemote = window.location.protocol !== 'file:' &&
 const plugins = [Markdown, Notes, Zoom, Search];
 if (isRemote) {
   plugins.push(RevealRemote);
+}
+
+for (const plugin of Object.values(window.RevelationPlugins)) {
+  if (typeof plugin.getRevealPlugins === 'function') {
+    const revealPlugins = await plugin.getRevealPlugins(isRemote);
+    if (Array.isArray(revealPlugins)) {
+      plugins.push(...revealPlugins);
+    }
+  }
 }
 
 const deck = new Reveal({

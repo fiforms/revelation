@@ -195,7 +195,7 @@ function showCustomContextMenu(x, y, pres) {
 
   for (const plugin of Object.values(window.RevelationPlugins)) {
     if (typeof plugin.getListMenuItems === 'function') {
-      const menuItems = plugin.getListMenuItems();
+      const menuItems = plugin.getListMenuItems(pres);
       if (Array.isArray(menuItems)) {
         options.push(...menuItems);
       }

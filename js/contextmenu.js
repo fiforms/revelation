@@ -40,8 +40,7 @@ export function contextMenu(deck) {
           { label: 'Toggle Remote Control Link (r)', action: () => fireRevealKey('r') }
 	  ] : []),
         { label: deck.isOverview() ? 'Close Overview (ESC)' : 'Overview (ESC)', action: () => deck.toggleOverview() },
-        { label: deck.isPaused() ? 'Unpause/Unblank (b)' : 'Pause/Blank (b)', action: () => deck.togglePause() },
-        { label: 'Close Presentation', action: () => closePresentation() }
+        { label: deck.isPaused() ? 'Unpause/Unblank (b)' : 'Pause/Blank (b)', action: () => deck.togglePause() }
       ];
 
       if (e.target.tagName === 'A' && e.target.href) {
@@ -67,15 +66,17 @@ export function contextMenu(deck) {
         );
       }
 
-
       for (const plugin of Object.values(window.RevelationPlugins)) {
         if (typeof plugin.getPresentationMenuItems === 'function') {
-          const menuItems = plugin.getPresentationMenuItems();
+          const menuItems = plugin.getPresentationMenuItems(deck);
           if (Array.isArray(menuItems)) {
             items.push(...menuItems);
           }
         }
       }
+
+      items.push({ label: 'Close Presentation', action: () => closePresentation() });
+
 
       items.forEach(({ label, action }) => {
         const item = document.createElement('div');
