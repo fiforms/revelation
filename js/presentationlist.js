@@ -1,10 +1,10 @@
+import { pluginLoader } from './pluginloader.js';
 
 const urlParams = new URLSearchParams(window.location.search);
 const url_key = urlParams.get('key');
 const url_prefix = `/presentations_${url_key}`;
 
 const container = document.getElementById('presentation-list');
-let globalPlugins = null;
 
 if(!url_key) {
     container.innerHTML = 'No key specified, unable to load presentation list';
@@ -22,27 +22,9 @@ if(window.electronAPI) {
   window.electronAPI.onShowToast((msg) => {
     showToast(msg);
   });
-
-  // Register electronAPI Plugins
-  window.electronAPI.getPluginList().then(pluginList => {
-    globalPlugins = pluginList;
-
-    // Loop over plugins
-    for (const [name, plugin] of Object.entries(globalPlugins)) {
-      if (plugin.baseURL && plugin.clientHookJS) {
-        const scriptURL = `${plugin.baseURL}/${plugin.clientHookJS}`;
-        const script = document.createElement('script');
-        script.src = scriptURL;
-        script.type = 'text/javascript';
-        script.async = true;
-        script.onload = () => console.log(`✅ Plugin loaded: ${name}`);
-        script.onerror = () => window.alert(`❌ Failed to load plugin: ${name} (${scriptURL})`);
-        document.head.appendChild(script);
-      }
-    }
-  });  
-
 }
+
+pluginLoader('presentationlist');
 
 fetch(`${url_prefix}/index.json`)
       .then(res => {
@@ -127,28 +109,28 @@ function showCustomContextMenu(x, y, pres) {
 
   const menu = document.createElement('div');
   menu.id = 'custom-context-menu';
-const menuWidth = 220;
-const menuHeight = 240; // Estimate or measure depending on items
+  const menuWidth = 220;
+  const menuHeight = 240; // Estimate or measure depending on items
 
-const maxLeft = window.innerWidth - menuWidth - 10;
-const maxTop = window.innerHeight - menuHeight - 10;
+  const maxLeft = window.innerWidth - menuWidth - 10;
+  const maxTop = window.innerHeight - menuHeight - 10;
 
-const clampedX = Math.min(x, maxLeft);
-const clampedY = Math.min(y, maxTop);
+  const clampedX = Math.min(x, maxLeft);
+  const clampedY = Math.min(y, maxTop);
 
-menu.style = `
-  position: absolute;
-  top: ${clampedY}px;
-  left: ${clampedX}px;
-  background: #222;
-  border: 1px solid #555;
-  border-radius: 8px;
-  color: white;
-  z-index: 9999;
-  font-family: sans-serif;
-  min-width: ${menuWidth}px;
-  box-shadow: 0 0 10px #000;
-`;
+  menu.style = `
+    position: absolute;
+    top: ${clampedY}px;
+    left: ${clampedX}px;
+    background: #222;
+    border: 1px solid #555;
+    border-radius: 8px;
+    color: white;
+    z-index: 9999;
+    font-family: sans-serif;
+    min-width: ${menuWidth}px;
+    box-shadow: 0 0 10px #000;
+  `;
 
   const target = window.electronAPI?.editPresentation ? 'Window' : 'Tab';
   const options = [
@@ -210,6 +192,15 @@ menu.style = `
     label: 'Export as PDF',
     action: () => exportPDF(pres.slug, pres.md)
   });
+
+  for (const plugin of Object.values(window.RevelationPlugins)) {
+    if (typeof plugin.getListMenuItems === 'function') {
+      const menuItems = plugin.getListMenuItems();
+      if (Array.isArray(menuItems)) {
+        options.push(...menuItems);
+      }
+    }
+  }
 
 
   for (const opt of options) {

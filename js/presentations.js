@@ -8,6 +8,10 @@ import RevealRemote from 'reveal.js-remote/plugin/remote.js';
 import { loadAndPreprocessMarkdown } from './loader.js';
 import { revealTweaks } from './tweaks.js';
 import { contextMenu } from './contextmenu.js';
+import { pluginLoader } from './pluginloader.js';
+
+
+pluginLoader('presentations');
 
 const isRemote = window.location.protocol !== 'file:' &&
                  !['localhost', '127.0.0.1'].includes(window.location.hostname);

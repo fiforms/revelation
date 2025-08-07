@@ -68,6 +68,15 @@ export function contextMenu(deck) {
       }
 
 
+      for (const plugin of Object.values(window.RevelationPlugins)) {
+        if (typeof plugin.getPresentationMenuItems === 'function') {
+          const menuItems = plugin.getPresentationMenuItems();
+          if (Array.isArray(menuItems)) {
+            items.push(...menuItems);
+          }
+        }
+      }
+
       items.forEach(({ label, action }) => {
         const item = document.createElement('div');
         item.textContent = label;
