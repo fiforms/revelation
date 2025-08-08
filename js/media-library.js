@@ -3,6 +3,8 @@ const urlParams = new URLSearchParams(window.location.search);
 const url_key = urlParams.get('key');
 let mediaInfo = {};
 
+import { pluginLoader } from './pluginloader.js';  
+
 const backLink = document.getElementById('back-link');
 if (url_key) {
   const a = document.createElement('a');
@@ -21,6 +23,8 @@ if (import.meta.hot) {
     location.reload();
   });
 }
+
+pluginLoader('media-library');
 
 fetch(`/presentations_${url_key}/_media/index.json`)
   .then(res => res.json())
@@ -128,13 +132,11 @@ function clickToView(e) {
 
 
 function showMediaContextMenu(x, y, item) {
-  console.log(item);
   const existing = document.getElementById('media-context-menu');
   if (existing) existing.remove();
 
   const menu = document.createElement('div');
   menu.id = 'media-context-menu';
-
   menu.style = `
     position: absolute;
     top: ${y}px;
@@ -149,33 +151,49 @@ function showMediaContextMenu(x, y, item) {
     box-shadow: 0 0 10px #000;
   `;
 
-  const itemEl = document.createElement('div');
-  itemEl.textContent = '📋 Copy YAML';
-  itemEl.style = 'padding: 0.5rem 1rem; cursor: pointer;';
-  itemEl.onmouseover = () => itemEl.style.background = '#444';
-  itemEl.onmouseout = () => itemEl.style.background = 'transparent';
-  itemEl.onclick = () => {
-    const yaml = generateYAML(item);
-    fallbackCopyText(yaml)
-    menu.remove();
-  };
+  const options = [
+    {
+      label: '📋 Copy YAML',
+      action: () => {
+        fallbackCopyText(generateYAML(item));
+        menu.remove();
+      }
+    },
+    {
+      label: '📋 Copy Markdown',
+      action: () => {
+        fallbackCopyText(generateMD(item));
+        menu.remove();
+      }
+    }
+  ];
 
-  menu.appendChild(itemEl);
+  // 🔌 Inject plugin menu items
+  const plugins = Object.entries(window.RevelationPlugins || {})
+    .map(([name, plugin]) => ({ name, plugin, priority: plugin.priority || 100 }))
+    .sort((a, b) => a.priority - b.priority);
 
-  const itemEl2 = document.createElement('div');
-  itemEl2.textContent = '📋 Copy Markdown';
-  itemEl2.style = 'padding: 0.5rem 1rem; cursor: pointer;';
-  itemEl2.onmouseover = () => itemEl2.style.background = '#444';
-  itemEl2.onmouseout = () => itemEl2.style.background = 'transparent';
-  itemEl2.onclick = () => {
-    const yaml = generateMD(item);
-    fallbackCopyText(yaml)
-    menu.remove();
-  };
+  for (const { plugin } of plugins) {
+    if (typeof plugin.getMediaMenuItems === 'function') {
+      const items = plugin.getMediaMenuItems(item);
+      if (Array.isArray(items)) options.push(...items);
+    }
+  }
 
-  menu.appendChild(itemEl2);
+  for (const opt of options) {
+    const el = document.createElement('div');
+    el.textContent = opt.label;
+    el.style = 'padding: 0.5rem 1rem; cursor: pointer;';
+    el.onmouseover = () => el.style.background = '#444';
+    el.onmouseout = () => el.style.background = 'transparent';
+    el.onclick = () => {
+      opt.action();
+      menu.remove();
+    };
+    menu.appendChild(el);
+  }
+
   document.body.appendChild(menu);
-
   document.addEventListener('click', () => menu.remove(), { once: true });
 }
 
