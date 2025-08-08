@@ -66,7 +66,16 @@ export function contextMenu(deck) {
         );
       }
 
-      for (const plugin of Object.values(window.RevelationPlugins)) {
+      const plugins = Object.entries(window.RevelationPlugins)
+        .map(([name, plugin]) => ({
+          name,
+          plugin,
+          priority: plugin.priority
+        }))
+        .sort((a, b) => a.priority - b.priority);  // Ascending = high priority first
+
+
+      for (const { plugin } of plugins) {
         if (typeof plugin.getPresentationMenuItems === 'function') {
           const menuItems = plugin.getPresentationMenuItems(deck);
           if (Array.isArray(menuItems)) {
