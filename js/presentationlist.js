@@ -193,7 +193,15 @@ function showCustomContextMenu(x, y, pres) {
     action: () => exportPDF(pres.slug, pres.md)
   });
 
-  for (const plugin of Object.values(window.RevelationPlugins)) {
+  const plugins = Object.entries(window.RevelationPlugins)
+    .map(([name, plugin]) => ({
+      name,
+      plugin,
+      priority: plugin.priority
+    }))
+    .sort((a, b) => a.priority - b.priority);  // Ascending = high priority first
+
+  for (const { plugin } of plugins) {
     if (typeof plugin.getListMenuItems === 'function') {
       const menuItems = plugin.getListMenuItems(pres);
       if (Array.isArray(menuItems)) {
