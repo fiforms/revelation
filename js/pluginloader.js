@@ -25,7 +25,7 @@ export function pluginLoader(page) {
             ) {
               const pluginModule = window.RevelationPlugins[name];
               if (typeof pluginModule.init === 'function') {
-                pluginModule.init({ pluginName: name, baseURL: plugin.baseURL, page: page });
+                pluginModule.init({ pluginName: name, baseURL: plugin.baseURL, page: page, config: plugin.config });
               }
               window.RevelationPlugins[name].priority = plugin.priority;
               console.log(`✅ Plugin '${name}' loaded`);
