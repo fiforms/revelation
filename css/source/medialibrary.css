@@ -1,0 +1,78 @@
+    body {
+      font-family: system-ui, sans-serif;
+      background-color: #111;
+      color: #f4f4f4;
+      padding: 2rem;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    .media-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 1.5rem;
+    }
+    .media-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        gap: 1.5rem;
+    }
+    .media-card {
+      background: #222;
+      border: 1px solid #444;
+      border-radius: 8px;
+      padding: 1rem;
+      box-shadow: 0 0 6px rgba(0,0,0,0.5);
+      display: flex;
+      flex-direction: column;
+      min-height: 300px;
+    }
+
+    .media-thumb-wrapper {
+        flex: 0 0 160px; /* fixed space for thumbnails */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .media-thumb-wrapper img {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain; /* avoid cropping */
+        border-radius: 4px;
+    }
+
+    .media-title {
+        font-weight: 700;
+        font-size: 1.05rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .media-card .title {
+      font-weight: bold;
+      font-size: 1.1rem;
+    }
+    .media-card .meta {
+      font-size: 0.9rem;
+      color: #ccc;
+    }
+    .media-card div {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .media-card div small {
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    #mlightbox-content img {
+        max-width: 90vw;
+        max-height: 90vh;
+        height: auto;
+        width: auto;
+    }
