@@ -178,25 +178,75 @@ export function initMediaLibrary(container, {
 function openPreview(item, index = null) {
   if (index !== null) currentIndex = index;
   lbContent.innerHTML = '';
+
+  const figure = document.createElement('figure');
+  figure.style.maxWidth = '90vw';
+  figure.style.maxHeight = '90vh';
+  figure.style.display = 'flex';
+  figure.style.flexDirection = 'column';
+  figure.style.alignItems = 'center';
+  figure.style.gap = '1rem';
+
+  // Media element
+  let mediaEl;
   const full = `/presentations_${state.key}/_media/${item.hashed_filename}`;
   if (item.mediatype === 'video') {
-    const v = document.createElement('video');
-    v.src = full; v.controls = true; v.autoplay = true;
-    v.style.maxWidth = '90vw'; v.style.maxHeight = '90vh';
-    lbContent.appendChild(v);
+    mediaEl = document.createElement('video');
+    mediaEl.src = full;
+    mediaEl.controls = true;
+    mediaEl.autoplay = true;
+    mediaEl.style.maxWidth = '100%';
+    mediaEl.style.maxHeight = '70vh';
   } else {
-    const img = document.createElement('img');
-    img.src = full;
-    img.style.maxWidth = '90vw'; img.style.maxHeight = '90vh';
-    lbContent.appendChild(img);
+    mediaEl = document.createElement('img');
+    mediaEl.src = full;
+    mediaEl.style.maxWidth = '100%';
+    mediaEl.style.maxHeight = '70vh';
   }
+
+  // Right-click in lightbox
+  mediaEl.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    showContextMenu(e.pageX, e.pageY, item);
+  });
+
+  // Metadata panel
+  const caption = document.createElement('figcaption');
+  caption.style = `
+    color: #ddd;
+    font-size: 0.95rem;
+    text-align: left;
+    max-width: 100%;
+    width: 100%;
+    background: rgba(0,0,0,0.6);
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
+    box-sizing: border-box;
+  `;
+  caption.innerHTML = `
+    <div style="font-weight: 700; font-size: 1.05rem; margin-bottom: .3rem;">
+      ${item.title || item.original_filename}
+    </div>
+    ${item.description ? `<div>${item.description}</div>` : ''}
+    <div style="font-size: .85rem; opacity: .8; margin-top: .3rem;">
+      <div>File: ${item.original_filename}</div>
+      ${item.copyright ? `<div>© ${item.copyright}</div>` : ''}
+      ${item.url ? `<div>URL: <a href="${item.url}" target="_blank" style="color:#4da6ff">${item.url}</a></div>` : ''}
+    </div>
+  `;
+
+  figure.appendChild(mediaEl);
+  figure.appendChild(caption);
+  lbContent.appendChild(figure);
+
+  lightbox.style.display = 'flex';
+
   // Right-click context menu in lightbox
   lbContent.firstChild.addEventListener('contextmenu', (e) => {
     e.preventDefault();
     showContextMenu(e.pageX, e.pageY, item);
   });
 
-  lightbox.style.display = 'flex';
 }
 
 
@@ -211,7 +261,7 @@ function openPreview(item, index = null) {
       border-radius:8px;color:white;z-index:9999;font-family:sans-serif;min-width:240px;
       box-shadow:0 0 10px #000;
     `;
-    
+
     const padding = 10;
     if (x + 240 > window.innerWidth) x = window.innerWidth - 240 - padding;
     if (y + menu.offsetHeight > window.innerHeight) y = window.innerHeight - menu.offsetHeight - padding;
