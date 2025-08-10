@@ -190,6 +190,12 @@ function openPreview(item, index = null) {
     img.style.maxWidth = '90vw'; img.style.maxHeight = '90vh';
     lbContent.appendChild(img);
   }
+  // Right-click context menu in lightbox
+  lbContent.firstChild.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    showContextMenu(e.pageX, e.pageY, item);
+  });
+
   lightbox.style.display = 'flex';
 }
 
@@ -201,10 +207,17 @@ function openPreview(item, index = null) {
     const menu = document.createElement('div');
     menu.id = 'media-context-menu';
     menu.style = `
-      position:absolute;top:${y}px;left:${x}px;background:#222;border:1px solid #555;
+      position:absolute;background:#222;border:1px solid #555;
       border-radius:8px;color:white;z-index:9999;font-family:sans-serif;min-width:240px;
       box-shadow:0 0 10px #000;
     `;
+    
+    const padding = 10;
+    if (x + 240 > window.innerWidth) x = window.innerWidth - 240 - padding;
+    if (y + menu.offsetHeight > window.innerHeight) y = window.innerHeight - menu.offsetHeight - padding;
+
+    menu.style.left = `${x}px`;
+    menu.style.top = `${y}px`;
 
     const options = [
       { label: '📋 Copy YAML', action: () => fallbackCopyText(generateYAML(item)) },
