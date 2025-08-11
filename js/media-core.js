@@ -210,30 +210,34 @@ function openPreview(item, index = null) {
     showContextMenu(e.pageX, e.pageY, item);
   });
 
-  // Metadata panel
-  const caption = document.createElement('figcaption');
-  caption.style = `
-    color: #ddd;
-    font-size: 0.95rem;
-    text-align: left;
-    max-width: 100%;
-    width: 100%;
-    background: rgba(0,0,0,0.6);
-    padding: 0.75rem 1rem;
-    border-radius: 6px;
-    box-sizing: border-box;
-  `;
-  caption.innerHTML = `
-    <div style="font-weight: 700; font-size: 1.05rem; margin-bottom: .3rem;">
-      ${item.title || item.original_filename}
-    </div>
-    ${item.description ? `<div>${item.description}</div>` : ''}
-    <div style="font-size: .85rem; opacity: .8; margin-top: .3rem;">
-      <div>File: ${item.original_filename}</div>
-      ${item.copyright ? `<div>© ${item.copyright}</div>` : ''}
-      ${item.url ? `<div>URL: <a href="${item.url}" target="_blank" style="color:#4da6ff">${item.url}</a></div>` : ''}
-    </div>
-  `;
+// Metadata panel
+const caption = document.createElement('figcaption');
+caption.style = `
+  color: #ddd;
+  font-size: 0.95rem;
+  text-align: left;
+  max-width: 100%;
+  width: 100%;
+  background: rgba(0,0,0,0.6);
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  box-sizing: border-box;
+`;
+caption.innerHTML = `
+  <div style="font-weight: 700; font-size: 1.05rem; margin-bottom: .3rem;">
+    ${item.title || item.original_filename}
+  </div>
+  ${item.description ? `<div>${item.description}</div>` : ''}
+  ${item.keywords ? `<div><strong>Keywords:</strong> ${item.keywords}</div>` : ''}
+  ${item.license ? `<div><strong>License:</strong> ${item.license}</div>` : ''}
+  <div style="font-size: .85rem; opacity: .8; margin-top: .3rem;">
+    <div>File: ${item.original_filename}</div>
+    ${item.attribution ? `<div>© ${item.attribution}</div>` : ''}
+    ${item.url_origin ? `<div>Origin: <a href="${item.url_origin}" target="_blank" style="color:#4da6ff">${item.url_origin}</a></div>` : ''}
+    ${item.url_library ? `<div>Library: <a href="${item.url_library}" target="_blank" style="color:#4da6ff">${item.url_library}</a></div>` : ''}
+    ${item.url_direct ? `<div>Direct Download: <a href="${item.url_direct}" target="_blank" style="color:#4da6ff">${item.url_direct}</a></div>` : ''}
+  </div>
+`;
 
   figure.appendChild(mediaEl);
   figure.appendChild(caption);
