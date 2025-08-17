@@ -200,8 +200,8 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
         const resolvedSrc = `../_media/${item.filename}`;
         line = line.replace(/\((media:[a-zA-Z0-9_-]+)\)/, `(${resolvedSrc})`);
         line = line.replace(/\"(media:[a-zA-Z0-9_-]+)\"/, `"${resolvedSrc}"`);
-        if (item.copyright) {
-          attributions.push(item.copyright);
+        if (item.attribution) {
+          attributions.push(`© ${item.attribution} (${item.license})`); // Add media attribution
         }
       }
     }
