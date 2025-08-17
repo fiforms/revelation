@@ -41,7 +41,7 @@ if (fs.existsSync(serverPath)) {
       /app\.use\(prefix \+ "_remote\/", express\.static\(__dirname \+ "\/static"\)\);/,
       `app.use(prefix + "_remote/ui/", express.static(path.resolve(__dirname, "../server-ui")));`
     );
-
+/*
     // Replace single app.get(prefix...) with full folder-routing logic
     content = content.replace(
       /app\.get\(prefix, \(_req, res\) => index\(res, args\.presentationpath\)\);/,
@@ -64,7 +64,7 @@ app.get(prefix + '*', (req, res, next) => {
   });
 });`
     );
-
+*/
     fs.writeFileSync(serverPath, content, 'utf8');
     console.log('✅ Patched server/index.js for reveal.js-remote UI and folder routing.');
   }
