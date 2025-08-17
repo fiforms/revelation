@@ -312,8 +312,13 @@ caption.innerHTML = `
     filename: ${item.hashed_filename}
     title: ${item.title || ''}
     description: ${item.description || ''}
-    copyright: ${item.copyright || ''}
-    url: ${item.url || ''}`;
+    attribution: ${item.attribution || ''}
+    license: ${item.license || ''}
+    url_origin: ${item.url_origin || ''}
+    url_library: ${item.url_library || ''}
+    url_direct: ${item.url_direct || ''}
+    mediatype: ${item.mediatype || ''}
+    keywords: ${item.keywords || ''}`;
   }
   function generateMD(item) {
     return `![](media:${generateTag(item)})`;
