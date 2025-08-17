@@ -122,7 +122,7 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
 
   const magicImageHandlers = {}
   if (!forHandout) {
-    magicImageHandlers.background = (src, modifier) => {
+    magicImageHandlers.background = (src, modifier, attribution) => {
       const isVideo = /\.(webm|mp4|mov|m4v)$/i.test(src);
 
       const tag = isVideo
@@ -130,16 +130,19 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
         : `<!-- .slide: data-background-image="${src}" -->`;
       if(modifier === 'sticky') {
         thismacros.push(tag);
+        if(attribution) {
+          thismacros.push(`:ATTRIB:${attribution}`);
+        }
         lastmacros.length = 0;  // Sticky background resets previous macros
       }
       return tag;
     };
 
-    magicImageHandlers.fit = (src, modifier) => {
+    magicImageHandlers.fit = (src, modifier, attribution) => {
       return `![](${src})<!-- .element data-imagefit -->`;
     }
 
-    magicImageHandlers.youtube = (src, modifier) => {
+    magicImageHandlers.youtube = (src, modifier, attribution) => {
       const match = src.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|watch\?v=))([\w-]+)/);
       const id = match ? match[1] : null;
       return id
@@ -148,7 +151,7 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
     };
   }
 
-  magicImageHandlers.caption = (src, modifier) => {
+  magicImageHandlers.caption = (src, modifier, attribution) => {
      return `
 <figure class="captioned-image">
   <img src="${src}" alt="">
@@ -193,6 +196,7 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
     }
 
     const mediaAliasMatch = line.match(/[\(\"]media:([a-zA-Z0-9_-]+)[\)\"]/);
+    let lastattribution = null;
     if (mediaAliasMatch && media) {
       const alias = mediaAliasMatch[1];
       const item = media[alias];
@@ -201,7 +205,8 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
         line = line.replace(/\((media:[a-zA-Z0-9_-]+)\)/, `(${resolvedSrc})`);
         line = line.replace(/\"(media:[a-zA-Z0-9_-]+)\"/, `"${resolvedSrc}"`);
         if (item.attribution) {
-          attributions.push(`© ${item.attribution} (${item.license})`); // Add media attribution
+          lastattribution = `© ${item.attribution} (${item.license})`;
+          attributions.push(lastattribution); // Add media attribution
         }
       }
     }
@@ -213,7 +218,7 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
       const src = magicImageMatch[3];
       const handler = magicImageHandlers[keyword];
       if (handler) {
-        processedLines.push(handler(src, modifier));
+        processedLines.push(handler(src, modifier, lastattribution));
         continue;
       }
     }
