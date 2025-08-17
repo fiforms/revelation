@@ -24,7 +24,7 @@ if(window.electronAPI) {
   });
 }
 
-pluginLoader('presentationlist');
+pluginLoader('presentationlist',`/plugins_${url_key}`);
 
 fetch(`${url_prefix}/index.json`)
       .then(res => {

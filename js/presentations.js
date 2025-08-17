@@ -10,8 +10,10 @@ import { revealTweaks } from './tweaks.js';
 import { contextMenu } from './contextmenu.js';
 import { pluginLoader } from './pluginloader.js';
 
+const match = window.location.pathname.match(/presentations_([^/]+)/);
+let key = match ? match[1] : null;
 
-await pluginLoader('presentations');
+await pluginLoader('presentations',`/plugins_${key}`);
 
 const isRemote = window.location.protocol !== 'file:' &&
                  !['localhost', '127.0.0.1'].includes(window.location.hostname);
@@ -30,8 +32,6 @@ for (const plugin of Object.values(window.RevelationPlugins)) {
     }
   }
 }
-
-console.log(plugins);
 
 const deck = new Reveal({
   plugins,

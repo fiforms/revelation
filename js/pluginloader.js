@@ -1,11 +1,31 @@
-export function pluginLoader(page) {
+export function pluginLoader(page, prefix) {
   window.RevelationPlugins = {};
 
-  if (!window.electronAPI) {
-    return Promise.resolve(1);
+  if (window.electronAPI && window.electronAPI.getPluginList) {
+    // Use Electron API
+    return window.electronAPI.getPluginList().then(pluginList => {
+      return handlePluginList(pluginList, page);
+    });
+  } else {
+    // Fallback: fetch from server
+    return fetch(`${prefix}/plugins.json`)
+      .then(res => {
+        if (!res.ok) {
+          throw new Error(`Server error: ${res.status}`);
+        }
+        return res.json();
+      })
+      .then(pluginList => {
+        return handlePluginList(pluginList, page);
+      })
+      .catch(err => {
+        console.error("Failed to fetch plugin list:", err);
+        return [];
+      });
   }
+}
 
-  return window.electronAPI.getPluginList().then(pluginList => {
+function handlePluginList(pluginList, page) {
     const pluginPromises = [];
 
     for (const [name, plugin] of Object.entries(pluginList)) {
@@ -49,5 +69,4 @@ export function pluginLoader(page) {
     }
 
     return Promise.allSettled(pluginPromises); // Resolves when all plugins are loaded or failed
-  });
 }

@@ -51,7 +51,7 @@ export function initMediaLibrary(container, {
   }
 
   // Load plugins (for context menus) but don’t block UI
-  pluginLoader('media-library').finally(() => { state.pluginsReady = true; });
+  pluginLoader('media-library',`/plugins_${key}`).finally(() => { state.pluginsReady = true; });
 
   // Lightbox
   const lightbox = document.createElement('div');
