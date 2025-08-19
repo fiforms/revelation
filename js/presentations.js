@@ -13,37 +13,55 @@ import { pluginLoader } from './pluginloader.js';
 const match = window.location.pathname.match(/presentations_([^/]+)/);
 let key = match ? match[1] : null;
 
-await pluginLoader('presentations',`/plugins_${key}`);
 
 const isRemote = window.location.protocol !== 'file:' &&
                  !['localhost', '127.0.0.1'].includes(window.location.hostname);
 
 
-const plugins = [Markdown, Notes, Zoom, Search];
-if (isRemote) {
-  plugins.push(RevealRemote);
-}
+pluginLoader('presentations',`/plugins_${key}`).then(async function() {
 
-for (const plugin of Object.values(window.RevelationPlugins)) {
-  if (typeof plugin.getRevealPlugins === 'function') {
-    const revealPlugins = await plugin.getRevealPlugins(isRemote);
-    if (Array.isArray(revealPlugins)) {
-      plugins.push(...revealPlugins);
+  const plugins = [Markdown, Notes, Zoom, Search];
+  if (window.revealRemoteServer) {
+    plugins.push(RevealRemote);
+  }
+
+  for (const plugin of Object.values(window.RevelationPlugins)) {
+    if (typeof plugin.getRevealPlugins === 'function') {
+      const revealPlugins = await plugin.getRevealPlugins(isRemote);
+      if (Array.isArray(revealPlugins)) {
+        plugins.push(...revealPlugins);
+      }
     }
   }
-}
 
-const deck = new Reveal({
-  plugins,
-  ...((isRemote && window.revealRemoteServer) && {
-    remote: {
-      remote: true,
-      multiplex: true,
-      server: window.revealRemoteServer,
-      path: "/socket.io"
-    }
-  })
+  const deck = new Reveal({
+    plugins,
+    ...((window.revealRemoteServer) && {
+      remote: {
+        remote: true,
+        multiplex: true,
+        server: window.revealRemoteServer,
+        path: "/socket.io"
+      }
+    })
+  });
+  loadAndPreprocessMarkdown(deck);
+
+  revealTweaks(deck);
+  contextMenu(deck);
+
+  deck.on('ready', () => {
+    const indices = deck.getIndices();
+
+    // Let browser layout settle first
+    window.setTimeout(() => {
+      deck.slide(indices.h, indices.v);  // Force refresh of current slide
+      document.body.classList.remove('hidden');
+      document.body.classList.add('reveal-ready');
+    }, 800); // adjust if needed 
+  });
 });
+
 
 const urlParams = new URLSearchParams(window.location.search);
 const mdFile = urlParams.get('p');
@@ -58,19 +76,5 @@ if (import.meta.hot) {
   });
 }
 
-loadAndPreprocessMarkdown(deck);
 
-revealTweaks(deck);
-contextMenu(deck);
-
-deck.on('ready', () => {
-  const indices = deck.getIndices();
-
-  // Let browser layout settle first
-  window.setTimeout(() => {
-    deck.slide(indices.h, indices.v);  // Force refresh of current slide
-    document.body.classList.remove('hidden');
-    document.body.classList.add('reveal-ready');
-  }, 800); // adjust if needed 
-});
 
