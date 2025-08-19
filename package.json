@@ -25,7 +25,7 @@
     "make": "node scripts/make-presentation.js",
     "addimages": "node scripts/add-images.mjs",
     "llm:dump": "node scripts/dump-for-llm.js revelation_file_summary.txt",
-    "remote-server": "node node_modules/reveal.js-remote/server/index.js --port 1947 --origin '*' --basepath '/' --presentationpath ./presentations/",
+    "remote-server": "node node_modules/reveal.js-remote/server/index.js --port 1947 --origin '*' --basepath '/'",
     "postinstall": "run-s patch-remote init-presentations",
     "patch-remote": "node scripts/patch-remote.js",
     "init-presentations": "node scripts/init-presentations.js",
