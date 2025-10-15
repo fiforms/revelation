@@ -3,7 +3,7 @@
 
 import { pluginLoader } from './pluginloader.js';
 
-export function initMediaLibrary(container, {
+export async function initMediaLibrary(container, {
   key,
   mode = 'standalone',           // 'standalone' | 'picker'
   onPick = null,                  // function(item) when mode === 'picker'
@@ -22,6 +22,8 @@ export function initMediaLibrary(container, {
 
   const mediaList = [];
   let currentIndex = -1;
+
+  const usedMedia = window.electronAPI ? await window.electronAPI.getUsedMedia() : [];
 
 
   // Simple structure
@@ -93,6 +95,7 @@ export function initMediaLibrary(container, {
 
   function render(media) {
     const entries = Object.entries(media);
+
     mediaList.length = 0; // reset
     if (!entries.length) {
       grid.innerHTML = '<p>No media found.</p>';
@@ -107,6 +110,14 @@ export function initMediaLibrary(container, {
       card.className = 'media-card';
       card.dataset.id = id;
       card.style = 'background:#222;border:1px solid #444;border-radius:8px;padding:1rem;box-shadow:0 0 6px rgba(0,0,0,.5)';
+
+      if(usedMedia.length) {
+        if (usedMedia.includes(item.hashed_filename)) {
+          card.classList.add('media-used');
+        } else {
+          card.classList.add('media-unused');
+        }
+      }
 
       const thumb = document.createElement('img');
       thumb.src = `/presentations_${state.key}/_media/${item.thumbnail}`;
@@ -292,6 +303,25 @@ caption.innerHTML = `
       { label: '📋 Copy YAML', action: () => fallbackCopyText(generateYAML(item)) },
       { label: '📋 Copy Markdown', action: () => fallbackCopyText(generateMD(item)) },
     ];
+
+    if(usedMedia.length && !usedMedia.includes(item.hashed_filename)) {
+      options.push({ label: '❌ Delete Media Item', action: async () => {
+        const confirmed = confirm('Are you sure you want to delete this media item? This action cannot be undone.');
+        if (!confirmed) return;
+        try {
+          const result = await window.electronAPI.deleteMediaItem(item.hashed_filename);
+          if (result.success) {
+            const card = grid.querySelector(`.media-card[data-id="${item.hashed_filename}"]`);
+            if (card) card.remove();
+          } else {
+            alert('Failed to delete media item: ' + (result.error || 'Unknown error'));
+          }
+        }
+        catch (err) {
+          alert('Error deleting media item: ' + err.message);
+        } 
+      }});
+    }
 
     if (state.pluginsReady && window.RevelationPlugins) {
       const plugins = Object.entries(window.RevelationPlugins)
