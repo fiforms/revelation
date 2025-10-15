@@ -65,6 +65,9 @@ pluginLoader('presentations',`/plugins_${key}`).then(async function() {
 
 const urlParams = new URLSearchParams(window.location.search);
 const mdFile = urlParams.get('p');
+const config = window.electronAPI ? await window.electronAPI.getAppConfig() : {};
+window.AppConfig = config;
+
 
 // VITE Hot Reloading Hook
 if (import.meta.hot) {

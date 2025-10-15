@@ -201,7 +201,15 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
       const alias = mediaAliasMatch[1];
       const item = media[alias];
       if (item?.filename) {
-        const resolvedSrc = `../_media/${item.filename}`;
+        let resolvedFile = item.filename;
+
+        // 🔥 use large variant if config says so
+        const prefersHigh = window.AppConfig?.pluginConfigs?.virtualbiblesnapshots?.loadHighBitrate;
+        if (prefersHigh && item.large_variant?.filename) {
+          resolvedFile = item.large_variant.filename;
+        }
+
+        const resolvedSrc = `../_media/${resolvedFile}`;
         line = line.replace(/\((media:[a-zA-Z0-9_-]+)\)/, `(${resolvedSrc})`);
         line = line.replace(/\"(media:[a-zA-Z0-9_-]+)\"/, `"${resolvedSrc}"`);
         if (item.attribution) {
