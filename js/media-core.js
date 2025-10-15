@@ -352,7 +352,8 @@ caption.innerHTML = `
 
   function generateYAML(item) {
     const tag = generateTag(item);
-    return `media:
+    
+    let yaml = `media:
   ${tag}:
     filename: ${item.hashed_filename}
     title: ${item.title || ''}
@@ -364,6 +365,14 @@ caption.innerHTML = `
     url_direct: ${item.url_direct || ''}
     mediatype: ${item.mediatype || ''}
     keywords: ${item.keywords || ''}`;
+
+    if (item.large_variant) {
+      yaml += `
+    large_variant:
+      filename: ${item.large_variant.hashed_filename}
+      url_direct: ${item.large_variant.url_direct || ''}`;
+    }
+    return yaml;
   }
   function generateMD(item) {
     return `![](media:${generateTag(item)})`;
