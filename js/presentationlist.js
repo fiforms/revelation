@@ -109,17 +109,21 @@ function showCustomContextMenu(x, y, pres) {
 
   const menu = document.createElement('div');
   menu.id = 'custom-context-menu';
+
+  const scrollY = window.scrollY || document.documentElement.scrollTop;
+  const scrollX = window.scrollX || document.documentElement.scrollLeft;
+
   const menuWidth = 220;
   const menuHeight = 240; // Estimate or measure depending on items
 
   const maxLeft = window.innerWidth - menuWidth - 10;
   const maxTop = window.innerHeight - menuHeight - 10;
 
-  const clampedX = Math.min(x, maxLeft);
-  const clampedY = Math.min(y, maxTop);
+  const clampedX = Math.min(x - scrollX, maxLeft);
+  const clampedY = Math.min(y - scrollY, maxTop);
 
   menu.style = `
-    position: absolute;
+    position: fixed;
     top: ${clampedY}px;
     left: ${clampedX}px;
     background: #222;

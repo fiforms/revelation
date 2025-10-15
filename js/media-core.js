@@ -260,18 +260,33 @@ caption.innerHTML = `
 
     const menu = document.createElement('div');
     menu.id = 'media-context-menu';
+    const menuWidth = 240;
+    const menuHeight = 220;
+    const padding = 10;
+
+    const maxLeft = window.innerWidth - menuWidth - padding;
+    const maxTop = window.innerHeight - menuHeight - padding;
+
+    const scrollX = window.scrollX || document.documentElement.scrollLeft;
+    const scrollY = window.scrollY || document.documentElement.scrollTop;
+
+    const clampedX = Math.min(x - scrollX, maxLeft);
+    const clampedY = Math.min(y - scrollY, maxTop);
+
     menu.style = `
-      position:absolute;background:#222;border:1px solid #555;
-      border-radius:8px;color:white;z-index:9999;font-family:sans-serif;min-width:240px;
-      box-shadow:0 0 10px #000;
+      position: fixed;
+      left: ${clampedX}px;
+      top: ${clampedY}px;
+      background: #222;
+      border: 1px solid #555;
+      border-radius: 8px;
+      color: white;
+      z-index: 9999;
+      font-family: sans-serif;
+      min-width: ${menuWidth}px;
+      box-shadow: 0 0 10px #000;
     `;
 
-    const padding = 10;
-    if (x + 240 > window.innerWidth) x = window.innerWidth - 240 - padding;
-    if (y + menu.offsetHeight > window.innerHeight) y = window.innerHeight - menu.offsetHeight - padding;
-
-    menu.style.left = `${x}px`;
-    menu.style.top = `${y}px`;
 
     const options = [
       { label: '📋 Copy YAML', action: () => fallbackCopyText(generateYAML(item)) },
