@@ -240,9 +240,9 @@ caption.style = `
   box-sizing: border-box;
 `;
 
-  let filenameInfo = `<div>File: ${item.original_filename}</div>`;
+  let filenameInfo = `<div>File: ${item.hashed_filename}</div>`;
   if (highSrc) {
-    filenameInfo += `<div>High-bitrate file: ${item.large_variant.original_filename}</div>`;
+    filenameInfo += `<div>High-bitrate file: ${item.large_variant.hashed_filename}</div>`;
   }
 
 caption.innerHTML = `
@@ -277,12 +277,25 @@ caption.innerHTML = `
     `;
     let usingHigh = false;
 
-    toggleBtn.addEventListener('click', () => {
+    toggleBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
       usingHigh = !usingHigh;
-      mediaEl.src = usingHigh ? highSrc : standardSrc;
-      mediaEl.play();
-      toggleBtn.textContent = usingHigh ? 'Play Standard Bitrate' : 'Play High Bitrate';
+      const newSrc = usingHigh ? highSrc : standardSrc;
+      mediaEl.pause();
+      mediaEl.src = newSrc;
+      mediaEl.load();
+
+      toggleBtn.textContent = usingHigh
+        ? 'Play Standard Bitrate'
+        : 'Play High Bitrate';
+
+      // Wait until the new source is ready to play
+      mediaEl.oncanplay = () => {
+        mediaEl.play().catch(err => console.warn('Playback failed:', err.message));
+        mediaEl.oncanplay = null; // cleanup
+      };
     });
+
 
     caption.appendChild(toggleBtn);
   }
