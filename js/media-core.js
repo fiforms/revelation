@@ -112,7 +112,7 @@ export async function initMediaLibrary(container, {
       card.style = 'background:#222;border:1px solid #444;border-radius:8px;padding:1rem;box-shadow:0 0 6px rgba(0,0,0,.5)';
 
       if(usedMedia.length) {
-        if (usedMedia.includes(item.hashed_filename)) {
+        if (usedMedia.includes(item.filename)) {
           card.classList.add('media-used');
         } else {
           card.classList.add('media-unused');
@@ -200,10 +200,10 @@ function openPreview(item, index = null) {
 
   // Media element
   let mediaEl;
-  const full = `/presentations_${state.key}/_media/${item.hashed_filename}`;
-  const standardSrc = `/presentations_${state.key}/_media/${item.hashed_filename}`;
+  const full = `/presentations_${state.key}/_media/${item.filename}`;
+  const standardSrc = `/presentations_${state.key}/_media/${item.filename}`;
   const highSrc = item.large_variant
-    ? `/presentations_${state.key}/_media/${item.large_variant.hashed_filename}`
+    ? `/presentations_${state.key}/_media/${item.large_variant.filename}`
     : null;
     
   if (item.mediatype === 'video') {
@@ -240,9 +240,9 @@ caption.style = `
   box-sizing: border-box;
 `;
 
-  let filenameInfo = `<div>File: ${item.hashed_filename}</div>`;
+  let filenameInfo = `<div>Original File: ${item.original_filename} &nbsp; &nbsp; &nbsp; Present Filename: ${item.filename}</div>`;
   if (highSrc) {
-    filenameInfo += `<div>High-bitrate file: ${item.large_variant.hashed_filename}</div>`;
+    filenameInfo += `<div>High-bitrate file: ${item.large_variant.filename}</div>`;
   }
 
 caption.innerHTML = `
@@ -251,11 +251,10 @@ caption.innerHTML = `
   </div>
   ${item.description ? `<div>${item.description}</div>` : ''}
   <div style="font-size:.85rem;opacity:.8;margin-top:.3rem;">${filenameInfo}</div>
-  ${item.keywords ? `<div><strong>Keywords:</strong> ${item.keywords}</div>` : ''}
-  ${item.license ? `<div><strong>License:</strong> ${item.license}</div>` : ''}
+  <div> ${item.keywords ? `<strong>Keywords:</strong> ${item.keywords}` : ''}
+  ${item.license ? `<strong>License:</strong> ${item.license}` : ''} 
+  ${item.attribution ? `© ${item.attribution}` : ''} </div>
   <div style="font-size: .85rem; opacity: .8; margin-top: .3rem;">
-    <div>File: ${item.original_filename}</div>
-    ${item.attribution ? `<div>© ${item.attribution}</div>` : ''}
     ${item.url_origin ? `<div>Origin: <a href="${item.url_origin}" target="_blank" style="color:#4da6ff">${item.url_origin}</a></div>` : ''}
     ${item.url_library ? `<div>Library: <a href="${item.url_library}" target="_blank" style="color:#4da6ff">${item.url_library}</a></div>` : ''}
     ${item.url_direct ? `<div>Direct Download: <a href="${item.url_direct}" target="_blank" style="color:#4da6ff">${item.url_direct}</a></div>` : ''}
@@ -354,14 +353,14 @@ caption.innerHTML = `
       { label: '📋 Copy Markdown', action: () => fallbackCopyText(generateMD(item)) },
     ];
 
-    if(usedMedia.length && !usedMedia.includes(item.hashed_filename)) {
+    if(usedMedia.length && !usedMedia.includes(item.filename)) {
       options.push({ label: '❌ Delete Media Item', action: async () => {
         const confirmed = confirm('Are you sure you want to delete this media item? This action cannot be undone.');
         if (!confirmed) return;
         try {
-          const result = await window.electronAPI.deleteMediaItem(item.hashed_filename);
+          const result = await window.electronAPI.deleteMediaItem(item.filename);
           if (result.success) {
-            const card = grid.querySelector(`.media-card[data-id="${item.hashed_filename}"]`);
+            const card = grid.querySelector(`.media-card[data-id="${item.filename}"]`);
             if (card) card.remove();
           } else {
             alert('Failed to delete media item: ' + (result.error || 'Unknown error'));
@@ -405,7 +404,8 @@ caption.innerHTML = `
     
     let yaml = `media:
   ${tag}:
-    filename: ${item.hashed_filename}
+    filename: ${item.filename}
+    original_filename: ${item.original_filename}
     title: ${item.title || ''}
     description: ${item.description || ''}
     attribution: ${item.attribution || ''}
@@ -419,7 +419,8 @@ caption.innerHTML = `
     if (item.large_variant) {
       yaml += `
     large_variant:
-      filename: ${item.large_variant.hashed_filename}
+      filename: ${item.large_variant.filename}
+      original_filename: ${item.large_variant.original_filename}
       url_direct: ${item.large_variant.url_direct || ''}`;
     }
     return yaml;
@@ -430,7 +431,7 @@ caption.innerHTML = `
   function generateTag(item) {
     const firstWord = (item.title || item.original_filename || '')
       .split(/\s+/)[0].substring(0,7).replace(/[^a-zA-Z]/g,'') || 'media';
-    const digits = (item.hashed_filename.match(/\d/g) || []).slice(0,3).join('') || '000';
+    const digits = (item.filename.match(/\d/g) || []).slice(0,3).join('') || '000';
     return firstWord + digits;
   }
   function fallbackCopyText(text) {
