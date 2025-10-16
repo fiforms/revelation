@@ -204,7 +204,7 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
         let resolvedFile = item.filename;
 
         // 🔥 use large variant if config says so
-        const prefersHigh = window.AppConfig?.pluginConfigs?.virtualbiblesnapshots?.loadHighBitrate;
+        let prefersHigh = localStorage.getItem('options_media-version') === 'high';
         if (prefersHigh && item.large_variant?.filename) {
           resolvedFile = item.large_variant.filename;
         }

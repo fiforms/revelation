@@ -63,3 +63,17 @@
       border-radius: 6px;
       box-shadow: 0 0 10px #000;
     }
+
+    #options-menu select, #options-menu input {
+      margin-top: .25rem;
+      font-size: .9rem;
+    }
+    #options-menu label {
+      font-size: .9rem;
+      color: #ccc;
+    }
+
+    #open-new-window:hover {
+      background:#005fa3;
+    }
+

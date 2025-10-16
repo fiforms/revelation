@@ -86,11 +86,71 @@ fetch(`${url_prefix}/index.json`)
 
 });
 
-// Display hostname in top-right corner
-const hostnameDiv = document.getElementById('hostname-indicator');
-if (hostnameDiv) {
-  hostnameDiv.textContent = window.location.hostname;
+// Replace hostname indicator logic with dropdown setup
+const optionsBtn = document.getElementById('options-button');
+const optionsDropdown = document.getElementById('options-dropdown');
+const hostnameDisplay = document.getElementById('hostname-display');
+
+if (hostnameDisplay) {
+  hostnameDisplay.textContent = window.location.hostname;
 }
+
+if (optionsBtn && optionsDropdown) {
+  optionsBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const isVisible = optionsDropdown.style.display === 'block';
+    optionsDropdown.style.display = isVisible ? 'none' : 'block';
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!optionsDropdown.contains(e.target) && e.target !== optionsBtn) {
+      optionsDropdown.style.display = 'none';
+    }
+  });
+}
+
+// load and persist settings via localStorage
+const mediaSelect = document.getElementById('media-version');
+const langInput = document.getElementById('lang-code');
+const variantSelect = document.getElementById('variant');
+
+// Hide Media Version if running inside Electron (handled in app settings)
+if (window.electronAPI) {
+  mediaSelect.disabled = true;
+  const appConfig = await window.electronAPI.getAppConfig()
+  mediaSelect.value = appConfig.preferHighBitrate ? 'high' : 'low';
+  localStorage.setItem('options_media-version', mediaSelect.value);
+}
+
+// Common persistence for other fields
+[mediaSelect, langInput, variantSelect].forEach(el => {
+  const key = `options_${el.id}`;
+  const saved = localStorage.getItem(key);
+  if (saved) el.value = saved;
+  el.addEventListener('change', () => localStorage.setItem(key, el.value));
+});
+
+// --- Open Presentation List in a New Window ---
+const openBtn = document.getElementById('open-new-window');
+if (openBtn) {
+  openBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+
+    // Build URL with key param (preserve ?key=... if present)
+    const currentURL = new URL(window.location.href);
+    const keyParam = currentURL.searchParams.get('key');
+    const baseURL = `${window.location.origin}/presentations.html`;
+    const newURL = keyParam ? `${baseURL}?key=${encodeURIComponent(keyParam)}` : baseURL;
+
+    // If inside Electron, open via the electronAPI; otherwise use window.open
+    if (window.electronAPI) {
+      window.electronAPI.openExternalURL?.(newURL);
+    } else {
+      window.open(newURL, '_blank', 'noopener,noreferrer');
+    }
+  });
+}
+
 
 const mediaLinkDiv = document.getElementById('media-library-link');
 if (url_key && mediaLinkDiv) {
