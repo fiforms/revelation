@@ -201,6 +201,11 @@ function openPreview(item, index = null) {
   // Media element
   let mediaEl;
   const full = `/presentations_${state.key}/_media/${item.hashed_filename}`;
+  const standardSrc = `/presentations_${state.key}/_media/${item.hashed_filename}`;
+  const highSrc = item.large_variant
+    ? `/presentations_${state.key}/_media/${item.large_variant.hashed_filename}`
+    : null;
+    
   if (item.mediatype === 'video') {
     mediaEl = document.createElement('video');
     mediaEl.src = full;
@@ -234,11 +239,18 @@ caption.style = `
   border-radius: 6px;
   box-sizing: border-box;
 `;
+
+  let filenameInfo = `<div>File: ${item.original_filename}</div>`;
+  if (highSrc) {
+    filenameInfo += `<div>High-bitrate file: ${item.large_variant.original_filename}</div>`;
+  }
+
 caption.innerHTML = `
   <div style="font-weight: 700; font-size: 1.05rem; margin-bottom: .3rem;">
     ${item.title || item.original_filename}
   </div>
   ${item.description ? `<div>${item.description}</div>` : ''}
+  <div style="font-size:.85rem;opacity:.8;margin-top:.3rem;">${filenameInfo}</div>
   ${item.keywords ? `<div><strong>Keywords:</strong> ${item.keywords}</div>` : ''}
   ${item.license ? `<div><strong>License:</strong> ${item.license}</div>` : ''}
   <div style="font-size: .85rem; opacity: .8; margin-top: .3rem;">
@@ -249,6 +261,31 @@ caption.innerHTML = `
     ${item.url_direct ? `<div>Direct Download: <a href="${item.url_direct}" target="_blank" style="color:#4da6ff">${item.url_direct}</a></div>` : ''}
   </div>
 `;
+
+  // --- Bitrate toggle button ---
+  if (highSrc) {
+    const toggleBtn = document.createElement('button');
+    toggleBtn.textContent = 'Play High Bitrate';
+    toggleBtn.style = `
+      margin-top:.5rem;
+      padding:.3rem .6rem;
+      border-radius:5px;
+      border:1px solid #666;
+      background:#333;
+      color:#eee;
+      cursor:pointer;
+    `;
+    let usingHigh = false;
+
+    toggleBtn.addEventListener('click', () => {
+      usingHigh = !usingHigh;
+      mediaEl.src = usingHigh ? highSrc : standardSrc;
+      mediaEl.play();
+      toggleBtn.textContent = usingHigh ? 'Play Standard Bitrate' : 'Play High Bitrate';
+    });
+
+    caption.appendChild(toggleBtn);
+  }
 
   figure.appendChild(mediaEl);
   figure.appendChild(caption);
