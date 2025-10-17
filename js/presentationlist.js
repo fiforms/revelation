@@ -251,6 +251,20 @@ function showCustomContextMenu(x, y, pres) {
         }
       }
     });
+    options.push({
+      label: 'Select for Modification',
+      action: () => {
+        const selected = {
+          slug: pres.slug,
+          mdFile: pres.md,
+          title: pres.title,
+          thumbnail: `${url_prefix}/${pres.slug}/${pres.thumbnail}`
+        };
+        window.electronAPI.saveCurrentPresentation(selected);
+        window.dispatchEvent(new CustomEvent('current-presentation-changed'));
+        showToast(`✅ Selected: ${pres.title}`);
+      }
+    });
   }
   options.push({
     label: 'Export as PDF',
