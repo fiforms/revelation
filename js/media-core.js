@@ -156,7 +156,11 @@ export async function initMediaLibrary(container, {
           const b = e.target.closest('[data-action^="pick:"]');
           if (!b) return;
           const variant = b.dataset.action.split(':')[1]; // background|fit|normal
-          if (typeof onPick === 'function') onPick({ variant, item });
+          if (typeof onPick === 'function') {
+            const yaml = generateYAML(item);
+            const md = generateMD(item);
+            onPick({ variant, yaml, md, item });
+          }
         });
         card.appendChild(pickRow);
       }
