@@ -145,7 +145,8 @@ export async function initMediaLibrary(container, {
         const pickRow = document.createElement('div');
         pickRow.style = 'display:flex; gap:.5rem; margin-top:.6rem;';
         pickRow.innerHTML = `
-          <button data-action="pick:background" title="Insert as background" class="mlbtn">Background</button>
+          <button data-action="pick:background" title="Insert as background" class="mlbtn">Bkg</button>
+          <button data-action="pick:backgroundsticky" title="Insert as sticky background" class="mlbtn">Bkg (Sticky)</button>
           <button data-action="pick:fit" title="Insert as fit image" class="mlbtn">Fit</button>
           <button data-action="pick:normal" title="Insert normal image" class="mlbtn">Normal</button>
         `;
