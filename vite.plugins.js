@@ -265,8 +265,8 @@ function presentationIndexPlugin() {
         // Middleware to serve files from revelation_electron-wrapper/http_admin
         // This allows serving static files from the external folder
 
-        const adminDir = path.resolve(__dirname, '../http_admin');
-        if (fs.existsSync(adminDir)) {
+        const adminDir = process.env.ADMIN_DIR_OVERRIDE;
+        if (adminDir && fs.existsSync(adminDir)) {
           server.middlewares.use(
             '/admin',
             serveStatic(adminDir, {
@@ -275,7 +275,7 @@ function presentationIndexPlugin() {
             })
           );
         } else {
-          console.warn('⚠️  External /http_admin folder not found — skipping mount.');
+          console.warn('⚠️  External http_admin folder not found — skipping mount.');
         }
 	    
     }
