@@ -22,7 +22,7 @@ if(process.env.PRESENTATIONS_DIR_OVERRIDE && process.env.PRESENTATIONS_KEY_OVERR
     key = process.env.PRESENTATIONS_KEY_OVERRIDE;
     presentationsWebPath = `/${prefix}${key}`;
     customPath = true;
-    pluginsDir = path.resolve(__dirname,'..','plugins');
+    pluginsDir = process.env.PLUGINS_DIR_OVERRIDE;
     pluginsWebPath = `/plugins_${key}`
 }
 else {
