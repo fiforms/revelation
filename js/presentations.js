@@ -45,6 +45,9 @@ pluginLoader('presentations',`/plugins_${key}`).then(async function() {
       }
     })
   });
+  
+  window.deck = deck;
+
   loadAndPreprocessMarkdown(deck);
 
   revealTweaks(deck);
