@@ -241,14 +241,9 @@ function showCustomContextMenu(x, y, pres) {
       action: () => window.electronAPI.showPresentationFolder(pres.slug)
     });
     options.push({
-      label: 'Export as ZIP',
+      label: '📤 Export Presentation…',
       action: async () => {
-        const result = await window.electronAPI.exportPresentation(pres.slug);
-        if (result?.success) {
-          alert(`✅ Exported to: ${result.filePath}`);
-        } else if (!result?.canceled) {
-          alert(`❌ Export failed: ${result?.error || 'Unknown error'}`);
-        }
+        await window.electronAPI.showExportWindow(pres.slug, pres.md);
       }
     });
     options.push({
@@ -266,10 +261,14 @@ function showCustomContextMenu(x, y, pres) {
       }
     });
   }
-  options.push({
-    label: 'Export as PDF',
-    action: () => exportPDF(pres.slug, pres.md)
-  });
+  else {
+    // These options ONLY appear in the web view, not the electron app
+    options.push({
+      label: 'Export as PDF',
+      action: () => exportPDF(pres.slug, pres.md)
+    });
+  }
+
 
   const plugins = Object.entries(window.RevelationPlugins)
     .map(([name, plugin]) => ({
