@@ -209,7 +209,13 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
           resolvedFile = item.large_variant.filename;
         }
 
-        const resolvedSrc = `../_media/${resolvedFile}`;
+        // Compute the base path dynamically
+        let basePath = '../_media/';
+        if (typeof window !== 'undefined' && window.mediaPath) {
+          basePath = window.mediaPath.endsWith('/') ? window.mediaPath : window.mediaPath + '/';
+        }
+
+        const resolvedSrc = `${basePath}${resolvedFile}`;
         line = line.replace(/\((media:[a-zA-Z0-9_-]+)\)/, `(${resolvedSrc})`);
         line = line.replace(/\"(media:[a-zA-Z0-9_-]+)\"/, `"${resolvedSrc}"`);
         if (item.attribution) {

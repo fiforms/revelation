@@ -10,6 +10,8 @@ import { revealTweaks } from './tweaks.js';
 import { contextMenu } from './contextmenu.js';
 import { pluginLoader } from './pluginloader.js';
 
+(async () => {
+
 const match = window.location.pathname.match(/presentations_([^/]+)/);
 let key = match ? match[1] : null;
 
@@ -82,5 +84,5 @@ if (import.meta.hot) {
   });
 }
 
-
+})();
 
