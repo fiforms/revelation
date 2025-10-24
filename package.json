@@ -1,6 +1,6 @@
 {
   "name": "revelation",
-  "version": "0.1.4",
+  "version": "0.1.4a",
   "dependencies": {
     "chokidar": "^4.0.3",
     "cors": "^2.8.5",
