@@ -9,6 +9,21 @@ export function revealTweaks(deck) {
     scrubBackgroundVideos();
     hideControlsOnSpeakerNotes();
     doubleClickFullScreen();
+    hideCursorOnIdle();
+}
+
+// Hide the cursor after a period of inactivity
+function hideCursorOnIdle() {
+  let timer;
+  const hideDelay = 2000; // milliseconds
+
+  document.addEventListener('mousemove', () => {
+    document.body.style.cursor = 'default';
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      document.body.style.cursor = 'none';
+    }, hideDelay);
+  });
 }
 
 // Disable video backgrounds in speaker notes view (iFrames)
