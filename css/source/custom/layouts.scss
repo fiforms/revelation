@@ -187,3 +187,23 @@ body.reveal-ready {
   padding-bottom: 0.6em;
   padding-top: 0.6em;
 }
+
+cite {
+  display: block;
+  font-size: 0.7em;
+  font-style: italic;
+  color: #666;
+  margin: 0.25em 0;
+}
+
+/* If the citation is the first thing inside its parent */
+cite:first-child {
+  text-align: left;
+  margin-bottom: 0.3em;
+}
+
+/* If the citation is the last thing inside its parent */
+cite:last-child {
+  text-align: right;
+  margin-top: 0.3em;
+}
