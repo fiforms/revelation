@@ -64,7 +64,8 @@ body.reveal-ready {
     padding-left: 3rem;
   }
 
-  section > section:has(img) {
+  section:has(img), 
+  section:has(video) {
     height: 100%;  
   }
 
@@ -90,7 +91,7 @@ body.reveal-ready {
     margin: 0;
   }
 
-  section img[data-imagefit] {
+  section img[data-imagefit], section video[data-imagefit] {
     position: absolute;
     top: 0; left: 0;
     right: 0; bottom: 0;

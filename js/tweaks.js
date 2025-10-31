@@ -5,6 +5,21 @@ export function revealTweaks(deck) {
     deck.on('ready', updateAttribution);       
     deck.on('slidechanged', () => updateAttributionFromCurrentSlide(deck));
 
+
+    // Play videos with data-imagefit attribute when the slide is shown
+    // This is necessary because Reveal.js may not autoplay videos in the background
+    // and some browsers require user interaction to start video playback.
+    deck.on('slidechanged', e => {
+      e.currentSlide.querySelectorAll('video[data-imagefit]').forEach(v => {
+        v.play().catch(() => {});
+      });
+    });
+
+    deck.on('ready', e => {
+      e.currentSlide.querySelectorAll('video[data-imagefit]').forEach(v => {
+        v.play().catch(() => {});
+      });
+    });
     
     scrubBackgroundVideos();
     hideControlsOnSpeakerNotes();

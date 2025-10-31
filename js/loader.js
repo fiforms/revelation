@@ -138,9 +138,12 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
       return tag;
     };
 
-    magicImageHandlers.fit = (src, modifier, attribution) => {
-      return `![](${src})<!-- .element data-imagefit -->`;
-    }
+    magicImageHandlers.fit = (src) => {
+      const isVideo = /\.(webm|mp4|mov|m4v)$/i.test(src);
+      return isVideo
+        ? `<video src="${src}" controls playsinline data-imagefit></video>`
+        : `![](${src})<!-- .element data-imagefit -->`;
+    };
 
     magicImageHandlers.youtube = (src, modifier, attribution) => {
       const match = src.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|watch\?v=))([\w-]+)/);
