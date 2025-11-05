@@ -115,7 +115,8 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
     upperthird: `<!-- .slide: data-upper-third -->`,
     columnstart: `<div class="flexcontainer"><div class="first">`,
     columnbreak: `</div><div class="second">`,
-    columnend: `</div></div>`
+    columnend: `</div></div>`,
+    bgtint: `<!-- .slide: data-tint-color="$1" -->`
   };
 
   const macros = { ...defaultMacros, ...userMacros };

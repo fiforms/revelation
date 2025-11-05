@@ -59,7 +59,7 @@ function scrubBackgroundVideos() {
 
 function updateAttributionFromCurrentSlide(deck) {
     const currentSlide = deck.getCurrentSlide();
-    const source = event.currentSlide.querySelector('.slide-attribution');
+    const source = currentSlide.querySelector('.slide-attribution');
     const overlay = document.getElementById('fixed-overlay-wrapper');
 
     if (source) {
@@ -68,6 +68,17 @@ function updateAttributionFromCurrentSlide(deck) {
     } else {
     overlay.innerHTML = '';
     overlay.style.display = 'none';
+    }
+
+    const tintcolor = currentSlide.getAttribute('data-tint-color');
+    console.log('Tint color for current slide:', tintcolor);
+    const tint = document.getElementById('fixed-tint-wrapper');
+
+    if (tintcolor) {
+    tint.style.background = tintcolor; 
+    tint.style.display = '';
+    } else {
+    tint.style.display = 'none';
     }
 }
 
