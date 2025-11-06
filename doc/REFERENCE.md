@@ -332,7 +332,7 @@ Use `<!-- .element: ... -->` after a line to apply classes or styles to a specif
 This is most commonly used to trigger fragments, transitions, or custom styling.
 (Note: see below for an easier way to tag fragments using ++)
 
----
+***
 
 #### 💡 Built-in Macros for Convenience
 
@@ -344,11 +344,97 @@ REVELation defines several built-in macros for commonly used slide attributes:
 | `lightbg`     | `<!-- .slide: data-lightbg -->`                               |
 | `lowerthird`  | `<!-- .slide: data-lower-third -->`                           |
 | `upperthird`  | `<!-- .slide: data-upper-third -->`                           |
+| `bgtint`      | `<!-- .slide: data-tint-color="$1" -->`                       |
 | `columnstart` | Start of two-column layout (`<div class="flexcontainer">...`) |
 | `columnbreak` | Middle divider for two-column layout                          |
 | `columnend`   | Closes the two-column layout                                  |
 
 You can override or redefine these in your YAML if needed.
+
+---
+
+#### 💡 Built-in Macros for Convenience
+
+REVELation defines several built-in macros to simplify commonly used slide attributes.
+
+---
+
+### 🎨 Background Helpers
+
+These macros apply semi-transparent panels behind text to keep it readable on photo or video backgrounds:
+
+```markdown
+{{darkbg}}
+```
+
+Applies a dark translucent background to paragraph text.
+
+---
+
+
+```markdown
+{{lightbg}}
+```
+
+Applies a light translucent background for darker images.
+
+> 💡 *These affect paragraphs and lists, not headings.*
+
+---
+
+### 📍 Positioning Text
+
+You can move your slide content toward the top or bottom third of the screen:
+
+```markdown
+{{upperthird}}
+```
+
+Aligns content near the top — useful for placing titles above an image.
+
+---
+
+```markdown
+{{lowerthird}}
+```
+
+Aligns content near the bottom — ideal for captions or text overlays on video.
+
+---
+
+### 🎨 Tint Overlays
+
+Add a semi-transparent color overlay (tint) between the background and text:
+
+```markdown
+{{bgtint:rgba(127,127,255,0.5)}}
+```
+
+Use any valid CSS color (e.g. `rgba`, `#hex`, `hsl`).
+This is great for improving contrast over bright or busy backgrounds.
+
+---
+
+### 🧱 Two-Column Layouts
+
+Create flexible two-column sections inside a slide:
+
+```markdown
+{{columnstart}}
+Left side content here
+
+{{columnbreak}}
+Right side content here
+
+{{columnend}}
+```
+
+Each part expands to HTML `<div>` elements that split your slide into two halves.
+
+---
+
+> You can override or redefine any of these macros in your YAML front matter if needed.
+
 
 ***
 
