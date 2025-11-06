@@ -199,7 +199,7 @@ function showCustomContextMenu(x, y, pres) {
 
   const target = window.electronAPI?.editPresentation ? 'Window' : 'Tab';
   const options = [
-    { label: tr(`Open in ${target}`), action: () => {
+    { label: '🪟 '+ tr(`Open in ${target}`), action: () => {
             if (window.electronAPI?.openPresentation) {
 	        window.electronAPI.openPresentation(pres.slug, pres.md, false);
 	    }
@@ -209,7 +209,7 @@ function showCustomContextMenu(x, y, pres) {
         }
       },
     { 
-        label: tr('Copy Link'),
+        label: '🔗 ' + tr('Copy Link'),
         action: () => {
                 const link = `${window.location.origin}${url_prefix}/${pres.slug}/index.html?p=${pres.md}`;
                 if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -224,26 +224,29 @@ function showCustomContextMenu(x, y, pres) {
                 }
               }
        },
-    { label: tr('Handout View'), action: () => handoutView(pres.slug,pres.md) }
+    { label: '📄 ' + tr('Handout View'), action: () => handoutView(pres.slug,pres.md) }
   ];
 
 
   if (window.electronAPI?.editPresentation) {
     options.push({
-      label: tr('Edit Markdown'),
+      label: '✏️ ' + tr('Edit Markdown'),
       action: () => window.electronAPI.editPresentation(pres.slug, pres.md)
     });
     options.push({
-      label: tr('Edit Presentation Metadata'),
+      label: '🧾 ' + tr('Edit Presentation Metadata'),
       action: () => window.electronAPI.editPresentationMetadata(pres.slug, pres.md)
     });
     options.push({
-      label: tr('Show Presentation Files'),
+      label: '📂 ' + tr('Show Presentation Files'),
       action: () => window.electronAPI.showPresentationFolder(pres.slug)
     });
     options.push({
-      label: tr('Regenerate Thumbnail'),
-      action: () => window.electronAPI.exportImages(pres.slug, pres.md, 426, 240, 2, true)
+      label: '🖼️ ' + tr('Regenerate Thumbnail'),
+      action: async () => {
+        await window.electronAPI.exportImages(pres.slug, pres.md, 853, 480, 2, true);
+        window.location = window.location.href; // reload
+      }
     });
     options.push({
       label: '📤 ' + tr('Export Presentation…'),
@@ -252,7 +255,7 @@ function showCustomContextMenu(x, y, pres) {
       }
     });
     options.push({
-      label: tr('Select for Modification'),
+      label: '✅ ' + tr('Select for Modification'),
       action: () => {
         const selected = {
           slug: pres.slug,
@@ -269,7 +272,7 @@ function showCustomContextMenu(x, y, pres) {
   else {
     // These options ONLY appear in the web view, not the electron app
     options.push({
-      label: tr('Export as PDF'),
+      label: '📑 ' + tr('Export as PDF'),
       action: () => exportPDF(pres.slug, pres.md)
     });
   }
