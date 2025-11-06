@@ -5,6 +5,7 @@
 // Load ./translations.json file
 
 window.translations = {};
+window.translationsources = ['/js/translations.json'];
 
 window.tr = (key) => {
     // Get from browser language settings
@@ -18,6 +19,39 @@ window.tr = (key) => {
         return key; // Fallback to the original key
     }
 }
+
+window.loadTranslations = async () => {
+  console.log(window.translationsources);
+  window.translations ||= {};
+
+  for (const src of window.translationsources) {
+    try {
+      const response = await fetch(src);
+      if (response.ok) {
+        const newTranslations = await response.json();
+
+        // Deep merge by language (e.g., "en", "es", "fr", etc.)
+        for (const [lang, entries] of Object.entries(newTranslations)) {
+          if (!window.translations[lang]) {
+            window.translations[lang] = {};
+          }
+
+          // Merge each key inside the language object
+          Object.assign(window.translations[lang], entries);
+        }
+
+      } else {
+        console.error(`Failed to load ${src}:`, response.statusText);
+      }
+    } catch (err) {
+      console.error(`Error loading ${src}:`, err);
+    }
+  }
+
+  window.translationsources = [];
+  console.log(window.translations);
+};
+
 
 function translatePage(language) {
     // Get all elements with data-translate attribute
@@ -39,14 +73,7 @@ function translatePage(language) {
 window.addEventListener('DOMContentLoaded', async () => {
     const userLanguage = navigator.language.slice(0,2); 
 
-    Response = await fetch('/js/translations.json');
-    if (Response.ok) {
-        newTranslations = await Response.json();
-        // append new translations to window.translations
-        window.translations = {...window.translations, ...newTranslations};
-    } else {
-        console.error('Failed to load translations.json');
-    }
+    await loadTranslations();
     console.log('Translating page to language:', userLanguage);
     translatePage(userLanguage);
 });

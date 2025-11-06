@@ -12,6 +12,20 @@
         "No key specified, unable to load presentation list": "No se especificó clave, no se puede cargar la lista de presentaciones",
         "Access denied. This presentation list is restricted.": "Acceso denegado. Esta lista de presentaciones está restringida.",
         "Failed to load presentations": "Error al cargar presentaciones",
-        "No presentations available.": "No hay presentaciones disponibles."
+        "No presentations available.": "No hay presentaciones disponibles.",
+        "Presentation List": "Lista de Presentaciones",
+        "Open in Tab": "Abrir en Pestaña",
+        "Open in Window": "Abrir en Ventana",
+        "Copy Link": "Copiar Enlace",
+        "Handout View": "Vista de Materiales",
+        "Edit Markdown": "Editar Markdown",
+        "Edit Presentation Metadata": "Editar Metadatos de la Presentación",
+        "Show Presentation Files": "Mostrar Archivos de la Presentación",
+        "Export Presentation…": "Exportar Presentación…",
+        "Select for Modification": "Seleccionar para Modificación",
+        "Selected": "Seleccionado",
+        "Export as PDF": "Exportar como PDF",
+        "PDF exported to": "PDF exportado a",
+        "Failed to copy the link. You can do it manually": "No se pudo copiar el enlace. Puede hacerlo manualmente"
     }
 }

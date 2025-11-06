@@ -198,7 +198,7 @@ function showCustomContextMenu(x, y, pres) {
 
   const target = window.electronAPI?.editPresentation ? 'Window' : 'Tab';
   const options = [
-    { label: `Open in ${target}`, action: () => {
+    { label: tr(`Open in ${target}`), action: () => {
             if (window.electronAPI?.openPresentation) {
 	        window.electronAPI.openPresentation(pres.slug, pres.md, false);
 	    }
@@ -208,7 +208,7 @@ function showCustomContextMenu(x, y, pres) {
         }
       },
     { 
-        label: 'Copy Link',
+        label: tr('Copy Link'),
         action: () => {
                 const link = `${window.location.origin}${url_prefix}/${pres.slug}/index.html?p=${pres.md}`;
                 if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -223,31 +223,31 @@ function showCustomContextMenu(x, y, pres) {
                 }
               }
        },
-    { label: 'Handout View', action: () => handoutView(pres.slug,pres.md) }
+    { label: tr('Handout View'), action: () => handoutView(pres.slug,pres.md) }
   ];
 
 
   if (window.electronAPI?.editPresentation) {
     options.push({
-      label: 'Edit Markdown',
+      label: tr('Edit Markdown'),
       action: () => window.electronAPI.editPresentation(pres.slug, pres.md)
     });
     options.push({
-      label: 'Edit Presentation Metadata',
+      label: tr('Edit Presentation Metadata'),
       action: () => window.electronAPI.editPresentationMetadata(pres.slug, pres.md)
     });
     options.push({
-      label: 'Show Presentation Files',
+      label: tr('Show Presentation Files'),
       action: () => window.electronAPI.showPresentationFolder(pres.slug)
     });
     options.push({
-      label: '📤 Export Presentation…',
+      label: '📤 ' + tr('Export Presentation…'),
       action: async () => {
         await window.electronAPI.showExportWindow(pres.slug, pres.md);
       }
     });
     options.push({
-      label: 'Select for Modification',
+      label: tr('Select for Modification'),
       action: () => {
         const selected = {
           slug: pres.slug,
@@ -257,14 +257,14 @@ function showCustomContextMenu(x, y, pres) {
         };
         window.electronAPI.saveCurrentPresentation(selected);
         window.dispatchEvent(new CustomEvent('current-presentation-changed'));
-        showToast(`✅ Selected: ${pres.title}`);
+        showToast(`✅ ${tr('Selected')}: ${pres.title}`);
       }
     });
   }
   else {
     // These options ONLY appear in the web view, not the electron app
     options.push({
-      label: 'Export as PDF',
+      label: tr('Export as PDF'),
       action: () => exportPDF(pres.slug, pres.md)
     });
   }
@@ -320,7 +320,7 @@ function exportPDF(slug, mdFile) {
     window.electronAPI.exportPresentationPDF(slug, mdFile)
       .then(result => {
         if (result.success) {
-          alert(`✅ PDF exported to: ${result.filePath}`);
+          alert(`✅ ${tr('PDF exported to')}: ${result.filePath}`);
         } else {
           // alert('❌ PDF export failed');
         }
@@ -347,7 +347,7 @@ function fallbackCopyText(text) {
     console.log('✅ Link copied (fallback)');
   } catch (err) {
     console.error('❌ Fallback copy failed', err);
-    alert('Failed to copy the link. You can do it manually:\n' + text);
+    alert(tr('Failed to copy the link. You can do it manually') + ':\n' + text);
   }
   document.body.removeChild(textarea);
 }
