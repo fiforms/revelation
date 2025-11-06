@@ -9,6 +9,8 @@ const backLink = document.getElementById('back-link');
 if (url_key && backLink) {
   const a = document.createElement('a');
   a.href = `/presentations.html?key=${url_key}`;
+  // set data-translate attribute for translation
+  a.setAttribute('data-translate', 'true');
   a.textContent = '← Back to Presentations';
   a.style = 'color:#4da6ff;text-decoration:none;font-size:1rem;';
   a.onmouseover = () => a.style.textDecoration = 'underline';

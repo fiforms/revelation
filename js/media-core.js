@@ -89,7 +89,7 @@ export async function initMediaLibrary(container, {
     .then(r => r.json())
     .then((media) => render(media))
     .catch(err => {
-      grid.innerHTML = `<p style="color:#f66">Failed to load media index: ${err.message}</p>`;
+      grid.innerHTML = `<p style="color:#f66">${tr('Failed to load media index')}: ${err.message}</p>`;
       console.error(err);
     });
 
@@ -98,7 +98,7 @@ export async function initMediaLibrary(container, {
 
     mediaList.length = 0; // reset
     if (!entries.length) {
-      grid.innerHTML = '<p>No media found.</p>';
+      grid.innerHTML = `<p>${tr('No media found.')}</p>`;
       return;
     }
     grid.innerHTML = '';
@@ -245,9 +245,9 @@ caption.style = `
   box-sizing: border-box;
 `;
 
-  let filenameInfo = `<div>Original File: ${item.original_filename} &nbsp; &nbsp; &nbsp; Present Filename: ${item.filename}</div>`;
+  let filenameInfo = `<div>${tr('Original File')}: ${item.original_filename} &nbsp; &nbsp; &nbsp; ${tr('Present Filename')}: ${item.filename}</div>`;
   if (highSrc) {
-    filenameInfo += `<div>High-bitrate file: ${item.large_variant.filename}</div>`;
+    filenameInfo += `<div>${tr('High-bitrate file')}: ${item.large_variant.filename}</div>`;
   }
 
 caption.innerHTML = `
@@ -256,20 +256,20 @@ caption.innerHTML = `
   </div>
   ${item.description ? `<div>${item.description}</div>` : ''}
   <div style="font-size:.85rem;opacity:.8;margin-top:.3rem;">${filenameInfo}</div>
-  <div> ${item.keywords ? `<strong>Keywords:</strong> ${item.keywords}` : ''}
-  ${item.license ? `<strong>License:</strong> ${item.license}` : ''} 
+  <div> ${item.keywords ? `<strong>${tr('Keywords')}:</strong> ${item.keywords}` : ''}
+  ${item.license ? `<strong>${tr('License')}:</strong> ${item.license}` : ''} 
   ${item.attribution ? `© ${item.attribution}` : ''} </div>
   <div style="font-size: .85rem; opacity: .8; margin-top: .3rem;">
-    ${item.url_origin ? `<div>Origin: <a href="${item.url_origin}" target="_blank" style="color:#4da6ff">${item.url_origin}</a></div>` : ''}
-    ${item.url_library ? `<div>Library: <a href="${item.url_library}" target="_blank" style="color:#4da6ff">${item.url_library}</a></div>` : ''}
-    ${item.url_direct ? `<div>Direct Download: <a href="${item.url_direct}" target="_blank" style="color:#4da6ff">${item.url_direct}</a></div>` : ''}
+    ${item.url_origin ? `<div>${tr('Origin')}: <a href="${item.url_origin}" target="_blank" style="color:#4da6ff">${item.url_origin}</a></div>` : ''}
+    ${item.url_library ? `<div>${tr('Library')}: <a href="${item.url_library}" target="_blank" style="color:#4da6ff">${item.url_library}</a></div>` : ''}
+    ${item.url_direct ? `<div>${tr('Direct Download')}: <a href="${item.url_direct}" target="_blank" style="color:#4da6ff">${item.url_direct}</a></div>` : ''}
   </div>
 `;
 
   // --- Bitrate toggle button ---
   if (highSrc) {
     const toggleBtn = document.createElement('button');
-    toggleBtn.textContent = 'Play High Bitrate';
+    toggleBtn.textContent = tr('Play High Bitrate');
     toggleBtn.style = `
       margin-top:.5rem;
       padding:.3rem .6rem;
@@ -290,8 +290,8 @@ caption.innerHTML = `
       mediaEl.load();
 
       toggleBtn.textContent = usingHigh
-        ? 'Play Standard Bitrate'
-        : 'Play High Bitrate';
+        ? tr('Play Standard Bitrate')
+        : tr('Play High Bitrate');
 
       // Wait until the new source is ready to play
       mediaEl.oncanplay = () => {
@@ -354,13 +354,13 @@ caption.innerHTML = `
 
 
     const options = [
-      { label: '📋 Copy YAML', action: () => fallbackCopyText(generateYAML(item)) },
-      { label: '📋 Copy Markdown', action: () => fallbackCopyText(generateMD(item)) },
+      { label: '📋 '+ tr('Copy YAML'), action: () => fallbackCopyText(generateYAML(item)) },
+      { label: '📋 '+ tr('Copy Markdown'), action: () => fallbackCopyText(generateMD(item)) },
     ];
 
     if(usedMedia.length && !usedMedia.includes(item.filename)) {
-      options.push({ label: '❌ Delete Media Item', action: async () => {
-        const confirmed = confirm('Are you sure you want to delete this media item? This action cannot be undone.');
+      options.push({ label: '❌ ' + tr('Delete Media Item'), action: async () => {
+        const confirmed = confirm(tr('Are you sure you want to delete this media item? This action cannot be undone.'));
         if (!confirmed) return;
         try {
           const result = await window.electronAPI.deleteMediaItem(item.filename);
@@ -368,11 +368,11 @@ caption.innerHTML = `
             const card = grid.querySelector(`.media-card[data-id="${item.filename}"]`);
             if (card) card.remove();
           } else {
-            alert('Failed to delete media item: ' + (result.error || 'Unknown error'));
+            alert(tr('Failed to delete media item: ') + (result.error || 'Unknown error'));
           }
         }
         catch (err) {
-          alert('Error deleting media item: ' + err.message);
+          alert(tr('Error deleting media item: ') + err.message);
         } 
       }});
     }
