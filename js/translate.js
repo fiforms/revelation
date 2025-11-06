@@ -5,7 +5,12 @@
 // Load ./translations.json file
 
 window.translations = {};
-window.translationsources = ['/js/translations.json'];
+if(window.offlineMarkdown) {
+  const scriptDir = new URL('.', document.currentScript.src).pathname;
+  window.translationsources = [scriptDir + 'translations.json'];
+} else {
+  window.translationsources = ['/js/translations.json'];
+}
 
 window.tr = (key) => {
     // Get from browser language settings
