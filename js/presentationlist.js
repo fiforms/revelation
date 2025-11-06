@@ -7,7 +7,7 @@ const url_prefix = `/presentations_${url_key}`;
 const container = document.getElementById('presentation-list');
 
 if(!url_key) {
-    container.innerHTML = 'No key specified, unable to load presentation list';
+    container.innerHTML = tr('No key specified, unable to load presentation list');
 }
 
 // VITE Hot Reloading Hook
@@ -30,9 +30,9 @@ fetch(`${url_prefix}/index.json`)
       .then(res => {
         if (!res.ok) {
           if (res.status === 403) {
-            throw new Error('Access denied. This presentation list is restricted.');
+            throw new Error(tr('Access denied. This presentation list is restricted.'));
           } else {
-            throw new Error(`Failed to load presentations: ${res.status} ${res.statusText}`);
+            throw new Error(tr("Failed to load presentations") + `: ${res.status} ${res.statusText}`);
           }
         }
         return res.json();
@@ -40,7 +40,7 @@ fetch(`${url_prefix}/index.json`)
       .then(presentations => {
 
         if (!presentations.length) {
-          container.innerHTML = '<p>No presentations available.</p>';
+          container.innerHTML = '<p>' + tr('No presentations available.') + '</p>';
           return;
         }
 

@@ -1,0 +1,17 @@
+{
+    "es": {
+        "REVELation Snapshot Presenter": "Presentador de Instantáneas REVELation",
+        "Options ⚙️": "Opciones ⚙️",
+        "Host:": "Anfitrión:",
+        "Media Version:": "Versión de Medios:",
+        "Normal": "Normal",
+        "Hi-Def": "Alta Definición",
+        "Language:": "Idioma:",
+        "Variant:": "Variante:",
+        "Open in New Window": "Abrir en Nueva Ventana",
+        "No key specified, unable to load presentation list": "No se especificó clave, no se puede cargar la lista de presentaciones",
+        "Access denied. This presentation list is restricted.": "Acceso denegado. Esta lista de presentaciones está restringida.",
+        "Failed to load presentations": "Error al cargar presentaciones",
+        "No presentations available.": "No hay presentaciones disponibles."
+    }
+}
