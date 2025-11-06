@@ -32,27 +32,27 @@ export function contextMenu(deck) {
       const isLocal = window.location.hostname === 'localhost';
 
       const items = [
-        { label: 'Show Reveal.js Help (?)', action: () => deck.toggleHelp() },
-        { label: 'Show Speaker Notes (s)', action: () => deck.getPlugins().notes.open() },
-        { label: 'Toggle Fullscreen', action: () => toggleFullscreen() },
+        { label: tr('Show Reveal.js Help (?)'), action: () => deck.toggleHelp() },
+        { label: tr('Show Speaker Notes (s)'), action: () => deck.getPlugins().notes.open() },
+        { label: tr('Toggle Fullscreen'), action: () => toggleFullscreen() },
         ...(!isLocal ? [
-          { label: 'Toggle Remote Follower Link (a)', action: () => fireRevealKey('a') },
-          { label: 'Toggle Remote Control Link (r)', action: () => fireRevealKey('r') }
+          { label: tr('Toggle Remote Follower Link (a)'), action: () => fireRevealKey('a') },
+          { label: tr('Toggle Remote Control Link (r)'), action: () => fireRevealKey('r') }
 	  ] : []),
-        { label: deck.isOverview() ? 'Close Overview (ESC)' : 'Overview (ESC)', action: () => deck.toggleOverview() },
-        { label: deck.isPaused() ? 'Unpause/Unblank (b)' : 'Pause/Blank (b)', action: () => deck.togglePause() }
+        { label: deck.isOverview() ? tr('Close Overview (ESC)') : tr('Overview (ESC)'), action: () => deck.toggleOverview() },
+        { label: deck.isPaused() ? tr('Unpause/Unblank (b)') : tr('Pause/Blank (b)'), action: () => deck.togglePause() }
       ];
 
       if (e.target.tagName === 'A' && e.target.href) {
         const link = e.target.href;
         items.unshift(
-          { label: 'Open Link in New Tab', action: () => window.open(link, '_blank') },
+          { label: tr('Open Link in New Tab'), action: () => window.open(link, '_blank') },
 		  {
-              label: 'Copy Link Address',
+              label: tr('Copy Link Address'),
               action: () => {
                 if (navigator.clipboard && navigator.clipboard.writeText) {
                   navigator.clipboard.writeText(link)
-                    .then(() => console.log('✅ Link copied to clipboard'))
+                    .then(() => console.log('✅ ' + tr('Link copied to clipboard')))
                     .catch(err => {
                       console.error('❌ Clipboard error:', err);
                       fallbackCopyText(link);
@@ -84,7 +84,7 @@ export function contextMenu(deck) {
         }
       }
 
-      items.push({ label: 'Close Presentation', action: () => closePresentation() });
+      items.push({ label: tr('Close Presentation'), action: () => closePresentation() });
 
 
       items.forEach(({ label, action }) => {
@@ -152,7 +152,7 @@ function closePresentation() {
 
     // If window.close() fails (e.g., not opened via script), show a fallback message
     if (!window.closed) {
-      alert("Please close this tab manually.");
+      alert(tr("Please close this tab manually."));
     }
   }
 }

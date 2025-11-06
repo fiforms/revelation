@@ -156,6 +156,7 @@ const mediaLinkDiv = document.getElementById('media-library-link');
 if (url_key && mediaLinkDiv) {
   const link = document.createElement('a');
   link.href = `/media-library.html?key=${url_key}`;
+  link.setAttribute('data-translate', 'true');
   link.textContent = '📁 View Media Library';
   link.style = 'color: #4da6ff; font-size: 1rem; text-decoration: none;';
   link.onmouseover = () => link.style.textDecoration = 'underline';

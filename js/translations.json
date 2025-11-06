@@ -46,6 +46,22 @@
         "Playback failed:": "Reproducción fallida:",
         "Are you sure you want to delete this media item? This action cannot be undone.": "¿Está seguro de que desea eliminar este elemento de medios? Esta acción no se puede deshacer.",
         "Failed to delete media item: ": "Error al eliminar el elemento de medios: ",
-        "Error deleting media item: ": "Error al eliminar el elemento de medios: "
+        "Error deleting media item: ": "Error al eliminar el elemento de medios: ",
+        "📁 View Media Library": "📁 Ver Biblioteca de Medios",
+        "Media Library": "Biblioteca de Medios",
+        "Show Reveal.js Help (?)": "Mostrar Ayuda de Reveal.js (?)",
+        "Show Speaker Notes (s)": "Mostrar Notas del Orador (s)",
+        "Toggle Fullscreen": "Alternar Pantalla Completa",
+        "Toggle Remote Follower Link (a)": "Alternar Enlace de Seguidor Remoto (a)",
+        "Toggle Remote Control Link (r)": "Alternar Enlace de Control Remoto (r)",
+        "Close Overview (ESC)": "Cerrar Visión General (ESC)",
+        "Overview (ESC)": "Visión General (ESC)",
+        "Unpause/Unblank (b)": "Reanudar/Desenfocar (b)",
+        "Pause/Blank (b)": "Pausar/Enfocar (b)",
+        "Open Link in New Tab": "Abrir Enlace en Nueva Pestaña",
+        "Copy Link Address": "Copiar Dirección del Enlace",
+        "Link copied to clipboard": "Enlace copiado al portapapeles",
+        "Close Presentation": "Cerrar Presentación",
+        "Please close this tab manually.": "Por favor, cierre esta pestaña manualmente."
     }
 }
