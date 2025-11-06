@@ -242,6 +242,10 @@ function showCustomContextMenu(x, y, pres) {
       action: () => window.electronAPI.showPresentationFolder(pres.slug)
     });
     options.push({
+      label: tr('Regenerate Thumbnail'),
+      action: () => window.electronAPI.exportImages(pres.slug, pres.md, 426, 240, 2, true)
+    });
+    options.push({
       label: '📤 ' + tr('Export Presentation…'),
       action: async () => {
         await window.electronAPI.showExportWindow(pres.slug, pres.md);

@@ -2,7 +2,7 @@
 title: A Basic Presentation
 description: More information about this basic presentation
 theme: softblood.css
-thumbnail: thumbnail.webp
+thumbnail: thumbnail.jpg
 config:
   transition: fade
   transitionSpeed: slow

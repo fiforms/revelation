@@ -54,7 +54,7 @@ async function main() {
 
     // Copy basic files
     fs.copyFileSync(path.join(templateDir, 'style.css'), path.join(presDir, 'style.css'));
-    fs.copyFileSync(path.join(templateDir, 'thumbnail.webp'), path.join(presDir, 'thumbnail.webp'));
+    fs.copyFileSync(path.join(templateDir, 'thumbnail.jpg'), path.join(presDir, 'thumbnail.jpg'));
 
     // Generate presentation.md with YAML front matter
     const date = new Date().toISOString().split('T')[0];
@@ -64,7 +64,7 @@ async function main() {
     content += `author:\n`;
     content += `  name: ${author}\n`;
     content += `theme: ${theme}\n`;
-    content += `thumbnail: thumbnail.webp\n`;
+    content += `thumbnail: thumbnail.jpg\n`;
     content += `created: ${date}\n`;
 
     if (useExample) {
