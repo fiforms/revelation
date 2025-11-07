@@ -122,11 +122,15 @@ export async function initMediaLibrary(container, {
       const thumb = document.createElement('img');
       thumb.src = `/presentations_${state.key}/_media/${item.thumbnail}`;
       thumb.alt = item.title || item.original_filename;
-      thumb.style = 'max-width:100%;border-radius:4px;margin-bottom:.5rem;cursor:zoom-in;';
-      thumb.addEventListener('click', (e) => {
-        e.stopPropagation();
-        openPreview(item, mediaList.indexOf(item));
-      });
+      if (mode === 'picker') {
+          thumb.style = 'max-width:100%;border-radius:4px;margin-bottom:.5rem;cursor:pointer;';
+      } else {
+          thumb.style = 'max-width:100%;border-radius:4px;margin-bottom:.5rem;cursor:zoom-in;';
+          thumb.addEventListener('click', (e) => {
+            e.stopPropagation();
+            openPreview(item, mediaList.indexOf(item));
+          });
+      }
 
       const title = document.createElement('div');
       title.style = 'font-weight:700;font-size:1.05rem;';
@@ -142,28 +146,13 @@ export async function initMediaLibrary(container, {
 
       // Picker affordance
       if (mode === 'picker') {
-        const pickRow = document.createElement('div');
-        pickRow.style = 'display:flex; gap:.5rem; margin-top:.6rem;';
-        pickRow.innerHTML = `
-          <button data-action="pick:background" title="Insert as background" class="mlbtn">Bkg</button>
-          <button data-action="pick:backgroundsticky" title="Insert as sticky background" class="mlbtn">Bkg (Sticky)</button>
-          <button data-action="pick:fit" title="Insert as fit image" class="mlbtn">Fit</button>
-          <button data-action="pick:normal" title="Insert normal image" class="mlbtn">Normal</button>
-        `;
-        pickRow.querySelectorAll('.mlbtn').forEach(btn => {
-          btn.style = 'padding:.4rem .6rem;border-radius:6px;border:1px solid #555;background:#2a2a2a;color:#eee;cursor:pointer;';
-        });
-        pickRow.addEventListener('click', (e) => {
-          const b = e.target.closest('[data-action^="pick:"]');
-          if (!b) return;
-          const variant = b.dataset.action.split(':')[1]; // background|fit|normal
+        card.addEventListener('click', () => {
           if (typeof onPick === 'function') {
             const yaml = generateYAML(item);
             const md = generateMD(item);
-            onPick({ variant, yaml, md, item });
+            onPick({ variant: 'auto', yaml, md, item });
           }
         });
-        card.appendChild(pickRow);
       }
 
       // Context menu (standalone mode keeps your plugin hooks)
