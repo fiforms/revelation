@@ -89,23 +89,43 @@ function generatePresentationIndex() {
     dirs.forEach((dir) => {
       const folderPath = path.join(presentationsDir, dir);
       const files = fs.readdirSync(folderPath).filter((file) => file.endsWith('.md'));
-
+      
       files.forEach((mdFile) => {
         const mdPath = path.join(folderPath, mdFile);
         const fileContent = fs.readFileSync(mdPath, 'utf-8');
-        const { data } = matter(fileContent);
-	if(data.alternatives !== 'hidden') {
 
-          indexData.push({
-            slug: dir,
-            md: mdFile,
-            title: data.title || `${dir}/${mdFile}`,
-            description: data.description || '',
-            thumbnail: data.thumbnail || 'preview.jpg',
-            theme: data.theme || '',
-          });
-	}
+        let data;
+        try {
+          // Attempt to read YAML front matter
+          data = matter(fileContent).data || {};
+        } catch (err) {
+          console.error(`⚠ Malformed YAML in ${dir}/${mdFile}: ${err.message}`);
+
+          // Fallback metadata when YAML is broken
+          data = {
+            title: "{malformed YAML}",
+            description: err.message,
+            thumbnail: "preview.jpg",
+            _malformed: true
+          };
+        }
+
+        // Skip hidden alternatives
+        if (data.alternatives === "hidden") {
+          return;
+        }
+
+        indexData.push({
+          slug: dir,
+          md: mdFile,
+          title: data.title || `${dir}/${mdFile}`,
+          description: data.description || "",
+          thumbnail: data.thumbnail || "preview.jpg",
+          theme: data.theme || "",
+          _malformed: data._malformed || false
+        });
       });
+
     });
 
     fs.writeFileSync(outputFile, JSON.stringify(indexData, null, 2), 'utf-8');
