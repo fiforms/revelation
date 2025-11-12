@@ -92,13 +92,29 @@ function createAlternativeSelector(deck, alternatives) {
 export function extractFrontMatter(md) {
   const FRONTMATTER_RE = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/;
   const match = md.match(FRONTMATTER_RE);
-  if (match) {
-    const yamlText = match[1];
-    const content = md.slice(match[0].length);
+  if (!match) {
+    return { metadata: {}, content: md };
+  }
+
+  const yamlText = match[1];
+  const content = md.slice(match[0].length);
+
+  try {
     const metadata = yaml.load(yamlText) || {};
     return { metadata, content };
+  } catch (err) {
+    console.error("⚠ Malformed YAML in presentation:", err.message);
+
+    // Return SAFE metadata with a flag
+    return {
+      metadata: {
+        title: "{malformed YAML}",
+        description: err.message,
+        _malformed: true
+      },
+      content
+    };
   }
-  return { metadata: {}, content: md };
 }
 
 export function preprocessMarkdown(md, userMacros = {}, forHandout = false, media = {}, newSlideOnHeading = true) {
