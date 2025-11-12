@@ -174,8 +174,8 @@ function showCustomContextMenu(x, y, pres) {
   const scrollY = window.scrollY || document.documentElement.scrollTop;
   const scrollX = window.scrollX || document.documentElement.scrollLeft;
 
-  const menuWidth = 220;
-  const menuHeight = 240; // Estimate or measure depending on items
+  const menuWidth = 330;
+  const menuHeight = 480; // Estimate or measure depending on items
 
   const maxLeft = window.innerWidth - menuWidth - 10;
   const maxTop = window.innerHeight - menuHeight - 10;
