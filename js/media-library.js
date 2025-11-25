@@ -23,4 +23,9 @@ if (import.meta.hot) {
   import.meta.hot.on('reload-media', () => location.reload());
 }
 
+if(window.electronAPI) {
+  const linkBack = document.getElementById('back-link');
+  if(linkBack) linkBack.style.display = 'none';
+}
+
 initMediaLibrary(container, { key: url_key, mode: 'standalone' });

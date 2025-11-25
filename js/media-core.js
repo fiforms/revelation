@@ -26,15 +26,73 @@ export async function initMediaLibrary(container, {
   const usedMedia = window.electronAPI ? await window.electronAPI.getUsedMedia() : [];
 
 
-  // Simple structure
+  // NEW: search/filter/sort bar on top + media layout below
   container.innerHTML = `
-    <div class="media-lib">
+    <div id="media-controls" style="
+      position:fixed;top:0;left:0;right:0;
+      padding:.5rem 1rem;
+      background:#111;border-bottom:1px solid #333;
+      z-index:1000;display:flex;gap:.5rem;align-items:center;">
+        <input id="media-search" type="text" placeholder="Search…" 
+          style="flex:1;padding:.35rem .5rem;border-radius:4px;border:1px solid #555;background:#222;color:#eee;">
+        <select id="media-type" 
+          style="padding:.35rem .5rem;border-radius:4px;border:1px solid #555;background:#222;color:#eee;">
+          <option value="all">All</option>
+          <option value="image">Images</option>
+          <option value="video">Videos</option>
+        </select>
+        <select id="media-sort"
+          style="padding:.35rem .5rem;border-radius:4px;border:1px solid #555;background:#222;color:#eee;">
+          <option value="name-asc">Filename A→Z</option>
+          <option value="name-desc">Filename Z→A</option>
+          <option value="date-new">Date Added (newest)</option>
+          <option value="date-old">Date Added (oldest)</option>
+        </select>
+    </div>
+
+    <div class="media-lib" style="padding-top:60px;">
       <div class="media-toolbar"></div>
-      <div class="media-grid" id="media-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1.5rem;"></div>
+      <div class="media-grid" id="media-grid"
+        style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1.5rem;">
+      </div>
     </div>
   `;
+
+  // Adjust search bar for Electron sidebar
+  const mediaControls = container.querySelector('#media-controls');
+  if (window.electronAPI && mode === 'standalone') {
+    // Scoot over by sidebar width (tweak 260px if your sidebar is different)
+    mediaControls.style.left = '260px';
+  } else {
+    mediaControls.style.left = '0';
+  }
+
+  const searchBox = container.querySelector('#media-search');
+  const typeSelect = container.querySelector('#media-type');
+  const sortSelect = container.querySelector('#media-sort');
+
+  searchBox.focus();
+
+  let masterList = [];
+  let viewList = [];
+
   const grid = container.querySelector('#media-grid');
   const toolbar = container.querySelector('.media-toolbar');
+
+  
+  let debounceTimer = null;
+  function triggerUpdate() {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      viewList = applyFiltersAndSort(masterList);
+      render(viewList);
+    }, 150);
+  }
+
+  searchBox.addEventListener('input', triggerUpdate);
+  typeSelect.addEventListener('change', triggerUpdate);
+  sortSelect.addEventListener('change', triggerUpdate);
+
 
   // Optional toolbar affordances
   if (mode === 'picker') {
@@ -87,53 +145,50 @@ export async function initMediaLibrary(container, {
   // Fetch
   fetch(`/presentations_${key}/_media/index.json`)
     .then(r => r.json())
-    .then((media) => render(media))
+    .then((media) => {
+      masterList = Object.values(media);
+      viewList = masterList;
+      render(viewList);
+    })
     .catch(err => {
       grid.innerHTML = `<p style="color:#f66">${tr('Failed to load media index')}: ${err.message}</p>`;
       console.error(err);
     });
 
-  function render(media) {
-    const entries = Object.entries(media);
+  function render(list) {
+    grid.innerHTML = '';
 
-    mediaList.length = 0; // reset
-    if (!entries.length) {
+    if (!list.length) {
       grid.innerHTML = `<p>${tr('No media found.')}</p>`;
       return;
     }
-    grid.innerHTML = '';
-    for (const [id, item] of entries) {
-      mediaList.push(item);
-      state.itemsById[id] = item;
 
+    for (const item of list) {
       const card = document.createElement('div');
       card.className = 'media-card';
-      card.dataset.id = id;
+      card.dataset.id = item.filename;
       card.style = 'background:#222;border:1px solid #444;border-radius:8px;padding:1rem;box-shadow:0 0 6px rgba(0,0,0,.5)';
 
-      if(usedMedia.length) {
-        if (usedMedia.includes(item.filename)) {
-          card.classList.add('media-used');
-        } else {
-          card.classList.add('media-unused');
-        }
+      if (usedMedia.length) {
+        if (usedMedia.includes(item.filename)) card.classList.add('media-used');
+        else card.classList.add('media-unused');
       }
 
       const thumb = document.createElement('img');
       thumb.src = `/presentations_${state.key}/_media/${item.thumbnail}`;
       thumb.alt = item.title || item.original_filename;
-      if (mode === 'picker') {
-          thumb.style = 'max-width:100%;border-radius:4px;margin-bottom:.5rem;cursor:pointer;';
-      } else {
-          thumb.style = 'max-width:100%;border-radius:4px;margin-bottom:.5rem;cursor:zoom-in;';
-          thumb.addEventListener('click', (e) => {
-            e.stopPropagation();
-            openPreview(item, mediaList.indexOf(item));
-          });
-      }
+      thumb.style = 'max-width:100%;border-radius:4px;margin-bottom:.5rem;cursor:zoom-in;';
+      thumb.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openPreview(item, list.indexOf(item));
+      });
+
+      const thumbWrap = document.createElement('div');
+      thumbWrap.className = 'media-thumb-wrapper';
+      thumbWrap.appendChild(thumb);
 
       const title = document.createElement('div');
-      title.style = 'font-weight:700;font-size:1.05rem;';
+      title.className = 'media-title';
       title.textContent = item.title || item.original_filename;
 
       const meta = document.createElement('div');
@@ -144,7 +199,18 @@ export async function initMediaLibrary(container, {
         ${item.copyright ? `<small>${item.copyright}</small><br/>` : ''}
       `;
 
-      // Picker affordance
+      card.appendChild(thumbWrap);
+      card.appendChild(title);
+      card.appendChild(meta);
+
+      if (enableContextMenu && mode === 'standalone') {
+        card.addEventListener('contextmenu', (e) => {
+          e.preventDefault();
+          showContextMenu(e.pageX, e.pageY, item);
+        });
+        card.addEventListener('click', () => openPreview(item, list.indexOf(item)));
+      }
+
       if (mode === 'picker') {
         card.addEventListener('click', () => {
           if (typeof onPick === 'function') {
@@ -155,27 +221,6 @@ export async function initMediaLibrary(container, {
         });
       }
 
-      // Context menu (standalone mode keeps your plugin hooks)
-      if (enableContextMenu && mode === 'standalone') {
-        card.addEventListener('contextmenu', (e) => {
-          e.preventDefault();
-          showContextMenu(e.pageX, e.pageY, item);
-        });
-      }
-
-      // Whole card click = preview (standalone)
-      if (mode === 'standalone') {
-        card.addEventListener('click', () => openPreview(item, mediaList.indexOf(item)));
-      }
-
-      const thumbWrap = document.createElement('div');
-      thumbWrap.className = 'media-thumb-wrapper';
-      thumbWrap.appendChild(thumb);
-      card.appendChild(thumbWrap);
-
-      title.className = 'media-title';
-      card.appendChild(title);
-      card.appendChild(meta);
       grid.appendChild(card);
     }
   }
@@ -434,6 +479,41 @@ caption.innerHTML = `
     document.body.appendChild(ta); ta.select();
     try { document.execCommand('copy'); } catch {}
     document.body.removeChild(ta);
+  }
+
+  function applyFiltersAndSort(list) {
+    const q = searchBox.value.trim().toLowerCase();
+    const type = typeSelect.value;
+    const sort = sortSelect.value;
+    const tokens = q ? q.split(/\s+/) : [];
+
+    let filtered = list.filter(item => {
+      if (type === "video" && item.mediatype !== "video") return false;
+      if (type === "image" && item.mediatype === "video") return false;
+
+      return tokens.every(t =>
+        (item.original_filename || "").toLowerCase().includes(t) ||
+        (item.title || "").toLowerCase().includes(t) ||
+        (item.description || "").toLowerCase().includes(t) ||
+        (item.keywords || "").toLowerCase().includes(t)
+      );
+    });
+
+    switch (sort) {
+      case "name-desc":
+        filtered.sort((a, b) => b.original_filename.localeCompare(a.original_filename));
+        break;
+      case "date-new":
+        filtered.sort((a, b) => (b.mtime || 0) - (a.mtime || 0));
+        break;
+      case "date-old":
+        filtered.sort((a, b) => (a.mtime || 0) - (b.mtime || 0));
+        break;
+      default:
+        filtered.sort((a, b) => a.original_filename.localeCompare(b.original_filename));
+    }
+
+    return filtered;
   }
 
   return {
