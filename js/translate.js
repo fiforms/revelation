@@ -26,7 +26,7 @@ window.tr = (key) => {
 }
 
 window.loadTranslations = async () => {
-  console.log(window.translationsources);
+  //console.log(window.translationsources);
   window.translations ||= {};
 
   for (const src of window.translationsources) {
