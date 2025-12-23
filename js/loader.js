@@ -132,7 +132,10 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
     columnstart: `<div class="flexcontainer"><div class="first">`,
     columnbreak: `</div><div class="second">`,
     columnend: `</div></div>`,
-    bgtint: `<!-- .slide: data-tint-color="$1" -->`
+    bgtint: `<!-- .slide: data-tint-color="$1" -->`,
+    audiostart: `<!-- .slide: data-background-audio-start="$1" -->`,
+    audioloop: `<!-- .slide: data-background-audio-loop="$1" -->`,
+    audiostop: `<!-- .slide: data-background-audio-stop -->`
   };
 
   const macros = { ...defaultMacros, ...userMacros };
