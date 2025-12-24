@@ -14,7 +14,7 @@
     "reveal.js-remote": "github:cologneintelligence/reveal.js-remote",
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.1",
-    "vite": "^6.3.5"
+    "vite": "^7.3.0"
   },
   "scripts": {
     "dev": "npm-run-all --parallel watch:theme vite",
