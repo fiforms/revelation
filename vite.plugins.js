@@ -140,9 +140,19 @@ function presentationIndexPlugin() {
       generateMediaIndex();
     },
     configureServer(server) {
-      copyFonts();
+      const isGui = /^(1|true)$/i.test(process.env.REVELATION_GUI || '');
+      const cssServeDir = isGui ? path.resolve(__dirname, 'dist/css') : path.resolve(__dirname, 'css');
+      const revealDistDir = path.resolve(__dirname, 'node_modules/reveal.js/dist');
+
+      if(!isGui) {
+        copyFonts();
+      }
       generatePresentationIndex();
       generateMediaIndex();
+
+      if (fs.existsSync(revealDistDir)) {
+        server.middlewares.use('/css/reveal.js/dist', serveStatic(revealDistDir, { fallthrough: true }));
+      }
 
      // 👇 Find out if Vite was started with --host (network mode)
     const isNetwork = process.argv.includes('--host');
@@ -156,8 +166,6 @@ function presentationIndexPlugin() {
     });
 
     const chokidar = require('chokidar');
-    const path = require('path');
-    const fs = require('fs');
 
     const watcher = chokidar.watch(presentationsDir, {
       ignored: /(^|[/\\])\../, // Ignore dotfiles
@@ -216,6 +224,16 @@ function presentationIndexPlugin() {
         }
       });
       
+    // Prefer dist/css output if available; fall back to css/.
+    console.log(`Serving /css from ${cssServeDir}`);
+    server.middlewares.use(
+      '/css',
+      serveStatic(cssServeDir, {
+        index: false,
+        fallthrough: true,
+      })
+    );
+
     // Rewrite `/presentations/foo/index.html` to `/presentation.html?slug=foo`
     server.middlewares.use((req, res, next) => {
       const escaped = presentationsWebPath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // escape for regex
