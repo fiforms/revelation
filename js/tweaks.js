@@ -76,12 +76,33 @@ function updateAttributionFromCurrentSlide(deck) {
     const tintcolor = currentSlide.getAttribute('data-tint-color');
     console.log('Tint color for current slide:', tintcolor);
     const tint = document.getElementById('fixed-tint-wrapper');
+    const tintFadeMs = 300;
+
+    if (!tint) {
+      return;
+    }
+
+    tint.style.transition = `opacity ${tintFadeMs}ms ease, background-color ${tintFadeMs}ms ease`;
+
+    if (tint._hideTimeout) {
+      clearTimeout(tint._hideTimeout);
+      tint._hideTimeout = null;
+    }
 
     if (tintcolor) {
-    tint.style.background = tintcolor; 
-    tint.style.display = '';
-    } else {
-    tint.style.display = 'none';
+      tint.style.backgroundColor = tintcolor;
+      if (getComputedStyle(tint).display === 'none') {
+        tint.style.display = '';
+        tint.style.opacity = '0';
+        // Force a reflow so the opacity transition starts from 0.
+        void tint.offsetHeight;
+      }
+      tint.style.opacity = '1';
+    } else if (getComputedStyle(tint).display !== 'none') {
+      tint.style.opacity = '0';
+      tint._hideTimeout = setTimeout(() => {
+        tint.style.display = 'none';
+      }, tintFadeMs);
     }
 }
 
