@@ -1,5 +1,6 @@
 const os = require('os');
 const fs = require('fs');
+const crypto = require('crypto');
 const path = require('path');
 const matter = require('gray-matter');
 const ip = require('ip');
@@ -143,6 +144,8 @@ function presentationIndexPlugin() {
       const isGui = /^(1|true)$/i.test(process.env.REVELATION_GUI || '');
       const cssServeDir = isGui ? path.resolve(__dirname, 'dist/css') : path.resolve(__dirname, 'css');
       const revealDistDir = path.resolve(__dirname, 'node_modules/reveal.js/dist');
+      const userDataDir = process.env.USER_DATA_DIR;
+      const configPath = userDataDir ? path.join(userDataDir, 'config.json') : null;
 
       if(!isGui) {
         copyFonts();
@@ -253,6 +256,67 @@ function presentationIndexPlugin() {
         next();
       });
 
+      // Peer pairing endpoints (served from the same Vite server)
+      server.middlewares.use((req, res, next) => {
+        if (!req.url?.startsWith('/peer/')) return next();
+
+        const config = loadPeerConfig(configPath);
+        if (!config) {
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Peer config unavailable' }));
+          return;
+        }
+
+        if (req.method === 'GET' && req.url === '/peer/public-key') {
+          const publicKey = config.rsaPublicKey;
+          const payload = {
+            instanceId: config.mdnsInstanceId,
+            instanceName: config.mdnsInstanceName,
+            hostname: os.hostname(),
+            publicKey,
+            publicKeyFingerprint: fingerprintPublicKey(publicKey || '')
+          };
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify(payload));
+          return;
+        }
+
+        if (req.method === 'POST' && req.url === '/peer/challenge') {
+          let body = '';
+          req.on('data', (chunk) => {
+            body += chunk.toString();
+          });
+          req.on('end', () => {
+            let data;
+            try {
+              data = JSON.parse(body || '{}');
+            } catch {
+              res.writeHead(400, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ error: 'Invalid JSON' }));
+              return;
+            }
+            const challenge = data.challenge;
+            if (!challenge || !config.rsaPrivateKey) {
+              res.writeHead(400, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ error: 'Missing challenge or private key' }));
+              return;
+            }
+            try {
+              const signature = signChallenge(config.rsaPrivateKey, challenge);
+              res.writeHead(200, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ signature }));
+            } catch (err) {
+              res.writeHead(500, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ error: err.message }));
+            }
+          });
+          return;
+        }
+
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Not found' }));
+      });
+
       // Restrict access to presentation listing from other hosts by default
       server.middlewares.use((req, res, next) => {
 
@@ -330,6 +394,26 @@ function copyFonts() {
       // Recursively copy
       copyRecursiveSync(src, dest);
       console.log('📁 Copied Reveal.js fonts to css/fonts');
+}
+
+function loadPeerConfig(configPath) {
+  if (!configPath || !fs.existsSync(configPath)) return null;
+  try {
+    return JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+  } catch {
+    return null;
+  }
+}
+
+function signChallenge(privateKeyPem, challenge) {
+  const signer = crypto.createSign('RSA-SHA256');
+  signer.update(challenge);
+  signer.end();
+  return signer.sign(privateKeyPem).toString('base64');
+}
+
+function fingerprintPublicKey(publicKeyPem) {
+  return crypto.createHash('sha256').update(publicKeyPem).digest('hex');
 }
 
 // Helper: Recursive copy
