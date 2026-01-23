@@ -67,7 +67,7 @@ export function contextMenu(deck) {
             action: () => {
               if (window.electronAPI?.sendPeerCommand) {
                 window.electronAPI.sendPeerCommand({
-                  type: 'open-link',
+                  type: 'open-presentation',
                   payload: { url: link }
                 });
               } else {
