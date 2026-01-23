@@ -61,7 +61,20 @@ export function contextMenu(deck) {
                   fallbackCopyText(link);
                 }
               }
+            },
+          {
+            label: tr('Send Link to Peers'),
+            action: () => {
+              if (window.electronAPI?.sendPeerCommand) {
+                window.electronAPI.sendPeerCommand({
+                  type: 'open-link',
+                  payload: { url: link }
+                });
+              } else {
+                console.warn('Peer commands unavailable outside Electron.');
+              }
             }
+          }
 
         );
       }
@@ -167,4 +180,3 @@ function fireRevealKey(key) {
   });
   document.dispatchEvent(event);
 }
-

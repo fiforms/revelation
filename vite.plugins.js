@@ -5,11 +5,14 @@ const path = require('path');
 const matter = require('gray-matter');
 const ip = require('ip');
 const serveStatic = require('serve-static');
+const { Server } = require('socket.io');
 
 const localIp = ip.address(); // Gets the LAN IP
 
 const baseDir = __dirname;
 const prefix = 'presentations_';
+const PEER_SOCKET_PATH = '/peer-commands';
+let peerCommandIo = null;
 
 let presentationsWebPath = '';
 let presentationsDir = '';
@@ -256,7 +259,8 @@ function presentationIndexPlugin() {
         next();
       });
 
-      // Peer pairing endpoints (served from the same Vite server)
+      // Peer pairing + peer command endpoints (served from the same Vite server)
+      ensurePeerCommandServer(server, configPath);
       server.middlewares.use((req, res, next) => {
         if (!req.url?.startsWith('/peer/')) return next();
 
@@ -266,6 +270,8 @@ function presentationIndexPlugin() {
           res.end(JSON.stringify({ error: 'Peer config unavailable' }));
           return;
         }
+
+        const parsedUrl = new URL(req.url, 'http://localhost');
 
         if (req.method === 'GET' && req.url === '/peer/public-key') {
           const publicKey = config.rsaPublicKey;
@@ -278,6 +284,64 @@ function presentationIndexPlugin() {
           };
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify(payload));
+          return;
+        }
+
+        if (req.method === 'GET' && parsedUrl.pathname === '/peer/socket-info') {
+          if (!config.rsaPrivateKey) {
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Peer private key unavailable' }));
+            return;
+          }
+          const token = crypto.randomBytes(16).toString('hex');
+          const expiresAt = Date.now() + 60_000;
+          const socketPath = PEER_SOCKET_PATH;
+          const payload = buildSocketPayload(token, expiresAt, socketPath);
+          const signature = signChallenge(config.rsaPrivateKey, payload);
+          const protocol = req.socket?.encrypted ? 'https' : 'http';
+          const socketUrl = `${protocol}://${req.headers.host}`;
+
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ socketUrl, socketPath, token, expiresAt, signature }));
+          return;
+        }
+
+        if (req.method === 'POST' && parsedUrl.pathname === '/peer/command') {
+          if (!peerCommandIo) {
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Peer command server unavailable' }));
+            return;
+          }
+          if (!isLoopbackAddress(req.socket?.remoteAddress)) {
+            res.writeHead(403, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Forbidden' }));
+            return;
+          }
+
+          let body = '';
+          req.on('data', (chunk) => {
+            body += chunk.toString();
+          });
+          req.on('end', () => {
+            let data;
+            try {
+              data = JSON.parse(body || '{}');
+            } catch {
+              res.writeHead(400, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ error: 'Invalid JSON' }));
+              return;
+            }
+            const command = data.command;
+            if (!command?.type) {
+              res.writeHead(400, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ error: 'Missing command type' }));
+              return;
+            }
+
+            peerCommandIo.emit('peer-command', command);
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ success: true }));
+          });
           return;
         }
 
@@ -405,11 +469,55 @@ function loadPeerConfig(configPath) {
   }
 }
 
+function isLoopbackAddress(address) {
+  if (!address) return false;
+  const normalized = address.startsWith('::ffff:') ? address.replace('::ffff:', '') : address;
+  return normalized === '127.0.0.1' || normalized === '::1';
+}
+
+function ensurePeerCommandServer(server, configPath) {
+  if (peerCommandIo || !server.httpServer) return;
+
+  peerCommandIo = new Server(server.httpServer, {
+    path: PEER_SOCKET_PATH,
+    cors: { origin: '*', methods: ['GET', 'POST'] }
+  });
+
+  peerCommandIo.use((socket, next) => {
+    const auth = socket.handshake.auth || {};
+    const { token, expiresAt, signature } = auth;
+    const config = loadPeerConfig(configPath);
+
+    if (!token || !expiresAt || !signature || !config?.rsaPublicKey) {
+      return next(new Error('Missing peer auth'));
+    }
+    if (Number(expiresAt) < Date.now()) {
+      return next(new Error('Peer auth expired'));
+    }
+    const payload = buildSocketPayload(token, expiresAt, PEER_SOCKET_PATH);
+    if (!verifySignature(config.rsaPublicKey, payload, signature)) {
+      return next(new Error('Invalid peer signature'));
+    }
+    return next();
+  });
+}
+
 function signChallenge(privateKeyPem, challenge) {
   const signer = crypto.createSign('RSA-SHA256');
   signer.update(challenge);
   signer.end();
   return signer.sign(privateKeyPem).toString('base64');
+}
+
+function verifySignature(publicKeyPem, payload, signatureBase64) {
+  const verifier = crypto.createVerify('RSA-SHA256');
+  verifier.update(payload);
+  verifier.end();
+  return verifier.verify(publicKeyPem, Buffer.from(signatureBase64, 'base64'));
+}
+
+function buildSocketPayload(token, expiresAt, socketPath) {
+  return `${token}:${expiresAt}:${socketPath}`;
 }
 
 function fingerprintPublicKey(publicKeyPem) {
