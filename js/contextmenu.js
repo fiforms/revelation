@@ -39,6 +39,9 @@ export function contextMenu(deck) {
           { label: tr('Toggle Remote Follower Link (a)'), action: () => fireRevealKey('a') },
           { label: tr('Toggle Remote Control Link (r)'), action: () => fireRevealKey('r') }
 	  ] : []),
+        ...(window.electronAPI?.sendPeerCommand ? [
+          { label: tr('Send Presentation to Peers (z)'), action: () => sendPresentationToPeers() }
+        ] : []),
         { label: deck.isOverview() ? tr('Close Overview (ESC)') : tr('Overview (ESC)'), action: () => deck.toggleOverview() },
         { label: deck.isPaused() ? tr('Unpause/Unblank (b)') : tr('Pause/Blank (b)'), action: () => deck.togglePause() }
       ];
@@ -61,20 +64,7 @@ export function contextMenu(deck) {
                   fallbackCopyText(link);
                 }
               }
-            },
-          {
-            label: tr('Send Link to Peers'),
-            action: () => {
-              if (window.electronAPI?.sendPeerCommand) {
-                window.electronAPI.sendPeerCommand({
-                  type: 'open-presentation',
-                  payload: { url: link }
-                });
-              } else {
-                console.warn('Peer commands unavailable outside Electron.');
-              }
             }
-          }
 
         );
       }
@@ -116,6 +106,42 @@ export function contextMenu(deck) {
       document.body.appendChild(menu);
       document.addEventListener('click', () => menu.remove(), { once: true });
     });
+}
+
+export function sendPresentationToPeers() {
+  if (!window.electronAPI?.sendPeerCommand) {
+    console.warn('Peer commands unavailable outside Electron.');
+    return;
+  }
+
+  const url = getPeerShareUrl();
+  if (!url) {
+    alert(tr('Remote share link not ready yet.'));
+    return;
+  }
+
+  window.electronAPI.sendPeerCommand({
+    type: 'open-presentation',
+    payload: { url }
+  });
+}
+
+function getPeerShareUrl() {
+  const baseUrl = window.location.href.replace(/#.*/, '');
+  if (!window.localStorage) return null;
+
+  try {
+    const presentations = JSON.parse(window.localStorage.getItem('presentations') || '{}');
+    const entry = presentations[baseUrl];
+    const multiplexId = entry?.multiplexId;
+    if (!multiplexId) return null;
+
+    const joiner = baseUrl.includes('?') ? '&' : '?';
+    return `${baseUrl}${joiner}remoteMultiplexId=${multiplexId}`;
+  } catch (err) {
+    console.warn('Failed to read remote share link from local storage.', err);
+    return null;
+  }
 }
 
 function fallbackCopyText(text) {
