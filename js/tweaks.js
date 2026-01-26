@@ -1,8 +1,13 @@
 
 export function revealTweaks(deck) {
-    const updateAttribution = () => updateAttributionFromCurrentSlide(deck);
 
-    deck.on('ready', updateAttribution);       
+    const isThumbnail = window.location.href.includes('backgroundTransition=none');
+
+    const readyTweaks = () => {
+      updateAttributionFromCurrentSlide(deck);
+    }
+
+    deck.on('ready', readyTweaks);       
     deck.on('slidechanged', () => updateAttributionFromCurrentSlide(deck));
 
 
@@ -10,7 +15,7 @@ export function revealTweaks(deck) {
     // This is necessary because Reveal.js may not autoplay videos in the background
     // and some browsers require user interaction to start video playback.
 
-    if (window.self === window.top) {
+    if (!isThumbnail) {
       deck.on('slidechanged', e => {
         e.currentSlide.querySelectorAll('video[data-imagefit]').forEach(v => {
           v.play().catch(() => {});
@@ -24,7 +29,7 @@ export function revealTweaks(deck) {
       });
     }
     
-    scrubBackgroundVideos();
+    scrubBackgroundVideos(isThumbnail);
     hideControlsOnSpeakerNotes();
     doubleClickFullScreen();
     hideCursorOnIdle();
@@ -45,8 +50,8 @@ function hideCursorOnIdle() {
 }
 
 // Disable video backgrounds in speaker notes view (iFrames)
-function scrubBackgroundVideos() {
-    if (window.self !== window.top) {
+function scrubBackgroundVideos(isThumbnail) {
+    if (isThumbnail) {
       document.querySelectorAll('.slide-background-content video').forEach(video => {
         if (!video.hasAttribute('data-paused-by-notes')) {
           video.pause();
@@ -56,7 +61,7 @@ function scrubBackgroundVideos() {
         }
       });
       // Re-run after 1 second
-      setTimeout(scrubBackgroundVideos, 1000);
+      setTimeout(() => scrubBackgroundVideos(true), 1000);
     }
 }
 
