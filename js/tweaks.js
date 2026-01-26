@@ -16,6 +16,7 @@ export function revealTweaks(deck) {
     // and some browsers require user interaction to start video playback.
 
     if (!isThumbnail) {
+      initBackgroundAudio(deck);
       deck.on('slidechanged', e => {
         e.currentSlide.querySelectorAll('video[data-imagefit]').forEach(v => {
           v.play().catch(() => {});
@@ -33,6 +34,81 @@ export function revealTweaks(deck) {
     hideControlsOnSpeakerNotes();
     doubleClickFullScreen();
     hideCursorOnIdle();
+}
+
+function initBackgroundAudio(deck) {
+  const audioEl = document.getElementById('background-audio-player');
+  if (!audioEl) {
+    return;
+  }
+
+  let lastCommand = null;
+
+  const normalizeSrc = (src) => {
+    try {
+      return new URL(src, window.location.href).href;
+    } catch {
+      return src;
+    }
+  };
+
+  const stopAudio = () => {
+    audioEl.pause();
+    audioEl.currentTime = 0;
+    audioEl.removeAttribute('src');
+    audioEl.load();
+    lastCommand = 'stop';
+  };
+
+  const startAudio = (src, loop) => {
+    const normalized = normalizeSrc(src);
+    const current = audioEl.src ? normalizeSrc(audioEl.src) : '';
+    const commandKey = `play:${normalized}:${loop ? 'loop' : 'once'}`;
+
+    if (lastCommand === commandKey) {
+      return;
+    }
+
+    const isSameSrc = current && normalized === current;
+    audioEl.loop = !!loop;
+
+    if (!isSameSrc) {
+      audioEl.src = src;
+      audioEl.currentTime = 0;
+    } else if (audioEl.ended && !audioEl.loop) {
+      lastCommand = commandKey;
+      return;
+    }
+
+    audioEl.play().catch(() => {});
+    lastCommand = commandKey;
+  };
+
+  const handleSlideAudio = (slide) => {
+    if (!slide) {
+      return;
+    }
+
+    if (slide.hasAttribute('data-background-audio-stop')) {
+      stopAudio();
+      return;
+    }
+
+    const loopSrc = slide.getAttribute('data-background-audio-loop');
+    const startSrc = slide.getAttribute('data-background-audio-start');
+
+    if (loopSrc) {
+      startAudio(loopSrc, true);
+      return;
+    }
+
+    if (startSrc) {
+      startAudio(startSrc, false);
+    }
+  };
+
+  deck.on('ready', e => handleSlideAudio(e.currentSlide));
+  deck.on('slidechanged', e => handleSlideAudio(e.currentSlide));
 }
 
 // Hide the cursor after a period of inactivity

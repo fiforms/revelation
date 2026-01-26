@@ -348,6 +348,7 @@ REVELation defines several built-in macros for commonly used slide attributes:
 | `columnstart` | Start of two-column layout (`<div class="flexcontainer">...`) |
 | `columnbreak` | Middle divider for two-column layout                          |
 | `columnend`   | Closes the two-column layout                                  |
+| `audio`       | Controls background audio (`play`, `playloop`, `stop`)         |
 
 You can override or redefine these in your YAML if needed.
 
@@ -430,6 +431,43 @@ Right side content here
 ```
 
 Each part expands to HTML `<div>` elements that split your slide into two halves.
+
+---
+
+### 🔊 Background Audio
+
+Start, loop, or stop an invisible background audio track when a slide appears.
+Audio will continue across slides until a new audio command is issued or a stop appears.
+
+```markdown
+{{audio:play:my_audio_file.mp3}}
+```
+
+Starts playing the file once.
+
+---
+
+```markdown
+{{audio:playloop:crickets.mp3}}
+```
+
+Loops the file until stopped or replaced.
+
+---
+
+```markdown
+{{audio:stop}}
+```
+
+Stops playback and clears the current track.
+
+---
+
+You can also reference named media aliases:
+
+```markdown
+{{audio:play:media:my_audio}}
+```
 
 ---
 

@@ -188,6 +188,34 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
   var blankslide = true;
   let insideCodeBlock = false;
   let currentFence = '';
+  const resolveMediaAlias = (input) => {
+    if (!input || !media) {
+      return input;
+    }
+    const aliasMatch = input.match(/^media:([a-zA-Z0-9_-]+)$/);
+    if (!aliasMatch) {
+      return input;
+    }
+    const alias = aliasMatch[1];
+    const item = media[alias];
+    if (!item?.filename) {
+      return input;
+    }
+
+    let resolvedFile = item.filename;
+    const prefersHigh = localStorage.getItem('options_media-version') === 'high';
+    if (prefersHigh && item.large_variant?.filename) {
+      resolvedFile = item.large_variant.filename;
+    }
+
+    let basePath = '../_media/';
+    if (typeof window !== 'undefined' && window.mediaPath) {
+      basePath = window.mediaPath.endsWith('/') ? window.mediaPath : window.mediaPath + '/';
+    }
+
+    return `${basePath}${resolvedFile}`;
+  };
+
   for (var line of lines) {
     index++;
 
@@ -266,10 +294,33 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
       const key = macroUseMatch[1].trim();
       const paramString = macroUseMatch[2];
       const params = paramString ? paramString.split(':') : [];
+      if (key === 'audio') {
+        const command = params[0]?.toLowerCase() || '';
+        const rawSrc = params[1] || '';
+        const src = resolveMediaAlias(rawSrc);
+        let audioLine = '';
+
+        if (command === 'stop') {
+          audioLine = `<!-- .slide: data-background-audio-stop -->`;
+        } else if (command === 'play' && src) {
+          audioLine = `<!-- .slide: data-background-audio-start="${src}" -->`;
+        } else if ((command === 'playloop' || command === 'loop') && src) {
+          audioLine = `<!-- .slide: data-background-audio-loop="${src}" -->`;
+        } else {
+          console.log('Markdown Audio Macro Not Found or Missing File: ' + paramString);
+        }
+
+        if (audioLine) {
+          thismacros.push(audioLine);
+          processedLines.push(audioLine);
+          lastmacros.length = 0;
+          continue;
+        }
+      }
       const template = macros[key];
       if (template) {
         // Replace $1, $2, ... with provided params
-        let expanded = template.replace(/\$(\d+)/g, (_, n) => params[+n - 1] ?? '');
+        let expanded = template.replace(/\$(\d+)/g, (_, n) => resolveMediaAlias(params[+n - 1] ?? ''));
         const mlines = expanded.split('\n');
         for (const mline of mlines) {
           thismacros.push(mline);
