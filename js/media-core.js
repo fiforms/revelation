@@ -155,6 +155,13 @@ export async function initMediaLibrary(container, {
       console.error(err);
     });
 
+  function pickItem(item) {
+    if (typeof onPick !== 'function') return;
+    const yaml = generateYAML(item);
+    const md = generateMD(item);
+    onPick({ variant: 'auto', yaml, md, item });
+  }
+
   function render(list) {
     grid.innerHTML = '';
 
@@ -179,6 +186,7 @@ export async function initMediaLibrary(container, {
       thumb.alt = item.title || item.original_filename;
       thumb.style = 'max-width:100%;border-radius:4px;margin-bottom:.5rem;cursor:zoom-in;';
       thumb.addEventListener('click', (e) => {
+        if (mode === 'picker') return;
         e.stopPropagation();
         openPreview(item, list.indexOf(item));
       });
@@ -203,21 +211,19 @@ export async function initMediaLibrary(container, {
       card.appendChild(title);
       card.appendChild(meta);
 
-      if (enableContextMenu && mode === 'standalone') {
+      if (enableContextMenu) {
         card.addEventListener('contextmenu', (e) => {
           e.preventDefault();
           showContextMenu(e.pageX, e.pageY, item);
         });
-        card.addEventListener('click', () => openPreview(item, list.indexOf(item)));
+        if (mode === 'standalone') {
+          card.addEventListener('click', () => openPreview(item, list.indexOf(item)));
+        }
       }
 
       if (mode === 'picker') {
         card.addEventListener('click', () => {
-          if (typeof onPick === 'function') {
-            const yaml = generateYAML(item);
-            const md = generateMD(item);
-            onPick({ variant: 'auto', yaml, md, item });
-          }
+          pickItem(item);
         });
       }
 
@@ -387,10 +393,19 @@ caption.innerHTML = `
     `;
 
 
-    const options = [
-      { label: '📋 '+ tr('Copy YAML'), action: () => fallbackCopyText(generateYAML(item)) },
-      { label: '📋 '+ tr('Copy Markdown'), action: () => fallbackCopyText(generateMD(item)) },
-    ];
+    let options = [];
+
+    if (mode === 'picker') {
+      options = [
+        { label: '🔍 ' + tr('Preview'), action: () => openPreview(item, viewList.indexOf(item)) },
+        { label: '➕ ' + tr('Add media to selected presentation'), action: () => pickItem(item) },
+      ];
+    } else {
+      options = [
+        { label: '📋 '+ tr('Copy YAML'), action: () => fallbackCopyText(generateYAML(item)) },
+        { label: '📋 '+ tr('Copy Markdown'), action: () => fallbackCopyText(generateMD(item)) },
+      ];
+    }
 
     if(usedMedia.length && !usedMedia.includes(item.filename)) {
       options.push({ label: '❌ ' + tr('Delete Media Item'), action: async () => {

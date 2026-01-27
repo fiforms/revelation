@@ -254,6 +254,7 @@ function showCustomContextMenu(x, y, pres) {
         await window.electronAPI.showExportWindow(pres.slug, pres.md);
       }
     });
+    /*
     options.push({
       label: '✅ ' + tr('Select for Modification'),
       action: () => {
@@ -268,6 +269,7 @@ function showCustomContextMenu(x, y, pres) {
         showToast(`✅ ${tr('Selected')}: ${pres.title}`);
       }
     });
+    */
   }
   else {
     // These options ONLY appear in the web view, not the electron app
