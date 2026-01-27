@@ -92,7 +92,7 @@ function generatePresentationIndex() {
 
     dirs.forEach((dir) => {
       const folderPath = path.join(presentationsDir, dir);
-      const files = fs.readdirSync(folderPath).filter((file) => file.endsWith('.md'));
+      const files = fs.readdirSync(folderPath).filter((file) => file.endsWith('.md') && file !== '__builder_temp.md');
       
       files.forEach((mdFile) => {
         const mdPath = path.join(folderPath, mdFile);

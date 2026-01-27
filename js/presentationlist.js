@@ -233,6 +233,12 @@ function showCustomContextMenu(x, y, pres) {
       label: '✏️ ' + tr('Edit Markdown'),
       action: () => window.electronAPI.editPresentation(pres.slug, pres.md)
     });
+    if (window.electronAPI?.openPresentationBuilder) {
+      options.push({
+        label: '🧩 ' + tr('Open Presentation Builder (Beta)'),
+        action: () => window.electronAPI.openPresentationBuilder(pres.slug, pres.md)
+      });
+    }
     options.push({
       label: '🧾 ' + tr('Edit Presentation Metadata'),
       action: () => window.electronAPI.editPresentationMetadata(pres.slug, pres.md)
