@@ -1,0 +1,81 @@
+/**
+ * Dark Default Theme for REVELation Snapshot Presenter
+ */
+
+@use "sass:color";
+
+// Reveal.js template base (via include path from node_modules)
+@import 'reveal.js/dist/reveal.css';
+@import "reveal.js/css/theme/template/mixins";
+@import "reveal.js/css/theme/template/settings";
+@import "./custom/layouts.scss";
+
+// Include theme-specific fonts
+@import url(./fonts/inter/inter.css);
+@import url(./fonts/noto_serif/noto_serif.css);
+
+// Override theme settings (see ../template/settings.scss)
+$backgroundColor: #191919;
+
+$mainColor: #fff;
+$headingColor: #fff;
+
+$mainFontSize: 42px;
+$mainFont: 'Inter Latin', 'Noto Serif Greek', 'Noto Serif Hebrew', system-ui, serif;
+$headingFont: 'Inter Latin', 'Noto Serif Greek', 'Noto Serif Hebrew', system-ui, serif;
+$headingTextShadow: 2px 2px 3px #222;
+$headingLetterSpacing: 0.01em;
+$headingTextTransform: none;
+$headingFontWeight: 600;
+$linkColor: #42affa;
+$linkColorHover: color.scale( $linkColor, $lightness: 15% );
+$selectionBackgroundColor: rgba( $linkColor, 0.75 );
+
+$heading1Size: 2.8em;
+$heading2Size: 2.4em;
+$heading3Size: 2.2em;
+$heading4Size: 2.0em;
+
+// Change text colors against light slide backgrounds
+@include light-bg-text-color(#222);
+
+@import "reveal.js/css/theme/template/theme";
+
+
+#fixed-overlay-wrapper {
+    background: rgba(0, 0, 0, 0.2);
+    color: white;
+}
+
+#fixed-tint-wrapper {
+        position: fixed;
+        top: 0;
+        left: 0;  
+        width: 100%;
+        height: 100%;
+        background-color: rgba(255,255,266,0.5);
+        zIndex: 0;
+        pointerEvents: none;
+}
+
+.reveal h1, .reveal h2 {
+    font-variant-caps: small-caps;
+    letter-spacing: 0.03em;
+}
+
+.reveal h1 {
+    text-shadow: 4px 4px 6px #111;
+}
+
+.reveal p {
+    text-shadow: 1px 1px 2px #222;
+}
+
+.reveal h4 {
+    font-weight: 500;
+}
+
+.reveal h5 {
+    font-size: 1.6em;
+    font-weight: 400;
+}

@@ -1,0 +1,42 @@
+@font-face {
+    font-family: 'Inter';
+    src: url('./Inter-VariableFont_opsz,wght.ttf') format('truetype');
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Inter';
+    src: url('./Inter-Italic-VariableFont_opsz,wght.ttf') format('truetype');
+    font-weight: 100 900;
+    font-style: italic;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Inter Latin';
+    src: url('../inter/Inter-VariableFont_opsz,wght.ttf') format('truetype');
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: swap;
+
+    unicode-range:
+        U+0000-00FF,   /* Basic Latin + Latin-1 */
+        U+0100-024F,   /* Latin Extended-A/B */
+        U+1E00-1EFF;   /* Latin Extended Additional */
+}
+
+@font-face {
+    font-family: 'Inter Latin';
+    src: url('../inter/Inter-Italic-VariableFont_opsz,wght.ttf') format('truetype');
+    font-weight: 100 900;
+    font-style: italic;
+    font-display: swap;
+
+    unicode-range:
+        U+0000-00FF,
+        U+0100-024F,
+        U+1E00-1EFF;
+}
+

@@ -1,0 +1,78 @@
+/* Noto Serif (Latin + Greek + Cyrillic) — Variable */
+@font-face {
+    font-family: 'Noto Serif';
+    src: url('./NotoSerif-VariableFont_wdth_wght.ttf') format('truetype');
+    font-weight: 200 900;
+    font-stretch: 75% 125%;
+    font-style: normal;
+    font-display: swap;
+
+    /* Key idea: limit this face to the scripts we want it to cover */
+    unicode-range:
+        U+0000-00FF,   /* Basic Latin + Latin-1 Supplement */
+        U+0100-024F,   /* Latin Extended-A/B */
+        U+1E00-1EFF,   /* Latin Extended Additional */
+        U+0370-03FF,   /* Greek */
+        U+1F00-1FFF,   /* Greek Extended (polytonic) */
+        U+0400-052F;   /* Cyrillic (optional, but harmless) */
+}
+
+@font-face {
+    font-family: 'Noto Serif';
+    src: url('./NotoSerif-Italic-VariableFont_wdth_wght.ttf') format('truetype');
+    font-weight: 200 900;
+    font-stretch: 75% 125%;
+    font-style: italic;
+    font-display: swap;
+
+    unicode-range:
+        U+0000-00FF,
+        U+0100-024F,
+        U+1E00-1EFF,
+        U+0370-03FF,
+        U+1F00-1FFF,
+        U+0400-052F;
+}
+
+/* Noto Serif Hebrew — Variable */
+@font-face {
+    font-family: 'Noto Serif Hebrew';
+    src: url('./NotoSerifHebrew-VariableFont_wdth_wght.ttf') format('truetype');
+    font-weight: 200 900;
+    font-stretch: 75% 125%;
+    font-style: normal;
+    font-display: swap;
+
+    /* Hebrew block + points/vowels/cantillation marks */
+    unicode-range:
+        U+0590-05FF,   /* Hebrew */
+        U+FB1D-FB4F;   /* Hebrew Presentation Forms (some legacy text uses these) */
+}
+
+
+@font-face {
+    font-family: 'Noto Serif Greek';
+    src: url('./NotoSerif-VariableFont_wdth_wght.ttf') format('truetype');
+    font-weight: 200 900;
+    font-style: normal;
+    font-stretch: 75% 125%;
+    font-display: swap;
+
+    unicode-range:
+        U+0370-03FF,   /* Greek */
+        U+1F00-1FFF;   /* Greek Extended (polytonic) */
+}
+
+@font-face {
+    font-family: 'Noto Serif Greek';
+    src: url('./NotoSerif-Italic-VariableFont_wdth_wght.ttf') format('truetype');
+    font-weight: 200 900;
+    font-style: italic;
+    font-stretch: 75% 125%;
+    font-display: swap;
+
+    unicode-range:
+        U+0370-03FF,
+        U+1F00-1FFF;
+}
+
