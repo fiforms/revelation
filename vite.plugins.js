@@ -449,6 +449,8 @@ function presentationIndexPlugin() {
 };
 
 function copyFonts() {
+  // No longer used — fonts are now included directly in the css/fonts folder
+  /*
       const src = path.resolve(__dirname, 'node_modules/reveal.js/dist/theme/fonts');
       const dest = path.resolve(__dirname, 'css/fonts');
 
@@ -458,6 +460,7 @@ function copyFonts() {
       // Recursively copy
       copyRecursiveSync(src, dest);
       console.log('📁 Copied Reveal.js fonts to css/fonts');
+  */
 }
 
 function loadPeerConfig(configPath) {

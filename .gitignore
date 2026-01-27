@@ -16,7 +16,6 @@ reveal-remote.js
 # Ignore compiled CSS and sourcemaps from custom themes
 css/*.css
 css/*.css.map
-css/fonts
 css/custom
 
 # Ignore user's presentation files

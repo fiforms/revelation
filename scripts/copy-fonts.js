@@ -1,7 +1,7 @@
     const path = require('path');
     const fs = require('fs');
 
-    const src = path.resolve(__dirname, '../node_modules/reveal.js/dist/theme/fonts');
+    const src = path.resolve(__dirname, '../css/fonts');
     const dest = path.resolve(__dirname, '../dist/css/fonts');
 
     // Skip if already copied
