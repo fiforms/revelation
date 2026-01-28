@@ -28,6 +28,7 @@ export async function loadAndPreprocessMarkdown(deck,selectedFile = null) {
       const macros = {};
 
       const { metadata, content } = extractFrontMatter(rawMarkdown);
+      const forceControls = urlParams.get('forceControls') === '1';
 
       // check for alternative versions, create a selector drop-down
       if (!selectedFile && metadata.alternatives && typeof metadata.alternatives === 'object') {
@@ -64,7 +65,12 @@ export async function loadAndPreprocessMarkdown(deck,selectedFile = null) {
       section.innerHTML = `<textarea data-template>${processedMarkdown}</textarea>`;
 
       // Initialize Reveal.js
-      deck.initialize(metadata.config);
+      const config = metadata.config || {};
+      if (forceControls) {
+        config.controls = true;
+        config.progress = true;
+      }
+      deck.initialize(config);
 }
 
 function createAlternativeSelector(deck, alternatives) {
