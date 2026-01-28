@@ -200,6 +200,12 @@ function hideControlsOnSpeakerNotes() {
 }
 
 function doubleClickFullScreen() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const forceControls = urlParams.get('forceControls') === '1';
+    if (forceControls) {
+      // if forceControls mode is on, do not enable double-click fullscreen
+      return;
+    }
     document.addEventListener('dblclick', () => {
       const elem = document.documentElement;
       if (!document.fullscreenElement) {
