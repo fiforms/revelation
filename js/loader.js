@@ -196,6 +196,7 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
   var blankslide = true;
   let insideCodeBlock = false;
   let currentFence = '';
+  let columnPipeState = 0; // 0=start, 1=break, 2=end
   const resolveMediaAlias = (input) => {
     if (!input || !media) {
       return input;
@@ -252,6 +253,22 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
     if(line.match(/^\{\{\}\}$/)) {
         lastmacros.length = 0; // Reset the list of saved macros
 	      continue;
+    }
+
+    if (line.trim() === '||') {
+      const columnKeys = ['columnstart', 'columnbreak', 'columnend'];
+      const key = columnKeys[columnPipeState];
+      const template = macros[key];
+      if (template) {
+        const expanded = template.split('\n');
+        for (const expandedLine of expanded) {
+          processedLines.push(expandedLine);
+        }
+      } else {
+        console.log('Markdown Column Macro Not Found: ' + key);
+      }
+      columnPipeState = (columnPipeState + 1) % columnKeys.length;
+      continue;
     }
 
     const mediaAliasMatch = line.match(/[\(\"]media:([a-zA-Z0-9_-]+)[\)\"]/);
@@ -365,6 +382,10 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
     // Inject saved macros and attribution HTML before slide break
     if (autoSlide || line === '---' || line === '***' || line.match(/^[Nn][Oo][Tt][Ee]\:/) || index >= lines.length - 1) {
       var blankslide = !autoSlide;
+      if (columnPipeState !== 0) {
+        console.warn('Unclosed column section before slide break.');
+        columnPipeState = 0;
+      }
       if(thismacros.length > 0) {
         lastmacros.length = 0;
         lastmacros.push(...thismacros);

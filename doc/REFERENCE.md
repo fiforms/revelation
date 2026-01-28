@@ -345,9 +345,6 @@ REVELation defines several built-in macros for commonly used slide attributes:
 | `lowerthird`  | `<!-- .slide: data-lower-third -->`                           |
 | `upperthird`  | `<!-- .slide: data-upper-third -->`                           |
 | `bgtint`      | `<!-- .slide: data-tint-color="$1" -->`                       |
-| `columnstart` | Start of two-column layout (`<div class="flexcontainer">...`) |
-| `columnbreak` | Middle divider for two-column layout                          |
-| `columnend`   | Closes the two-column layout                                  |
 | `audio`       | Controls background audio (`play`, `playloop`, `stop`)         |
 
 You can override or redefine these in your YAML if needed.
@@ -418,19 +415,19 @@ This is great for improving contrast over bright or busy backgrounds.
 
 ### 🧱 Two-Column Layouts
 
-Create flexible two-column sections inside a slide:
+Create flexible two-column sections inside a slide using a simple marker line:
 
 ```markdown
-{{columnstart}}
+||
 Left side content here
 
-{{columnbreak}}
+||
 Right side content here
 
-{{columnend}}
+||
 ```
 
-Each part expands to HTML `<div>` elements that split your slide into two halves.
+Each `||` advances the column state (start → break → end) and expands to the same HTML `<div>` structure as before.
 
 ---
 
