@@ -69,6 +69,8 @@ export async function loadAndPreprocessMarkdown(deck,selectedFile = null) {
       if (forceControls) {
         config.controls = true;
         config.progress = true;
+        config.slideNumber = true;
+        config.showSlideNumber = 'all';
       }
       deck.initialize(config);
 }
