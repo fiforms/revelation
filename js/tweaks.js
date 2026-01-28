@@ -5,10 +5,14 @@ export function revealTweaks(deck) {
 
     const readyTweaks = () => {
       updateAttributionFromCurrentSlide(deck);
+      ensureLinksOpenExternally(deck);
     }
 
     deck.on('ready', readyTweaks);       
-    deck.on('slidechanged', () => updateAttributionFromCurrentSlide(deck));
+    deck.on('slidechanged', () => {
+      updateAttributionFromCurrentSlide(deck);
+      ensureLinksOpenExternally(deck);
+    });
 
 
     // Play videos with data-imagefit attribute when the slide is shown
@@ -34,6 +38,20 @@ export function revealTweaks(deck) {
     hideControlsOnSpeakerNotes();
     doubleClickFullScreen();
     hideCursorOnIdle();
+}
+
+function ensureLinksOpenExternally(deck) {
+  const scope = deck?.getRevealElement?.() || document;
+  scope.querySelectorAll('a[href]').forEach((link) => {
+    const href = link.getAttribute('href');
+    if (!href || href.trim().startsWith('#')) return;
+    link.setAttribute('target', '_blank');
+    const rel = link.getAttribute('rel') || '';
+    const relParts = new Set(rel.split(/\s+/).filter(Boolean));
+    relParts.add('noopener');
+    relParts.add('noreferrer');
+    link.setAttribute('rel', Array.from(relParts).join(' '));
+  });
 }
 
 function initBackgroundAudio(deck) {
