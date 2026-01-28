@@ -54,7 +54,6 @@ window.loadTranslations = async () => {
   }
 
   window.translationsources = [];
-  console.log(window.translations);
 };
 
 
