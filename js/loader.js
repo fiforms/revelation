@@ -273,6 +273,10 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
 
     const mediaAliasMatch = line.match(/[\(\"]media:([a-zA-Z0-9_-]+)[\)\"]/);
     let lastattribution = null;
+    if (mediaAliasMatch && forHandout) {
+      // In handout mode, skip media lines
+      continue;
+    }
     if (mediaAliasMatch && media) {
       const alias = mediaAliasMatch[1];
       const item = media[alias];
@@ -306,6 +310,9 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
       const keyword = magicImageMatch[1].toLowerCase();
       const modifier = magicImageMatch[2]?.trim() || '';
       const src = magicImageMatch[3];
+      if (forHandout && keyword === 'background' && modifier === 'sticky') {
+        continue;
+      }
       const handler = magicImageHandlers[keyword];
       if (handler) {
         processedLines.push(handler(src, modifier, lastattribution));

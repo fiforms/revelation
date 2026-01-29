@@ -4,6 +4,44 @@ import { marked } from 'marked';
 const urlParams = new URLSearchParams(window.location.search);
 const mdFile = urlParams.get('p');
 
+function splitSlides(markdown) {
+  const lines = markdown.split('\n');
+  const slides = [];
+  let current = [];
+  let insideCodeBlock = false;
+  let currentFence = '';
+  let breakType = 'start';
+
+  for (const line of lines) {
+    const fenceMatch = line.match(/^(`{3,})(.*)$/);
+    if (fenceMatch) {
+      const fence = fenceMatch[1];
+      if (!insideCodeBlock) {
+        insideCodeBlock = true;
+        currentFence = fence;
+      } else if (fence === currentFence) {
+        insideCodeBlock = false;
+        currentFence = '';
+      }
+      current.push(line);
+      continue;
+    }
+
+    const trimmed = line.trim();
+    if (!insideCodeBlock && (trimmed === '---' || trimmed === '***')) {
+      slides.push({ content: current.join('\n'), breakType });
+      current = [];
+      breakType = trimmed === '---' ? 'vertical' : 'horizontal';
+      continue;
+    }
+
+    current.push(line);
+  }
+
+  slides.push({ content: current.join('\n'), breakType });
+  return slides;
+}
+
 // VITE Hot Reloading Hook
 if (import.meta.hot) {
   import.meta.hot.on('reload-presentations', (data) => {
@@ -26,29 +64,23 @@ if (!mdFile) {
       document.title = metadata.title || "Presentation Handout";
 
       const processed = preprocessMarkdown(content, metadata.macros || {}, true, metadata.media, metadata.newSlideOnHeading);
-      const slides = processed.split(/\n(?=^(?:\*\*\*|---)$|^#\s)/gm);
+      const slides = splitSlides(processed);
       const output = [];
       const incremental = metadata && metadata.config && (metadata.config.slideNumber === 'c' || metadata.config.slideNumber === 'c/t');
 	
-      let hIndex = 0;
+      let hIndex = 1;
       let vIndex = 1;
       let slideCount = 0;
-      let lastBreakWasVertical = false;
+      let started = false;
 
-      for (let rawSlide of slides) {
+      for (let slide of slides) {
+          const rawSlide = slide.content;
           const lines = rawSlide.trim().split('\nNote:\n');
           const cleanedMarkdown = lines[0].replace(/^\s*(\*\*\*|---)\s*$/gm, '').trim();
           const slideHTML = marked.parse(cleanedMarkdown);
           const cleanedNote = (lines.length > 1) ? lines[1].replace(/^\s*(\*\*\*|---)\s*$/gm, '').trim() : '';
           const noteHTML = marked.parse(cleanedNote);
 
-      // Determine what kind of break this is
-      const isHorizontalBreak = rawSlide.match(/^\s*\*\*\*/m);
-      const isVerticalBreak = rawSlide.match(/^\s*---/m);
-      const startsWithHeading = /^\s{0,3}#{1,2}\s/.test(cleanedMarkdown);
-	  if (isVerticalBreak) {
-    	      lastBreakWasVertical = true;
-	  }
 	  if((!cleanedMarkdown || 
 		   /^#+$/.test(cleanedMarkdown) ||
 		   /^\s*<!--[\s\S]*?-->\s*$/.test(cleanedMarkdown)
@@ -56,19 +88,22 @@ if (!mdFile) {
 	    continue;
           }
 
-      if (isHorizontalBreak || (startsWithHeading && !lastBreakWasVertical)) {
+      if (!started) {
+        hIndex = 1;
+        vIndex = 1;
+        started = true;
+      } else if (slide.breakType === 'horizontal') {
         hIndex++;
         vIndex = 1;
-      } else if (isVerticalBreak || (startsWithHeading && lastBreakWasVertical)) {
+      } else if (slide.breakType === 'vertical') {
         vIndex++;
       } else {
         // Catch-all: assume horizontal
         hIndex++;
         vIndex = 1;
       }
-      
+
 	  slideCount++;
-          lastBreakWasVertical = false;
 	  const slideno = incremental ? slideCount : `${hIndex}.${vIndex}` ;
 
           output.push('<section class="slide">');
