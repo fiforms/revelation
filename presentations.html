@@ -12,7 +12,7 @@
   <div id="options-menu" style="position:fixed;top:1rem;right:1rem;z-index:1000;">
     <button id="options-button" style="background:#222;color:#fff;border:1px solid #555;border-radius:6px;padding:.4rem .8rem;cursor:pointer;" data-translate>Options ⚙️</button>
     <div id="options-dropdown" style="display:none;position:absolute;right:0;top:2.5rem;background:#111;border:1px solid #555;border-radius:8px;padding:.8rem;min-width:220px;box-shadow:0 4px 12px rgba(0,0,0,0.4);">
-      <div style="margin-bottom:.5rem;"><strong data-translate>Host:</strong> <span id="hostname-display">loading…</span></div>
+      <div id="lan-ip-row" style="margin-bottom:.5rem;display:none;"><strong data-translate>LAN URL:</strong> <span id="lan-ip-display">loading…</span></div>
       <label style="display:block;margin-top:.5rem;"><span data-translate>Media Version:</span>
         <select id="media-version" style="width:100%;background:#222;color:#fff;border:1px solid #555;border-radius:4px;">
           <option value="low" data-translate>Normal</option>
@@ -46,4 +46,3 @@
   <script src="/js/sidebarloader.js"></script>
 </body>
 </html>
-

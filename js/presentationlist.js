@@ -89,10 +89,28 @@ fetch(`${url_prefix}/index.json`)
 // Replace hostname indicator logic with dropdown setup
 const optionsBtn = document.getElementById('options-button');
 const optionsDropdown = document.getElementById('options-dropdown');
-const hostnameDisplay = document.getElementById('hostname-display');
+const lanIpRow = document.getElementById('lan-ip-row');
+const lanIpDisplay = document.getElementById('lan-ip-display');
 
-if (hostnameDisplay) {
-  hostnameDisplay.textContent = window.location.hostname;
+let appConfig = null;
+if (window.electronAPI?.getAppConfig) {
+  try {
+    appConfig = await window.electronAPI.getAppConfig();
+  } catch (err) {
+    console.warn('Failed to load app config:', err);
+  }
+}
+
+
+if (lanIpRow && lanIpDisplay) {
+  if (appConfig?.mode === 'network' && appConfig?.hostLANURL) {
+    const port = appConfig?.viteServerPort;
+    const host = appConfig.hostLANURL;
+    lanIpRow.style.display = 'block';
+    lanIpDisplay.textContent = port ? `${host}:${port}` : host;
+  } else {
+    lanIpRow.style.display = 'none';
+  }
 }
 
 if (optionsBtn && optionsDropdown) {
@@ -117,9 +135,10 @@ const variantSelect = document.getElementById('variant');
 // Hide Media Version if running inside Electron (handled in app settings)
 if (window.electronAPI) {
   mediaSelect.disabled = true;
-  const appConfig = await window.electronAPI.getAppConfig()
-  mediaSelect.value = appConfig.preferHighBitrate ? 'high' : 'low';
-  localStorage.setItem('options_media-version', mediaSelect.value);
+  if (appConfig) {
+    mediaSelect.value = appConfig.preferHighBitrate ? 'high' : 'low';
+    localStorage.setItem('options_media-version', mediaSelect.value);
+  }
 }
 
 // Common persistence for other fields
