@@ -210,8 +210,9 @@ function showCustomContextMenu(x, y, pres) {
       },
     { 
         label: '🔗 ' + tr('Copy Link'),
-        action: () => {
-                const link = `${window.location.origin}${url_prefix}/${pres.slug}/index.html?p=${pres.md}`;
+        action: async () => {
+                const baseURL = await getCopyLinkBaseURL();
+                const link = `${baseURL}${url_prefix}/${pres.slug}/index.html?p=${pres.md}`;
                 if (navigator.clipboard && navigator.clipboard.writeText) {
                   navigator.clipboard.writeText(link)
                     .then(() => console.log('✅ Link copied to clipboard'))
@@ -222,8 +223,8 @@ function showCustomContextMenu(x, y, pres) {
                 } else {
                   fallbackCopyText(link);
                 }
-              }
-       },
+          }
+      },
     { label: '📄 ' + tr('Handout View'), action: () => handoutView(pres.slug,pres.md) }
   ];
 
@@ -322,6 +323,20 @@ function showCustomContextMenu(x, y, pres) {
   document.body.appendChild(menu);
 
   document.addEventListener('click', () => menu.remove(), { once: true });
+}
+
+async function getCopyLinkBaseURL() {
+  if (window.electronAPI?.getAppConfig) {
+    try {
+      const appConfig = await window.electronAPI.getAppConfig();
+      if (appConfig?.mode === 'network' && appConfig?.hostLANURL) {
+        return `http://${appConfig.hostLANURL}:${appConfig.viteServerPort}`;
+      }
+    } catch (err) {
+      console.warn('Failed to load app config for copy link:', err);
+    }
+  }
+  return window.location.origin;
 }
 
 function handoutView(slug, mdFile) {

@@ -3,7 +3,7 @@ export function pluginLoader(page, prefix) {
 
   if (window.electronAPI && window.electronAPI.getPluginList) {
     // Use Electron API
-    return window.electronAPI.getPluginList().then(pluginList => {
+    return window.electronAPI.getPluginList({ host: window.location.host }).then(pluginList => {
       return handlePluginList(pluginList, page);
     });
   } else {

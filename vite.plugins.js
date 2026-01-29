@@ -381,10 +381,11 @@ function presentationIndexPlugin() {
         res.end(JSON.stringify({ error: 'Not found' }));
       });
 
-      // Restrict access to presentation listing from other hosts by default
+      // Restrict access to presentation/media indexes to localhost only
       server.middlewares.use((req, res, next) => {
 
-            if (req.url?.toLowerCase().includes('index.json')) {
+            const lowerUrl = req.url?.toLowerCase() || '';
+            if (lowerUrl.includes('index.json')) {
             const rawIp = req.socket.remoteAddress;
 
             // Normalize to raw IPv4 if in IPv6-mapped format
@@ -394,12 +395,11 @@ function presentationIndexPlugin() {
             const normalizedClientIp = clientIp === '::1' ? '127.0.0.1' : clientIp;
 
             const isLocalhost = normalizedClientIp === '127.0.0.1';
-            const isSameAsServer = normalizedClientIp === localIp;
 
-            if (!isLocalhost && !isSameAsServer) {
+            if (!isLocalhost) {
               console.log(`Attempted access from ${normalizedClientIp} blocked.`);
               res.writeHead(403, { 'Content-Type': 'text/plain' });
-              res.end('403 Forbidden: index.json access denied');
+              res.end('403 Forbidden: index.json access denied (localhost only)');
               return;
             }
           }
