@@ -407,7 +407,7 @@ caption.innerHTML = `
       ];
     }
 
-    if(usedMedia.length && !usedMedia.includes(item.filename)) {
+    if(!usedMedia.length || !usedMedia.includes(item.filename)) {
       options.push({ label: '❌ ' + tr('Delete Media Item'), action: async () => {
         const confirmed = confirm(tr('Are you sure you want to delete this media item? This action cannot be undone.'));
         if (!confirmed) return;
