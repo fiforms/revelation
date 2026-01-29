@@ -293,6 +293,13 @@ function presentationIndexPlugin() {
             res.end(JSON.stringify({ error: 'Peer private key unavailable' }));
             return;
           }
+          const expectedPin = config.mdnsPairingPin;
+          const providedPin = parsedUrl.searchParams.get('pin');
+          if (expectedPin && providedPin !== expectedPin) {
+            res.writeHead(403, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Invalid pairing PIN' }));
+            return;
+          }
           const token = crypto.randomBytes(16).toString('hex');
           const expiresAt = Date.now() + 60_000;
           const socketPath = PEER_SOCKET_PATH;
@@ -360,6 +367,13 @@ function presentationIndexPlugin() {
               return;
             }
             const challenge = data.challenge;
+            const expectedPin = config.mdnsPairingPin;
+            const providedPin = data.pin;
+            if (expectedPin && providedPin !== expectedPin) {
+              res.writeHead(403, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ error: 'Invalid pairing PIN' }));
+              return;
+            }
             if (!challenge || !config.rsaPrivateKey) {
               res.writeHead(400, { 'Content-Type': 'application/json' });
               res.end(JSON.stringify({ error: 'Missing challenge or private key' }));
