@@ -282,6 +282,22 @@ function showCustomContextMenu(x, y, pres) {
         await window.electronAPI.showExportWindow(pres.slug, pres.md);
       }
     });
+    options.push({
+      label: '🗑️ ' + tr('Delete Presentation…'),
+      action: async () => {
+        try {
+          const result = await window.electronAPI.deletePresentation(pres.slug, pres.md);
+          if (result?.success) {
+            showToast(`🗑️ ${tr('Deleted')}: ${pres.title}`);
+            window.location = window.location.href;
+          } else if (!result?.canceled) {
+            alert(`❌ ${tr('Delete failed')}: ${result?.error || tr('Unknown error')}`);
+          }
+        } catch (err) {
+          alert(`❌ ${tr('Delete failed')}: ${err.message}`);
+        }
+      }
+    });
     /*
     options.push({
       label: '✅ ' + tr('Select for Modification'),
