@@ -163,6 +163,8 @@ function updateAttributionFromCurrentSlide(deck) {
     const currentSlide = deck.getCurrentSlide();
     const source = currentSlide.querySelector('.slide-attribution');
     const overlay = document.getElementById('fixed-overlay-wrapper');
+    const aiSource = currentSlide.querySelector('.slide-ai-symbol');
+    const aiOverlay = document.getElementById('fixed-ai-wrapper');
 
     if (source) {
     overlay.innerHTML = source.innerHTML;
@@ -170,6 +172,16 @@ function updateAttributionFromCurrentSlide(deck) {
     } else {
     overlay.innerHTML = '';
     overlay.style.display = 'none';
+    }
+
+    if (aiOverlay) {
+      if (aiSource) {
+        aiOverlay.innerHTML = aiSource.innerHTML;
+        aiOverlay.style.display = '';
+      } else {
+        aiOverlay.innerHTML = '';
+        aiOverlay.style.display = 'none';
+      }
     }
 
     const tintcolor = currentSlide.getAttribute('data-tint-color');

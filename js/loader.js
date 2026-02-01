@@ -131,6 +131,7 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
   const attributions = [];
   const lastmacros = [];
   const thismacros = [];
+  let aiSymbolRequested = false;
 
   const defaultMacros = {
     darkbg: `<!-- .slide: data-darkbg -->`,
@@ -377,6 +378,14 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
       continue;
     }
 
+    const aiSymbolMatch = line.match(/^::AI\s*$/i);
+    if (aiSymbolMatch) {
+      if (!forHandout) {
+        aiSymbolRequested = true;
+      }
+      continue;
+    }
+
     var autoSlide = false;
     if(newSlideOnHeading && line.match(/^#{1,3} (?!#)/) && !blankslide) {
         // Always insert a slide break before a heading
@@ -420,6 +429,13 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
         processedLines.push('</div>');
         processedLines.push('');
         attributions.length = 0; // Clear the array
+      }
+
+      if (aiSymbolRequested) {
+        processedLines.push('<div class="slide-ai-symbol">');
+        processedLines.push('</div>');
+        processedLines.push('');
+        aiSymbolRequested = false;
       }
 
       if(autoSlide) {

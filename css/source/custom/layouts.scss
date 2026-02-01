@@ -107,6 +107,10 @@ body.reveal-ready {
     display: none;
   }
 
+  .slide-ai-symbol {
+    display: none;
+  }
+
   section div.flexcontainer {
     display: flex; 
     align-items: center; 
@@ -182,6 +186,21 @@ body.reveal-ready {
     pointer-events: none;
     z-index: 9999;
     padding: 0.5em;
+}
+
+#fixed-ai-wrapper {
+    position: fixed;
+    left: 0.8em;
+    bottom: 0.8em;
+    pointer-events: none;
+    z-index: 9998;
+    width: 4vh;
+    height: 4vh;
+    background-image: url("fonts/symbols/aigenerated.webp");
+    background-repeat: no-repeat;
+    background-size: contain;
+    background-position: left bottom;
+    opacity: 0.5;
 }
 
 #fixed-overlay-wrapper .attribution {
