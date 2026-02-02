@@ -342,8 +342,12 @@ REVELation defines several built-in macros for commonly used slide attributes:
 | ------------- | ------------------------------------------------------------- |
 | `darkbg`      | `<!-- .slide: data-darkbg -->`                                |
 | `lightbg`     | `<!-- .slide: data-lightbg -->`                               |
+| `darktext`    | `<!-- .slide: data-darktext -->`                              |
+| `lighttext`   | `<!-- .slide: data-lighttext -->`                             |
 | `lowerthird`  | `<!-- .slide: data-lower-third -->`                           |
 | `upperthird`  | `<!-- .slide: data-upper-third -->`                           |
+| `shiftleft`   | `<!-- .slide: data-shiftleft -->`                             |
+| `shiftright`  | `<!-- .slide: data-shiftright -->`                            |
 | `bgtint`      | `<!-- .slide: data-tint-color="$1" -->`                       |
 | `audio`       | Controls background audio (`play`, `playloop`, `stop`)         |
 

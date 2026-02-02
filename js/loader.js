@@ -136,6 +136,10 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
   const defaultMacros = {
     darkbg: `<!-- .slide: data-darkbg -->`,
     lightbg: `<!-- .slide: data-lightbg -->`,
+    darktext: `<!-- .slide: data-darktext -->`,
+    lighttext: `<!-- .slide: data-lighttext -->`,
+    shiftright: `<!-- .slide: data-shiftright -->`,
+    shiftleft: `<!-- .slide: data-shiftleft -->`,
     lowerthird: `<!-- .slide: data-lower-third -->`,
     upperthird: `<!-- .slide: data-upper-third -->`,
     columnstart: `<div class="flexcontainer"><div class="first">`,

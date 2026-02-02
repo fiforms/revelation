@@ -25,6 +25,36 @@ body.reveal-ready {
 	// padding-top: 2em; /* adjust as needed */
   }
 
+  section[data-lighttext],
+  section[data-lighttext] h1,
+  section[data-lighttext] h2,
+  section[data-lighttext] h3,
+  section[data-lighttext] h4,
+  section[data-lighttext] h5,
+  section[data-lighttext] h6 {
+    color: #f0f0f0 !important;
+  }
+
+  section[data-darktext],
+  section[data-darktext] h1,
+  section[data-darktext] h2,
+  section[data-darktext] h3,
+  section[data-darktext] h4,
+  section[data-darktext] h5,
+  section[data-darktext] h6 {
+    color: #202020 !important;
+  }
+
+  section[data-shiftright] {
+    padding-left: 28%;
+    width: 72% !important;
+  }
+
+  section[data-shiftleft] {
+    width: 72% !important;
+    padding-right: 28%;
+  }
+
   section[data-lower-third] {
 	display: flex !important;
 	flex-direction: column;
