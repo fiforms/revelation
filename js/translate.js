@@ -15,6 +15,9 @@ if(window.offlineMarkdown) {
 window.tr = (key) => {
     // Get from browser language settings
     const language = navigator.language.slice(0,2); 
+    if(language === 'en') {
+        return key; // No translation needed for English
+    }
 
     if (window.translations[language] && window.translations[language][key]) {
         return window.translations[language][key];
@@ -58,6 +61,10 @@ window.loadTranslations = async () => {
 
 
 function translatePage(language) {
+    if(language === 'en') {
+        // No translation needed for English
+        return;
+    }
     // Get all elements with data-translate attribute
     const elements = document.querySelectorAll('[data-translate]');
 
@@ -78,6 +85,5 @@ window.addEventListener('DOMContentLoaded', async () => {
     const userLanguage = navigator.language.slice(0,2); 
 
     await loadTranslations();
-    console.log('Translating page to language:', userLanguage);
     translatePage(userLanguage);
 });
