@@ -1,6 +1,6 @@
 {
   "name": "revelation",
-  "version": "0.2.5-git",
+  "version": "0.2.6beta",
   "dependencies": {
     "chokidar": "^4.0.3",
     "cors": "^2.8.6",
