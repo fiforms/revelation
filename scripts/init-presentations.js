@@ -29,11 +29,12 @@ function copyRecursiveSync(src, dest) {
 }
 
 function main(baseDirParameter = false, folderNameParameter = false) {
+  console.log(`baseDirParameter: ${baseDirParameter}`);
+  console.log(`folderNameParameter: ${folderNameParameter}`);
   let baseDir = baseDirParameter;
   if(baseDir === false) {
     baseDir = path.resolve(__dirname, '..');
   }
-  const templateReadme = path.join(__dirname,'..', 'templates', 'readme');
   let folderName = folderNameParameter;
   
   if(!folderName) {
@@ -54,21 +55,28 @@ function main(baseDirParameter = false, folderNameParameter = false) {
     }
   }
 
-  const destReadmePath = path.join(baseDir, folderName, 'readme');
+  const destReadmePath = path.join(baseDir, folderName);
 
-  if (fs.existsSync(templateReadme) && !fs.existsSync(destReadmePath)) {
-    copyRecursiveSync(templateReadme, destReadmePath);
-    console.log(`📄 Copied template readme → ${folderName}/readme`);
-  } else if (!fs.existsSync(templateReadme)) {
-    console.warn('⚠️ templates/readme not found. Skipping copy.');
-  } else {
-    console.log('ℹ️ Readme folder already exists in target. Skipping copy.');
-  }
+  copyReadmeTemplate(destReadmePath);
+
   return folderName;
+}
+
+function copyReadmeTemplate(destDir) {
+    const templateReadme = path.join(__dirname,'..', 'templates', 'readme');
+    const destReadmePath = path.join(destDir, 'readme');
+    if (fs.existsSync(templateReadme) && !fs.existsSync(destReadmePath)) {
+        copyRecursiveSync(templateReadme, destReadmePath);
+        console.log(`📄 Copied template readme → ${destDir}/readme`);
+    } else if (!fs.existsSync(templateReadme)) {
+        console.warn('⚠️ templates/readme not found. Skipping copy.');
+    } else {
+        console.log('ℹ️ Readme folder already exists in target. Skipping copy.');
+    }
 }
 
 if (require.main === module) {
   main();
 }
 
-module.exports = { main };
+module.exports = { main, copyReadmeTemplate };
