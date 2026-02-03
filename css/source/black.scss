@@ -27,3 +27,8 @@
         zIndex: 0;
         pointerEvents: none;
 }
+
+.info-head, .info-body {
+    background-color: rgba(48, 48, 48, 0.5);
+    padding: 1rem;
+}

@@ -17,13 +17,91 @@ body.reveal-ready {
 .reveal {
 
   section[data-upper-third] { 
-	display: flex !important;
-	flex-direction: column;
-	justify-content: flex-start !important;
-	align-items: center; /* or 'flex-start' if you want left alignment */
-	height: 100%;
-	// padding-top: 2em; /* adjust as needed */
+    display: flex !important;
+    flex-direction: column;
+    justify-content: flex-start !important;
+    align-items: center;
+    height: 100%;
   }
+
+  section[data-infoslide] {
+
+    display: flex !important;
+    flex-direction: column;
+    justify-content: flex-start !important;
+    align-items: flex-start !important; 
+    text-align: left;
+    height: 100%;
+
+    width: 100%;
+
+    h1, h2, h3, h4, h5, h6, ul, ol, p, table {
+      align-items: flex-start;
+      text-align: left;
+      margin-left: calc(var(--slide-width) * 0.04);
+    }
+
+    table  {
+      margin-top: calc(var(--slide-height) * 0.04);
+      width: calc(100% - calc(var(--slide-width) * 0.08));
+    }
+
+    div.flexcontainer {
+      margin-left: calc(var(--slide-width) * 0.02);
+      margin-right: calc(var(--slide-width) * 0.05);
+      margin-top: calc(var(--slide-height) * 0.04);
+    }
+
+    div.flexcontainer div.first, div.flexcontainer div.second {
+      align-items: flex-start;
+      text-align: left;
+      justify-content: flex-start;
+    }
+
+    h1 {
+      font-size: 2em;
+      margin-top: calc(var(--slide-height) * 0.02);
+      height: calc(calc(var(--slide-height) * 0.17) - 15pt);
+      margin-bottom: calc(var(--slide-height) * 0.02);
+      align-self: center;
+      text-align: center;
+    }
+
+    h2 {
+      font-size: 2em;
+      margin-top: calc(var(--slide-height) * 0.02);
+      height: calc(calc(var(--slide-height) * 0.17) - 15pt);
+      margin-bottom: calc(var(--slide-height) * 0.02);
+    }
+
+    h3 {
+      font-size: calc(calc(var(--slide-height) * 0.12) - 10pt);
+    }
+
+    h3, h4, h5, h6 {
+      margin-top: calc(var(--slide-height) * 0.03);
+      height: calc(calc(var(--slide-height) * 0.17) - 15pt);
+      margin-bottom: calc(var(--slide-height) * 0.01);
+    }
+
+    .info-head {
+      position: absolute;
+      top: calc(var(--slide-height) * 0.02);
+      left: calc(var(--slide-width) * 0.02);
+      right: calc(var(--slide-width) * 0.02);
+      height: calc(calc(var(--slide-height) * 0.12) - 12pt);
+      z-index: -10;
+    }
+    .info-body {
+        position: absolute;
+        top: calc(calc(var(--slide-height) * 0.17) + 12pt);
+        left: calc(var(--slide-width) * 0.02);
+        right: calc(var(--slide-width) * 0.02);
+        bottom: calc(var(--slide-height) * 0.02);
+        height: auto;
+        z-index: -10;
+    }
+ }
 
   section[data-lighttext],
   section[data-lighttext] h1,

@@ -82,3 +82,9 @@ $heading4Size: 2.0em;
     font-size: 1.6em;
     font-weight: 400;
 }
+
+.info-head, .info-body {
+    background-color: rgba(0, 0, 0, 0.5);
+    padding: 1rem;
+    border-radius: 8px;
+}
