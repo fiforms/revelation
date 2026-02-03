@@ -570,6 +570,10 @@ function generateMediaIndex() {
     const fullPath = path.join(mediaDir, file);
     try {
       const data = JSON.parse(fs.readFileSync(fullPath, 'utf-8'));
+      if (data?.large_variant?.filename) {
+        const variantPath = path.join(mediaDir, data.large_variant.filename);
+        data.large_variant_local = fs.existsSync(variantPath);
+      }
       const key = path.basename(file, '.json');
       index[key] = data;
     } catch (e) {
