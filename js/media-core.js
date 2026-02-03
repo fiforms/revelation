@@ -120,10 +120,35 @@ export async function initMediaLibrary(container, {
     position:'fixed', inset:'0', background:'rgba(0,0,0,.9)', display:'none',
     zIndex:'9999', alignItems:'center', justifyContent:'center', cursor:'pointer'
   });
-  lightbox.innerHTML = `<div id="mlightbox-content" style="max-width:90%;max-height:90%"></div>`;
+  lightbox.innerHTML = `
+    <button type="button" id="mlightbox-close" aria-label="Close preview">×</button>
+    <div id="mlightbox-content"></div>
+  `;
   document.body.appendChild(lightbox);
   const lbContent = lightbox.querySelector('#mlightbox-content');
+  const lbClose = lightbox.querySelector('#mlightbox-close');
+  Object.assign(lbClose.style, {
+    position: 'fixed',
+    top: '16px',
+    right: '16px',
+    width: '36px',
+    height: '36px',
+    borderRadius: '50%',
+    border: '1px solid rgba(255,255,255,0.35)',
+    background: 'rgba(0,0,0,0.55)',
+    color: '#fff',
+    fontSize: '22px',
+    lineHeight: '32px',
+    textAlign: 'center',
+    cursor: 'pointer',
+    zIndex: '10000'
+  });
   lightbox.addEventListener('click', () => { lightbox.style.display = 'none'; lbContent.innerHTML=''; });
+  lbClose.addEventListener('click', (e) => {
+    e.stopPropagation();
+    lightbox.style.display = 'none';
+    lbContent.innerHTML = '';
+  });
 
     document.addEventListener('keydown', (e) => {
         if (lightbox.style.display !== 'flex') return;
@@ -160,6 +185,21 @@ export async function initMediaLibrary(container, {
     const yaml = generateYAML(item);
     const md = generateMD(item);
     onPick({ variant: 'auto', yaml, md, item });
+  }
+
+  function formatVariantStatus(item) {
+    if (!item.large_variant) return tr('High-res: not available');
+    if (item.large_variant_local === false) return tr('High-res: available (not downloaded)');
+    if (item.large_variant_local === true) return tr('High-res: downloaded');
+    return tr('High-res: available');
+  }
+
+  function updateCardVariantStatus(item) {
+    const card = grid.querySelector(`.media-card[data-id="${item.filename}"]`);
+    if (!card) return;
+    const statusEl = card.querySelector('.media-variant-status');
+    if (!statusEl) return;
+    statusEl.textContent = formatVariantStatus(item);
   }
 
   function render(list) {
@@ -206,6 +246,10 @@ export async function initMediaLibrary(container, {
         <small>${item.original_filename}</small><br/>
         ${item.copyright ? `<small>${item.copyright}</small><br/>` : ''}
       `;
+      const variantStatus = document.createElement('small');
+      variantStatus.className = 'media-variant-status';
+      variantStatus.textContent = formatVariantStatus(item);
+      meta.appendChild(variantStatus);
 
       card.appendChild(thumbWrap);
       card.appendChild(title);
@@ -236,34 +280,30 @@ function openPreview(item, index = null) {
   lbContent.innerHTML = '';
 
   const figure = document.createElement('figure');
-  figure.style.maxWidth = '90vw';
-  figure.style.maxHeight = '90vh';
-  figure.style.display = 'flex';
-  figure.style.flexDirection = 'column';
-  figure.style.alignItems = 'center';
-  figure.style.gap = '1rem';
+  figure.className = 'mlightbox-figure';
+  figure.addEventListener('click', (e) => e.stopPropagation());
 
   // Media element
   let mediaEl;
   const full = `/presentations_${state.key}/_media/${item.filename}`;
   const standardSrc = `/presentations_${state.key}/_media/${item.filename}`;
-  const highSrc = item.large_variant
+  let highSrc = item.large_variant
     ? `/presentations_${state.key}/_media/${item.large_variant.filename}`
     : null;
+  let highLocal = item.large_variant_local === true;
     
   if (item.mediatype === 'video') {
     mediaEl = document.createElement('video');
     mediaEl.src = full;
     mediaEl.controls = true;
     mediaEl.autoplay = true;
-    mediaEl.style.maxWidth = '100%';
-    mediaEl.style.maxHeight = '70vh';
+    mediaEl.className = 'mlightbox-media';
   } else {
     mediaEl = document.createElement('img');
     mediaEl.src = full;
-    mediaEl.style.maxWidth = '100%';
-    mediaEl.style.maxHeight = '70vh';
+    mediaEl.className = 'mlightbox-media';
   }
+  mediaEl.addEventListener('click', (e) => e.stopPropagation());
 
   // Right-click in lightbox
   mediaEl.addEventListener('contextmenu', (e) => {
@@ -273,17 +313,8 @@ function openPreview(item, index = null) {
 
 // Metadata panel
 const caption = document.createElement('figcaption');
-caption.style = `
-  color: #ddd;
-  font-size: 0.95rem;
-  text-align: left;
-  max-width: 100%;
-  width: 100%;
-  background: rgba(0,0,0,0.6);
-  padding: 0.75rem 1rem;
-  border-radius: 6px;
-  box-sizing: border-box;
-`;
+caption.className = 'mlightbox-caption';
+caption.addEventListener('click', (e) => e.stopPropagation());
 
   let filenameInfo = `<div>${tr('Original File')}: ${item.original_filename} &nbsp; &nbsp; &nbsp; ${tr('Present Filename')}: ${item.filename}</div>`;
   if (highSrc) {
@@ -306,47 +337,146 @@ caption.innerHTML = `
   </div>
 `;
 
-  // --- Bitrate toggle button ---
-  if (highSrc) {
-    const toggleBtn = document.createElement('button');
-    toggleBtn.textContent = tr('Play High Bitrate');
-    toggleBtn.style = `
-      margin-top:.5rem;
-      padding:.3rem .6rem;
-      border-radius:5px;
-      border:1px solid #666;
-      background:#333;
-      color:#eee;
-      cursor:pointer;
-    `;
-    let usingHigh = false;
+  const variantRow = document.createElement('div');
+  variantRow.className = 'mlightbox-variant-row';
+  const variantStatus = document.createElement('div');
+  variantStatus.className = 'mlightbox-variant-status';
+  variantRow.appendChild(variantStatus);
 
-    toggleBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      usingHigh = !usingHigh;
-      const newSrc = usingHigh ? highSrc : standardSrc;
+  const actionRow = document.createElement('div');
+  actionRow.className = 'mlightbox-actions';
+
+  const canUseElectron = !!window.electronAPI?.downloadLargeVariant;
+  let usingHigh = false;
+  const toggleBtn = document.createElement('button');
+  toggleBtn.className = 'mlightbox-button';
+  toggleBtn.textContent = tr('Play High Bitrate');
+
+  const downloadBtn = document.createElement('button');
+  downloadBtn.className = 'mlightbox-button';
+  downloadBtn.textContent = tr('Download High-res');
+
+  const deleteBtn = document.createElement('button');
+  deleteBtn.className = 'mlightbox-button';
+  deleteBtn.textContent = tr('Delete High-res');
+
+  const updateVariantUI = () => {
+    variantStatus.textContent = formatVariantStatus(item);
+    if (!item.large_variant) {
+      toggleBtn.style.display = 'none';
+      downloadBtn.style.display = 'none';
+      deleteBtn.style.display = 'none';
+      return;
+    }
+    if (highLocal) {
+      toggleBtn.style.display = '';
+      downloadBtn.style.display = 'none';
+      deleteBtn.style.display = '';
+      toggleBtn.disabled = false;
+    } else {
+      toggleBtn.style.display = 'none';
+      downloadBtn.style.display = canUseElectron ? '' : 'none';
+      deleteBtn.style.display = 'none';
+    }
+  };
+
+  toggleBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (!highLocal || !highSrc) return;
+    usingHigh = !usingHigh;
+    const newSrc = usingHigh ? highSrc : standardSrc;
+    mediaEl.pause();
+    mediaEl.src = newSrc;
+    mediaEl.load();
+
+    toggleBtn.textContent = usingHigh
+      ? tr('Play Standard Bitrate')
+      : tr('Play High Bitrate');
+
+    mediaEl.oncanplay = () => {
+      mediaEl.play().catch(err => console.warn('Playback failed:', err.message));
+      mediaEl.oncanplay = null;
+    };
+  });
+
+  downloadBtn.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    if (!item.large_variant || !window.electronAPI?.downloadLargeVariant) return;
+    downloadBtn.disabled = true;
+    downloadBtn.textContent = tr('Downloading...');
+    try {
+      const result = await window.electronAPI.downloadLargeVariant(item.filename);
+      if (!result.success) throw new Error(result.error || 'Download failed.');
+      if (result.filename) {
+        item.large_variant.filename = result.filename;
+        highSrc = `/presentations_${state.key}/_media/${item.large_variant.filename}`;
+      }
+      highLocal = true;
+      item.large_variant_local = true;
+      updateCardVariantStatus(item);
+      updateVariantUI();
+    } catch (err) {
+      alert(tr('Failed to download high-res variant: ') + err.message);
+    } finally {
+      downloadBtn.disabled = false;
+      downloadBtn.textContent = tr('Download High-res');
+    }
+  });
+
+  deleteBtn.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    if (!window.electronAPI?.deleteLargeVariant) return;
+    const confirmed = confirm(tr('Delete the high-resolution variant?'));
+    if (!confirmed) return;
+    deleteBtn.disabled = true;
+    try {
+      const result = await window.electronAPI.deleteLargeVariant(item.filename);
+      if (!result.success) throw new Error(result.error || 'Delete failed.');
+      highLocal = false;
+      usingHigh = false;
+      item.large_variant_local = false;
       mediaEl.pause();
-      mediaEl.src = newSrc;
+      mediaEl.src = standardSrc;
       mediaEl.load();
+      toggleBtn.textContent = tr('Play High Bitrate');
+      updateCardVariantStatus(item);
+      updateVariantUI();
+    } catch (err) {
+      alert(tr('Failed to delete high-res variant: ') + err.message);
+    } finally {
+      deleteBtn.disabled = false;
+    }
+  });
 
-      toggleBtn.textContent = usingHigh
-        ? tr('Play Standard Bitrate')
-        : tr('Play High Bitrate');
-
-      // Wait until the new source is ready to play
-      mediaEl.oncanplay = () => {
-        mediaEl.play().catch(err => console.warn('Playback failed:', err.message));
-        mediaEl.oncanplay = null; // cleanup
-      };
-    });
-
-
-    caption.appendChild(toggleBtn);
+  caption.appendChild(variantRow);
+  if (item.large_variant) {
+    actionRow.appendChild(toggleBtn);
+    actionRow.appendChild(downloadBtn);
+    actionRow.appendChild(deleteBtn);
+    caption.appendChild(actionRow);
   }
+  updateVariantUI();
 
   figure.appendChild(mediaEl);
   figure.appendChild(caption);
   lbContent.appendChild(figure);
+
+  if (item.large_variant && item.large_variant_local === undefined && highSrc) {
+    fetch(highSrc, { method: 'HEAD' })
+      .then(res => {
+        highLocal = res.ok;
+        item.large_variant_local = res.ok;
+        updateCardVariantStatus(item);
+        updateVariantUI();
+      })
+      .catch(() => {});
+  }
+
+  requestAnimationFrame(() => {
+    const captionHeight = caption.offsetHeight;
+    const maxMediaHeight = Math.max(140, Math.floor(window.innerHeight * 0.92 - (captionHeight + 24)));
+    mediaEl.style.maxHeight = `${maxMediaHeight}px`;
+  });
 
   lightbox.style.display = 'flex';
 
@@ -405,6 +535,41 @@ caption.innerHTML = `
         { label: '📋 '+ tr('Copy YAML'), action: () => fallbackCopyText(generateYAML(item)) },
         { label: '📋 '+ tr('Copy Markdown'), action: () => fallbackCopyText(generateMD(item)) },
       ];
+    }
+
+    if (item.large_variant && window.electronAPI?.downloadLargeVariant) {
+      if (item.large_variant_local === true) {
+        options.push({
+          label: '🧹 ' + tr('Delete High-res'),
+          action: async () => {
+            const confirmed = confirm(tr('Delete the high-resolution variant?'));
+            if (!confirmed) return;
+            const result = await window.electronAPI.deleteLargeVariant(item.filename);
+            if (!result.success) {
+              alert(tr('Failed to delete high-res variant: ') + (result.error || 'Unknown error'));
+              return;
+            }
+            item.large_variant_local = false;
+            updateCardVariantStatus(item);
+          }
+        });
+      } else {
+        options.push({
+          label: '⬇️ ' + tr('Download High-res'),
+          action: async () => {
+            const result = await window.electronAPI.downloadLargeVariant(item.filename);
+            if (!result.success) {
+              alert(tr('Failed to download high-res variant: ') + (result.error || 'Unknown error'));
+              return;
+            }
+            if (result.filename) {
+              item.large_variant.filename = result.filename;
+            }
+            item.large_variant_local = true;
+            updateCardVariantStatus(item);
+          }
+        });
+      }
     }
 
     if(!usedMedia.length || !usedMedia.includes(item.filename)) {
