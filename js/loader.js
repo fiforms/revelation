@@ -376,9 +376,28 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
       }
     }
 
+    // Sticky attribution: persists until macros reset
+    const stickyAttribMatch = line.match(/^\:ATTRIB\s*:\s*STICKY\s*:(.*)$/i);
+    if (stickyAttribMatch) {
+      const attribText = stickyAttribMatch[1];
+      thismacros.push(`:ATTRIB:${attribText}`);
+      attributions.push(attribText);
+      continue;
+    }
+
+    // Sticky AI tag: persists until macros reset
+    const stickyAiMatch = line.match(/^::AI\s*:\s*STICKY\s*$/i);
+    if (stickyAiMatch) {
+      if (!forHandout) {
+        aiSymbolRequested = true;
+        thismacros.push('::AI');
+      }
+      continue;
+    }
+
     // Check for attributions and load them into the attributions array
-    const attribMatch = line.match(/^\:ATTRIB\:(.*)$/); 
-    if(attribMatch) {
+    const attribMatch = line.match(/^\:ATTRIB\:(.*)$/);
+    if (attribMatch) {
       attributions.push(attribMatch[1]);
       continue;
     }
@@ -413,13 +432,19 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
       }
       else {
         for (const val of lastmacros) {
-            const attribMatch = val.match(/^\:ATTRIB\:(.*)$/);
-                if(attribMatch) {
-              attributions.push(attribMatch[1]);
-              }
-            else {
-              processedLines.push(val);
+          const attribMatch = val.match(/^\:ATTRIB\:(.*)$/);
+          if (attribMatch) {
+            attributions.push(attribMatch[1]);
+            continue;
+          }
+          const aiStickyMatch = val.match(/^::AI\s*$/i);
+          if (aiStickyMatch) {
+            if (!forHandout) {
+              aiSymbolRequested = true;
             }
+            continue;
+          }
+          processedLines.push(val);
         }
         processedLines.push('');
       }
