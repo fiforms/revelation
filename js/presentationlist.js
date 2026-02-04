@@ -127,6 +127,17 @@ if (optionsBtn && optionsDropdown) {
   });
 }
 
+function appendMediaParam(url) {
+  if (!appConfig?.preferHighBitrate) return url;
+  try {
+    const parsed = new URL(url, window.location.origin);
+    parsed.searchParams.set('media', 'high');
+    return parsed.toString();
+  } catch {
+    return url + (url.includes('?') ? '&' : '?') + 'media=high';
+  }
+}
+
 // load and persist settings via localStorage
 const mediaSelect = document.getElementById('media-version');
 const langInput = document.getElementById('lang-code');
@@ -231,7 +242,8 @@ function showCustomContextMenu(x, y, pres) {
         label: '🔗 ' + tr('Copy Link'),
         action: async () => {
                 const baseURL = await getCopyLinkBaseURL();
-                const link = `${baseURL}${url_prefix}/${pres.slug}/index.html?p=${pres.md}`;
+                let link = `${baseURL}${url_prefix}/${pres.slug}/index.html?p=${pres.md}`;
+                link = appendMediaParam(link);
                 if (navigator.clipboard && navigator.clipboard.writeText) {
                   navigator.clipboard.writeText(link)
                     .then(() => console.log('✅ Link copied to clipboard'))

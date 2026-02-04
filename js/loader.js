@@ -8,6 +8,8 @@ export async function loadAndPreprocessMarkdown(deck,selectedFile = null) {
       const urlParams = new URLSearchParams(window.location.search);
 
       let rawMarkdown;
+      let mediaIndex = null;
+      let prefersHigh = false;
 
       // 🧠 Check for global offlineMarkdown
       if (typeof window.offlineMarkdown === 'string') {
@@ -53,7 +55,57 @@ export async function loadAndPreprocessMarkdown(deck,selectedFile = null) {
         Object.assign(macros, metadata.macros); // User-defined macros from front matter 
       }
 
-      const partProcessedMarkdown = preprocessMarkdown(content, macros, false, metadata.media, metadata.newSlideOnHeading);
+      // Resolve preferred media version from URL (preferred) or localStorage fallback
+      const mediaParam = (urlParams.get('media') || '').toLowerCase();
+      if (mediaParam === 'high') {
+        prefersHigh = true;
+      } else if (mediaParam === 'low' || mediaParam === 'standard') {
+        prefersHigh = false;
+      } else if (!window.electronAPI) {
+        const stored = localStorage.getItem('options_media-version');
+        prefersHigh = stored === 'high';
+      }
+
+      // Load media index (if available) for high-bitrate availability checks
+      try {
+        let mediaBasePath = '../_media/';
+        if (typeof window !== 'undefined' && window.mediaPath) {
+          mediaBasePath = window.mediaPath.endsWith('/') ? window.mediaPath : window.mediaPath + '/';
+        }
+        const mediaIndexUrl = `${mediaBasePath}index.json`;
+        const mediaIndexRes = await fetch(mediaIndexUrl, { cache: 'no-store' });
+        if (mediaIndexRes.ok) {
+          mediaIndex = await mediaIndexRes.json();
+        }
+      } catch (err) {
+        console.warn('Media index not available:', err.message);
+      }
+
+      // Hydrate large_variant from media index when missing in front matter
+      if (mediaIndex && metadata.media && typeof metadata.media === 'object') {
+        for (const key of Object.keys(metadata.media)) {
+          const entry = metadata.media[key];
+          if (!entry?.filename) continue;
+          const indexItem = mediaIndex[entry.filename];
+          if (!indexItem) continue;
+          if (!entry.large_variant && indexItem.large_variant) {
+            entry.large_variant = { ...indexItem.large_variant };
+          }
+          if (entry.large_variant && entry.large_variant_local === undefined && indexItem.large_variant_local !== undefined) {
+            entry.large_variant_local = indexItem.large_variant_local;
+          }
+        }
+      }
+
+      const partProcessedMarkdown = preprocessMarkdown(
+        content,
+        macros,
+        false,
+        metadata.media,
+        metadata.newSlideOnHeading,
+        mediaIndex,
+        prefersHigh
+      );
       const processedMarkdown = metadata.convertSmartQuotes === false ? partProcessedMarkdown : convertSmartQuotes(partProcessedMarkdown);
 
       // Create a temporary element to convert markdown into HTML slides
@@ -125,7 +177,7 @@ export function extractFrontMatter(md) {
   }
 }
 
-export function preprocessMarkdown(md, userMacros = {}, forHandout = false, media = {}, newSlideOnHeading = true) {
+export function preprocessMarkdown(md, userMacros = {}, forHandout = false, media = {}, newSlideOnHeading = true, mediaIndex = null, preferHigh = null) {
   const lines = md.split('\n');
   const processedLines = [];
   const attributions = [];
@@ -203,6 +255,16 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
   let insideCodeBlock = false;
   let currentFence = '';
   let columnPipeState = 0; // 0=start, 1=break, 2=end
+  const mediaIndexMap = mediaIndex && typeof mediaIndex === 'object' ? mediaIndex : null;
+  const prefersHigh = typeof preferHigh === 'boolean'
+    ? preferHigh
+    : (localStorage.getItem('options_media-version') === 'high');
+  const isHighVariantAvailable = (item) => {
+    if (!item?.large_variant?.filename) return false;
+    if (!mediaIndexMap) return false;
+    const indexItem = mediaIndexMap[item.filename];
+    return indexItem?.large_variant_local === true;
+  };
   const resolveMediaAlias = (input) => {
     if (!input || !media) {
       return input;
@@ -218,8 +280,7 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
     }
 
     let resolvedFile = item.filename;
-    const prefersHigh = localStorage.getItem('options_media-version') === 'high';
-    if (prefersHigh && item.large_variant?.filename) {
+    if (prefersHigh && isHighVariantAvailable(item)) {
       resolvedFile = item.large_variant.filename;
     }
 
@@ -289,9 +350,8 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
       if (item?.filename) {
         let resolvedFile = item.filename;
 
-        // 🔥 use large variant if config says so
-        let prefersHigh = localStorage.getItem('options_media-version') === 'high';
-        if (prefersHigh && item.large_variant?.filename) {
+        // 🔥 use large variant if config says so and it is available
+        if (prefersHigh && isHighVariantAvailable(item)) {
           resolvedFile = item.large_variant.filename;
         }
 

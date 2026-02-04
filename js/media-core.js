@@ -187,11 +187,12 @@ export async function initMediaLibrary(container, {
     onPick({ variant: 'auto', yaml, md, item });
   }
 
-  function formatVariantStatus(item) {
-    if (!item.large_variant) return tr('High-res: not available');
-    if (item.large_variant_local === false) return tr('High-res: available (not downloaded)');
-    if (item.large_variant_local === true) return tr('High-res: downloaded');
-    return tr('High-res: available');
+  function formatVariantStatus(item, longDesc = false) {
+    const front = longDesc ? 'High-resolution variant: ' : '💎 ';
+    if (!item.large_variant) return ''
+    if (item.large_variant_local === false) return front + '<span style="color: #33cc33;">' + tr('available') + '</span>';
+    if (item.large_variant_local === true) return front + '<span style="color: #6666ee;">' +tr('downloaded') + '</span>';
+    return '';
   }
 
   function updateCardVariantStatus(item) {
@@ -248,7 +249,7 @@ export async function initMediaLibrary(container, {
       `;
       const variantStatus = document.createElement('small');
       variantStatus.className = 'media-variant-status';
-      variantStatus.textContent = formatVariantStatus(item);
+      variantStatus.innerHTML = formatVariantStatus(item);
       meta.appendChild(variantStatus);
 
       card.appendChild(thumbWrap);
@@ -361,7 +362,7 @@ caption.innerHTML = `
   deleteBtn.textContent = tr('Delete High-res');
 
   const updateVariantUI = () => {
-    variantStatus.textContent = formatVariantStatus(item);
+    variantStatus.innerHTML = formatVariantStatus(item, true);
     if (!item.large_variant) {
       toggleBtn.style.display = 'none';
       downloadBtn.style.display = 'none';
