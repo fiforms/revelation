@@ -183,8 +183,13 @@ function toggleFullscreen() {
 }
 
 function closePresentation() {
-  if (window.electronAPI?.closeWindow) {
-    window.electronAPI.closeWindow();
+  if (window.electronAPI?.closePresentation) {
+    window.electronAPI.closePresentation();
+    return;
+  }
+  if (window.parent && window.parent !== window) {
+    window.parent.postMessage('pip-close-presentation', '*');
+    return;
   } else {
     // Try to close the browser tab/window
     window.close();

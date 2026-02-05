@@ -76,6 +76,17 @@ const mdFile = urlParams.get('p');
 const config = window.electronAPI ? await window.electronAPI.getAppConfig() : {};
 window.AppConfig = config;
 
+// If embedded in a PIP iframe, forward X key presses to the parent.
+if (window.parent && window.parent !== window) {
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'x' || event.key === 'X') {
+      event.preventDefault();
+      event.stopPropagation();
+      window.parent.postMessage('pip-toggle', '*');
+    }
+  }, true);
+}
+
 
 // VITE Hot Reloading Hook
 if (import.meta.hot) {
