@@ -190,6 +190,9 @@ export async function initMediaLibrary(container, {
   function formatVariantStatus(item, longDesc = false) {
     const front = longDesc ? 'High-resolution variant: ' : '💎 ';
     if (!item.large_variant) return ''
+    if (item.large_variant_converting === true) {
+      return front + '<span style="color: #ffb347;">' + tr('converting') + '</span>';
+    }
     if (item.large_variant_local === false) return front + '<span style="color: #33cc33;">' + tr('available') + '</span>';
     if (item.large_variant_local === true) return front + '<span style="color: #6666ee;">' +tr('downloaded') + '</span>';
     return '';
@@ -348,6 +351,7 @@ caption.innerHTML = `
   actionRow.className = 'mlightbox-actions';
 
   const canUseElectron = !!window.electronAPI?.downloadLargeVariant;
+  const canConvertVariant = !!window.electronAPI?.convertLargeVariant;
   let usingHigh = false;
   const toggleBtn = document.createElement('button');
   toggleBtn.className = 'mlightbox-button';
@@ -361,23 +365,38 @@ caption.innerHTML = `
   deleteBtn.className = 'mlightbox-button';
   deleteBtn.textContent = tr('Delete High-res');
 
+  const convertBtn = document.createElement('button');
+  convertBtn.className = 'mlightbox-button';
+  convertBtn.textContent = tr('Convert High-res to H.264');
+
   const updateVariantUI = () => {
     variantStatus.innerHTML = formatVariantStatus(item, true);
     if (!item.large_variant) {
       toggleBtn.style.display = 'none';
       downloadBtn.style.display = 'none';
       deleteBtn.style.display = 'none';
+      convertBtn.style.display = 'none';
+      return;
+    }
+    if (item.large_variant_converting === true) {
+      toggleBtn.style.display = highLocal ? '' : 'none';
+      downloadBtn.style.display = 'none';
+      deleteBtn.style.display = 'none';
+      convertBtn.style.display = 'none';
+      toggleBtn.disabled = true;
       return;
     }
     if (highLocal) {
       toggleBtn.style.display = '';
       downloadBtn.style.display = 'none';
       deleteBtn.style.display = '';
+      convertBtn.style.display = (canConvertVariant && item.large_variant?.filename?.toLowerCase().endsWith('.webm')) ? '' : 'none';
       toggleBtn.disabled = false;
     } else {
       toggleBtn.style.display = 'none';
       downloadBtn.style.display = canUseElectron ? '' : 'none';
       deleteBtn.style.display = 'none';
+      convertBtn.style.display = 'none';
     }
   };
 
@@ -449,11 +468,29 @@ caption.innerHTML = `
     }
   });
 
+  convertBtn.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    if (!window.electronAPI?.convertLargeVariant) return;
+    convertBtn.disabled = true;
+    try {
+      const result = await window.electronAPI.convertLargeVariant(item.filename);
+      if (!result.success) throw new Error(result.error || 'Convert failed.');
+      item.large_variant_converting = true;
+      updateCardVariantStatus(item);
+      updateVariantUI();
+    } catch (err) {
+      alert(tr('Failed to convert high-res variant: ') + err.message);
+    } finally {
+      convertBtn.disabled = false;
+    }
+  });
+
   caption.appendChild(variantRow);
   if (item.large_variant) {
     actionRow.appendChild(toggleBtn);
     actionRow.appendChild(downloadBtn);
     actionRow.appendChild(deleteBtn);
+    actionRow.appendChild(convertBtn);
     caption.appendChild(actionRow);
   }
   updateVariantUI();
@@ -554,6 +591,28 @@ caption.innerHTML = `
             updateCardVariantStatus(item);
           }
         });
+        if (window.electronAPI?.convertLargeVariant) {
+          const isWebm = item.large_variant?.filename?.toLowerCase().endsWith('.webm');
+          if (item.large_variant_converting === true) {
+            options.push({
+              label: '⏳ ' + tr('Converting high-res variant'),
+              action: () => {}
+            });
+          } else if (isWebm) {
+            options.push({
+              label: '🔁 ' + tr('Convert High-res to H.264'),
+              action: async () => {
+                const result = await window.electronAPI.convertLargeVariant(item.filename);
+                if (!result.success) {
+                  alert(tr('Failed to convert high-res variant: ') + (result.error || 'Unknown error'));
+                  return;
+                }
+                item.large_variant_converting = true;
+                updateCardVariantStatus(item);
+              }
+            });
+          }
+        }
       } else {
         options.push({
           label: '⬇️ ' + tr('Download High-res'),
