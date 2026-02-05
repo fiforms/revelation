@@ -78,7 +78,7 @@ body.reveal-ready {
       font-size: 2em;
       margin-top: calc(var(--slide-height) * 0.02);
       height: calc(calc(var(--slide-height) * 0.17) - 15pt);
-      margin-bottom: calc(var(--slide-height) * 0.02);
+      margin-bottom: calc(var(--slide-height) * 0.06);
       align-self: center;
       text-align: center;
     }
@@ -87,7 +87,7 @@ body.reveal-ready {
       font-size: 2em;
       margin-top: calc(var(--slide-height) * 0.02);
       height: calc(calc(var(--slide-height) * 0.17) - 15pt);
-      margin-bottom: calc(var(--slide-height) * 0.02);
+      margin-bottom: calc(var(--slide-height) * 0.06);
     }
 
     h3 {
@@ -97,7 +97,7 @@ body.reveal-ready {
     h3, h4, h5, h6 {
       margin-top: calc(var(--slide-height) * 0.03);
       height: calc(calc(var(--slide-height) * 0.17) - 15pt);
-      margin-bottom: calc(var(--slide-height) * 0.01);
+      margin-bottom: calc(var(--slide-height) * 0.05);
     }
 
     .info-head {
