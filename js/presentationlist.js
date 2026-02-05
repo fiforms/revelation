@@ -295,6 +295,32 @@ function showCustomContextMenu(x, y, pres) {
       }
     });
     options.push({
+      label: '📥 ' + tr('Download Missing Media'),
+      action: async () => {
+        try {
+          const result = await window.electronAPI.importMissingMedia(pres.slug);
+          if (!result?.success) {
+            alert(`❌ ${tr('Download failed')}: ${result?.error || tr('Unknown error')}`);
+            return;
+          }
+          if (!result.missingCount) {
+            showToast(`✅ ${tr('No missing media found')}`);
+            return;
+          }
+          if (result.skipped) {
+            showToast(`ℹ️ ${tr('Skipped downloading')} (${result.missingCount})`);
+            return;
+          }
+          const extra = result.largeDownloaded
+            ? ` (+${result.largeDownloaded} ${tr('large variants')})`
+            : '';
+          showToast(`✅ ${tr('Downloaded')} ${result.downloadedCount}/${result.missingCount}${extra}`);
+        } catch (err) {
+          alert(`❌ ${tr('Download failed')}: ${err.message}`);
+        }
+      }
+    });
+    options.push({
       label: '🗑️ ' + tr('Delete Presentation…'),
       action: async () => {
         try {
