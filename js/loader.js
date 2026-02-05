@@ -234,8 +234,9 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
     magicImageHandlers.youtube = (src, modifier, attribution) => {
       const match = src.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|watch\?v=))([\w-]+)/);
       const id = match ? match[1] : null;
+      const widthHeight = modifier === 'fit' ? 'class="youtube-fit"' : 'class="youtube-iframe"';
       return id
-        ? `<iframe width="960" height="540" src="https://www.youtube.com/embed/${id}?autoplay=0&mute=1&loop=1&playlist=${id}" frameborder="0" allowfullscreen></iframe>`
+        ? `<iframe ${widthHeight} src="https://www.youtube.com/embed/${id}?autoplay=0&mute=1&loop=1&playlist=${id}" frameborder="0" allowfullscreen></iframe>`
         : `<!-- Invalid YouTube URL: ${src} -->`;
     };
   }

@@ -186,7 +186,8 @@ body.reveal-ready {
   }
 
   section:has(img), 
-  section:has(video) {
+  section:has(video),
+  section:has(iframe) {
     height: 100%;  
   }
 
@@ -222,6 +223,33 @@ body.reveal-ready {
     max-width: 100%;
     max-height: 100%;
     object-fit: contain;
+  }
+
+  section:has(iframe.youtube-fit) {
+    position: relative;
+    height: 100%;
+    padding: 0;
+  }
+
+  iframe.youtube-fit {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    max-width: 100%;
+    max-height: 100%;
+    margin: 0;
+    border: 0;
+  }
+
+  iframe.youtube-iframe {
+    display: block;
+    width: calc(var(--slide-width) * 0.8);
+    height: calc(var(--slide-width) * 0.8 * 9 / 16);
+    max-width: 100%;
+    max-height: calc(var(--slide-height) * 0.8);
+    margin: 0 auto;
+    border: 0;
   }
 
   .slide-attribution {

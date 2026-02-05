@@ -608,6 +608,7 @@ REVELation supports enhanced image syntax that simplifies adding background vide
 | `fit`               | Scales image to fit inside slide with styling         |
 | `caption`           | Adds a `<figure>` and `<figcaption>` wrapper          |
 | `youtube`           | Embeds an autoplaying, looped YouTube iframe          |
+| `youtube:fit`       | Embeds an autoplaying, looped YouTube iframe, fullscreen |
 
 ---
 
