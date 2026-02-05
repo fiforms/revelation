@@ -1,0 +1,102 @@
+/**
+ * NAME: REVELation Light
+ * AUTHOR: Daniel McFeeters
+ *
+ * Light Default Theme for REVELation Snapshot Presenter
+ */
+
+@use "sass:color";
+
+// Reveal.js template base (via include path from node_modules)
+@import 'reveal.js/dist/reveal.css';
+@import "reveal.js/css/theme/template/mixins";
+@import "reveal.js/css/theme/template/settings";
+@import "./custom/layouts.scss";
+
+// Include theme-specific fonts
+@import url(./fonts/inter/inter.css);
+@import url(./fonts/noto_serif/noto_serif.css);
+
+// Override theme settings (see ../template/settings.scss)
+// $backgroundColor: #f7f4ef;
+
+$mainColor: #202020;
+$headingColor: #332f21;
+
+$mainFontSize: 42px;
+$mainFont: 'Inter Latin', 'Noto Serif Greek', 'Noto Serif Hebrew', system-ui, serif;
+$headingFont: 'Inter Latin', 'Noto Serif Greek', 'Noto Serif Hebrew', system-ui, serif;
+$headingTextShadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+$headingLetterSpacing: 0.01em;
+$headingTextTransform: none;
+$headingFontWeight: 600;
+$linkColor: #1369b5;
+$linkColorHover: color.scale( $linkColor, $lightness: 15% );
+$selectionBackgroundColor: rgba( $linkColor, 0.75 );
+
+$heading1Size: 2.8em;
+$heading2Size: 2.4em;
+$heading3Size: 2.2em;
+$heading4Size: 2.0em;
+
+// Change text colors against light slide backgrounds
+@include light-bg-text-color(#14171c);
+
+@import 'reveal.js/css/theme/template/mixins';
+
+// Background generator
+@mixin bodyBackground() {
+	@include radial-gradient( #ebe0d5, #cbc6b6 );
+}
+
+
+@import "reveal.js/css/theme/template/theme";
+
+
+#fixed-overlay-wrapper {
+    background: rgba(0, 0, 0, 0.08);
+    color: #11151a;
+}
+
+#fixed-tint-wrapper {
+        position: fixed;
+        top: 0;
+        left: 0;  
+        width: 100%;
+        height: 100%;
+        background-color: rgba(255, 255, 255, 0.35);
+        zIndex: 0;
+        pointerEvents: none;
+}
+
+.reveal h1, .reveal h2 {
+    font-variant-caps: small-caps;
+    letter-spacing: 0.01em;
+}
+
+.reveal h1 {
+    text-shadow: 1px 2px 3px rgba(0, 0, 0, 0.2);
+}
+
+.reveal h2, .reveal h3, .reveal h4, .reveal h5, .reveal h6 {
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.16);
+}
+
+.reveal p {
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.12);
+}
+
+.reveal h4 {
+    font-weight: 500;
+}
+
+.reveal h5 {
+    font-size: 1.6em;
+    font-weight: 400;
+}
+
+.info-head, .info-body {
+    background-color: rgba(255, 255, 255, 0.4);
+    padding: 1rem;
+    border-radius: 8px;
+}
