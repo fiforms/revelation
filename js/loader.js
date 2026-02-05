@@ -217,7 +217,7 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
       if(modifier === 'sticky') {
         thismacros.push(tag);
         if(attribution) {
-          thismacros.push(`:ATTRIB:${attribution}`);
+          thismacros.push(`{{attrib:${attribution}}}`);
         }
         lastmacros.length = 0;  // Sticky background resets previous macros
       }
@@ -422,7 +422,7 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
         const mlines = expanded.split('\n');
         for (const mline of mlines) {
           thismacros.push(mline);
-          const attribMatch = mline.match(/^\:ATTRIB\:(.*)$/);
+          const attribMatch = mline.match(/^\{\{attrib:(.*)}}\s*$/i);
           if (attribMatch) {
             attributions.push(attribMatch[1]);
             continue;
@@ -437,32 +437,32 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
     }
 
     // Sticky attribution: persists until macros reset
-    const stickyAttribMatch = line.match(/^\:ATTRIB\s*:\s*STICKY\s*:(.*)$/i);
+    const stickyAttribMatch = line.match(/^\{{attrib:(.*)}}\s*$/i);
     if (stickyAttribMatch) {
-      const attribText = stickyAttribMatch[1];
-      thismacros.push(`:ATTRIB:${attribText}`);
+      const attribText = stickyAttribMatch[1].replace("(c)","©");
+      thismacros.push(`{{attrib:${attribText}}}`);
       attributions.push(attribText);
       continue;
     }
 
     // Sticky AI tag: persists until macros reset
-    const stickyAiMatch = line.match(/^::AI\s*:\s*STICKY\s*$/i);
+    const stickyAiMatch = line.match(/^{{ai}}\s*$/i);
     if (stickyAiMatch) {
       if (!forHandout) {
         aiSymbolRequested = true;
-        thismacros.push('::AI');
+        thismacros.push('{{ai}}');
       }
       continue;
     }
 
     // Check for attributions and load them into the attributions array
-    const attribMatch = line.match(/^\:ATTRIB\:(.*)$/);
+    const attribMatch = line.match(/^\:ATTRIB\:(.*)$/i);
     if (attribMatch) {
-      attributions.push(attribMatch[1]);
+      attributions.push(attribMatch[1].replace("*(c)","©"));
       continue;
     }
 
-    const aiSymbolMatch = line.match(/^::AI\s*$/i);
+    const aiSymbolMatch = line.match(/^:AI:\s*$/i);
     if (aiSymbolMatch) {
       if (!forHandout) {
         aiSymbolRequested = true;
@@ -492,12 +492,12 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
       }
       else {
         for (const val of lastmacros) {
-          const attribMatch = val.match(/^\:ATTRIB\:(.*)$/);
+          const attribMatch = val.match(/^\{\{attrib:(.*)}}\s*$/i);
           if (attribMatch) {
             attributions.push(attribMatch[1]);
             continue;
           }
-          const aiStickyMatch = val.match(/^::AI\s*$/i);
+          const aiStickyMatch = val.match(/^{{ai}}\s*$/i);
           if (aiStickyMatch) {
             if (!forHandout) {
               aiSymbolRequested = true;
