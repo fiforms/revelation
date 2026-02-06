@@ -388,6 +388,53 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
       }
     }
 
+    const inlineMacroMatch = line.match(/^:([A-Za-z0-9_]+)(?::(.*))?:\s*$/);
+    if (inlineMacroMatch) {
+      const key = inlineMacroMatch[1].trim().toLowerCase();
+      const paramString = inlineMacroMatch[2];
+      const params = paramString ? paramString.split(':') : [];
+      if (key !== 'attrib' && key !== 'ai' && !key.startsWith('column')) {
+        if (key === 'audio') {
+          const command = params[0]?.toLowerCase() || '';
+          const rawSrc = params[1] || '';
+          const src = resolveMediaAlias(rawSrc);
+          let audioLine = '';
+
+          if (command === 'stop') {
+            audioLine = `<!-- .slide: data-background-audio-stop -->`;
+          } else if (command === 'play' && src) {
+            audioLine = `<!-- .slide: data-background-audio-start="${src}" -->`;
+          } else if ((command === 'playloop' || command === 'loop') && src) {
+            audioLine = `<!-- .slide: data-background-audio-loop="${src}" -->`;
+          } else {
+            console.log('Markdown Audio Inline Macro Not Found or Missing File: ' + paramString);
+          }
+
+          if (audioLine) {
+            processedLines.push(audioLine);
+            continue;
+          }
+        }
+
+        const template = macros[key];
+        if (template) {
+          const expanded = template.replace(/\$(\d+)/g, (_, n) => resolveMediaAlias(params[+n - 1] ?? ''));
+          const mlines = expanded.split('\n');
+          for (const mline of mlines) {
+            const attribMatch = mline.match(/^\{\{attrib:(.*)}}\s*$/i);
+            if (attribMatch) {
+              attributions.push(attribMatch[1]);
+              continue;
+            }
+            processedLines.push(mline);
+          }
+          continue;
+        } else {
+          console.log('Markdown Inline Macro Not Found: ' + key);
+        }
+      }
+    }
+
     const macroUseMatch = line.match(/^\{\{([A-Za-z0-9_]+)(?::([^}]+))?\}\}$/);
 
     if (macroUseMatch) {
@@ -411,9 +458,13 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
         }
 
         if (audioLine) {
-          thismacros.push(audioLine);
-          processedLines.push(audioLine);
-          lastmacros.length = 0;
+          if (command === 'stop') {
+            processedLines.push(audioLine);
+          } else {
+            thismacros.push(audioLine);
+            processedLines.push(audioLine);
+            lastmacros.length = 0;
+          }
           continue;
         }
       }
