@@ -4,8 +4,8 @@
   splash.id = 'revelation-splash';
   splash.innerHTML = `
     <div class="splash-content">
-      <h2>Created with REVELation Snapshot Presenter</h2>
-      <p><a href="https://github.com/fiforms/revelation-electron-wrapper" target="_blank">Download the Builder</a></p>
+      <h2>Created with REVELation Snapshot Presenter v. <span id="app-version"></span></h2>
+      <p><a href="https://snapshots.vrbm.org/revelation-snapshot-presenter/" target="_blank">Learn More</a></p>
     </div>
   `;
   document.body.appendChild(splash);
@@ -50,6 +50,11 @@
     }
   `;
   document.head.appendChild(style);
+
+  const versionSpan = splash.querySelector('#app-version');
+  if (versionSpan) {
+    versionSpan.textContent = window.exportedAppVersion || 'unknown';
+  }
 
   // Remove after delay or user input
   let dismissed = false;
