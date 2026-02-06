@@ -31,6 +31,8 @@ export function contextMenu(deck) {
 
       const isLocal = window.location.hostname === 'localhost';
 
+      const canSendToPeers = !!window.electronAPI?.sendPeerCommand || (window.parent && window.parent !== window);
+
       const items = [
         { label: tr('Show Reveal.js Help (?)'), action: () => deck.toggleHelp() },
         { label: tr('Show Speaker Notes (s)'), action: () => deck.getPlugins().notes.open() },
@@ -39,7 +41,7 @@ export function contextMenu(deck) {
           { label: tr('Toggle Remote Follower Link (a)'), action: () => fireRevealKey('a') },
           { label: tr('Toggle Remote Control Link (r)'), action: () => fireRevealKey('r') }
 	  ] : []),
-        ...(window.electronAPI?.sendPeerCommand ? [
+        ...(canSendToPeers ? [
           { label: tr('Send Presentation to Peers (z)'), action: () => sendPresentationToPeers() }
         ] : []),
         { label: deck.isOverview() ? tr('Close Overview (ESC)') : tr('Overview (ESC)'), action: () => deck.toggleOverview() },
@@ -109,21 +111,26 @@ export function contextMenu(deck) {
 }
 
 export function sendPresentationToPeers() {
-  if (!window.electronAPI?.sendPeerCommand) {
-    console.warn('Peer commands unavailable outside Electron.');
-    return;
-  }
-
   const url = getPeerShareUrl();
   if (!url) {
     alert(tr('Remote share link not ready yet.'));
     return;
   }
 
-  window.electronAPI.sendPeerCommand({
-    type: 'open-presentation',
-    payload: { url }
-  });
+  if (window.electronAPI?.sendPeerCommand) {
+    window.electronAPI.sendPeerCommand({
+      type: 'open-presentation',
+      payload: { url }
+    });
+    return;
+  }
+
+  if (window.parent && window.parent !== window) {
+    window.parent.postMessage({ type: 'pip-send-to-peers', payload: { url } }, '*');
+    return;
+  }
+
+  console.warn('Peer commands unavailable outside Electron.');
 }
 
 function getPeerShareUrl() {
