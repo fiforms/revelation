@@ -30,6 +30,7 @@ export async function loadAndPreprocessMarkdown(deck,selectedFile = null) {
       const macros = {};
 
       const { metadata, content } = extractFrontMatter(rawMarkdown);
+      const contentWithBlankSlide = `${content}\n\n---\n\n`;
       const forceControls = urlParams.get('forceControls') === '1';
 
       // check for alternative versions, create a selector drop-down
@@ -98,7 +99,7 @@ export async function loadAndPreprocessMarkdown(deck,selectedFile = null) {
       }
 
       const partProcessedMarkdown = preprocessMarkdown(
-        content,
+        contentWithBlankSlide,
         macros,
         false,
         metadata.media,
