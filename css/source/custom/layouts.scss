@@ -119,6 +119,12 @@ body.reveal-ready {
     }
  }
 
+  section[data-infoslidefull] {
+    .info-bodyfull {
+      top: calc(var(--slide-height) * 0.02);
+    }
+  }
+
   section[data-lighttext],
   section[data-lighttext] h1,
   section[data-lighttext] h2,

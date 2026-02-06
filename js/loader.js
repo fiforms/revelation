@@ -195,6 +195,7 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
     lowerthird: `<!-- .slide: data-lower-third -->`,
     upperthird: `<!-- .slide: data-upper-third -->`,
     info: `<!-- .slide: data-infoslide --><div class="info-head"></div><div class="info-body"></div>`,
+    infofull: `<!-- .slide: data-infoslide data-infoslidefull --></div><div class="info-body info-bodyfull"></div>`,
     columnstart: `<div class="flexcontainer"><div class="first">`,
     columnbreak: `</div><div class="second">`,
     columnend: `</div></div>`,
