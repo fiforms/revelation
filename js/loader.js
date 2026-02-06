@@ -124,6 +124,8 @@ export async function loadAndPreprocessMarkdown(deck,selectedFile = null) {
         config.progress = true;
         config.slideNumber = true;
         config.showSlideNumber = 'all';
+        config.autoSlide = 0;
+        config.autoSlideStoppable = false;
       }
       deck.initialize(config);
 }
@@ -201,6 +203,8 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
     columnbreak: `</div><div class="second">`,
     columnend: `</div></div>`,
     bgtint: `<!-- .slide: data-tint-color="$1" -->`,
+    animate: `<!-- .slide: data-auto-animate -->`,
+    autoslide: `<!-- .slide: data-autoslide="$1" -->`,
     audiostart: `<!-- .slide: data-background-audio-start="$1" -->`,
     audioloop: `<!-- .slide: data-background-audio-loop="$1" -->`,
     audiostop: `<!-- .slide: data-background-audio-stop -->`
@@ -395,6 +399,18 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
       const paramString = inlineMacroMatch[2];
       const params = paramString ? paramString.split(':') : [];
       if (key !== 'attrib' && key !== 'ai' && !key.startsWith('column')) {
+        if (key === 'animate') {
+          const mode = params[0]?.trim().toLowerCase() || '';
+          if (!mode) {
+            processedLines.push('<!-- .slide: data-auto-animate -->');
+            continue;
+          }
+          if (mode === 'restart') {
+            processedLines.push('<!-- .slide: data-auto-animate-restart -->');
+            continue;
+          }
+          console.log('Markdown Animate Inline Macro Not Found: ' + paramString);
+        }
         if (key === 'audio') {
           const command = params[0]?.toLowerCase() || '';
           const rawSrc = params[1] || '';
@@ -442,6 +458,19 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
       const key = macroUseMatch[1].trim();
       const paramString = macroUseMatch[2];
       const params = paramString ? paramString.split(':') : [];
+      if (key.toLowerCase() === 'animate') {
+        const mode = params[0]?.trim().toLowerCase() || '';
+        const animateLine = !mode
+          ? '<!-- .slide: data-auto-animate -->'
+          : (mode === 'restart' ? '<!-- .slide: data-auto-animate-restart -->' : '');
+        if (animateLine) {
+          thismacros.push(animateLine);
+          processedLines.push(animateLine);
+          lastmacros.length = 0;
+          continue;
+        }
+        console.log('Markdown Animate Macro Not Found: ' + paramString);
+      }
       if (key === 'audio') {
         const command = params[0]?.toLowerCase() || '';
         const rawSrc = params[1] || '';
