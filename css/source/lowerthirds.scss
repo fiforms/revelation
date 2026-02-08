@@ -41,7 +41,7 @@ body,
   align-items: center !important;
   text-align: center;
   height: 100%;
-  padding: 0 4vw 7vh;
+  padding: 0;
   box-sizing: border-box;
 }
 
@@ -55,12 +55,9 @@ body,
 .reveal .slides section li,
 .reveal .slides section blockquote {
   color: #fff !important;
-  text-shadow:
-    -2px -2px 0 #000,
-    2px -2px 0 #000,
-    -2px 2px 0 #000,
-    2px 2px 0 #000,
-    0 0 6px rgba(0, 0, 0, 0.9);
+  -webkit-text-stroke: 0.04em #000000;
+  text-shadow: none;
+  font-weight: bold;
 }
 
 .reveal .slides section p,
