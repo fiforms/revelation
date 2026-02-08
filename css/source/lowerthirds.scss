@@ -1,0 +1,85 @@
+/**
+ * Lower Thirds Theme for REVELation Snapshot Presenter
+ */
+
+@use "sass:color";
+
+// Reveal.js template base (via include path from node_modules)
+@import 'reveal.js/dist/reveal.css';
+@import "reveal.js/css/theme/template/mixins";
+@import "reveal.js/css/theme/template/settings";
+@import "./custom/layouts.scss";
+
+@import 'reveal.js/css/theme/source/black-contrast.scss';
+
+:root {
+  --chroma-key-color: #00ff00;
+}
+
+html,
+body {
+  background: var(--chroma-key-color) !important;
+}
+
+body,
+.reveal,
+.reveal .slides,
+.reveal .slides section {
+  background: transparent !important;
+}
+
+#fixed-overlay-wrapper,
+#fixed-tint-wrapper,
+#fixed-ai-wrapper {
+  display: none !important;
+}
+
+.reveal .slides section {
+  display: flex !important;
+  flex-direction: column;
+  justify-content: flex-end !important;
+  align-items: center !important;
+  text-align: center;
+  height: 100%;
+  padding: 0 4vw 7vh;
+  box-sizing: border-box;
+}
+
+.reveal .slides section h1,
+.reveal .slides section h2,
+.reveal .slides section h3,
+.reveal .slides section h4,
+.reveal .slides section h5,
+.reveal .slides section h6,
+.reveal .slides section p,
+.reveal .slides section li,
+.reveal .slides section blockquote {
+  color: #fff !important;
+  text-shadow:
+    -2px -2px 0 #000,
+    2px -2px 0 #000,
+    -2px 2px 0 #000,
+    2px 2px 0 #000,
+    0 0 6px rgba(0, 0, 0, 0.9);
+}
+
+.reveal .slides section p,
+.reveal .slides section ul,
+.reveal .slides section ol,
+.reveal .slides section blockquote {
+  background: none !important;
+  margin: 0.25em 0 !important;
+  padding: 0 !important;
+}
+
+.reveal .slides section ul,
+.reveal .slides section ol {
+  list-style-position: inside;
+}
+
+.reveal .slides section img,
+.reveal .slides section video,
+.reveal .slides section iframe,
+.reveal .slides section figure {
+  display: none !important;
+}

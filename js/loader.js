@@ -6,6 +6,33 @@ let style_path = '/css/';
 export async function loadAndPreprocessMarkdown(deck,selectedFile = null) {
       const defaultFile = 'presentation.md';
       const urlParams = new URLSearchParams(window.location.search);
+      const variant = (urlParams.get('variant') || '').trim().toLowerCase();
+      const variantThemeMap = {
+        lowerthirds: 'lowerthirds.css',
+        confidencemonitor: 'confidencemonitor.css'
+      };
+      const suppressVisualElements = variant === 'lowerthirds' || variant === 'confidencemonitor';
+
+      if (variant) {
+        document.body.dataset.variant = variant;
+      } else {
+        delete document.body.dataset.variant;
+      }
+
+      if (variant === 'lowerthirds') {
+        let chromaKeyColor = '#00ff00';
+        if (window.AppConfig?.pipColor) {
+          chromaKeyColor = window.AppConfig.pipColor;
+        } else if (window.electronAPI?.getAppConfig) {
+          try {
+            const cfg = await window.electronAPI.getAppConfig();
+            if (cfg?.pipColor) chromaKeyColor = cfg.pipColor;
+          } catch {
+            // Keep default chroma key color.
+          }
+        }
+        document.documentElement.style.setProperty('--chroma-key-color', chromaKeyColor);
+      }
 
       let rawMarkdown;
       let mediaIndex = null;
@@ -52,8 +79,9 @@ export async function loadAndPreprocessMarkdown(deck,selectedFile = null) {
 
       // Update document title and theme
       document.title = metadata.title || "Reveal.js Presentation";
-      if (metadata.theme) {
-        document.getElementById('theme-stylesheet').href = style_path + metadata.theme;
+      const selectedTheme = variantThemeMap[variant] || metadata.theme;
+      if (selectedTheme) {
+        document.getElementById('theme-stylesheet').href = style_path + selectedTheme;
       }
       if (metadata.stylesheet) {
         const styleEl = document.createElement('link');
@@ -115,7 +143,8 @@ export async function loadAndPreprocessMarkdown(deck,selectedFile = null) {
         metadata.media,
         metadata.newSlideOnHeading,
         mediaIndex,
-        prefersHigh
+        prefersHigh,
+        suppressVisualElements
       );
       const processedMarkdown = metadata.convertSmartQuotes === false ? partProcessedMarkdown : convertSmartQuotes(partProcessedMarkdown);
 
@@ -190,7 +219,7 @@ export function extractFrontMatter(md) {
   }
 }
 
-export function preprocessMarkdown(md, userMacros = {}, forHandout = false, media = {}, newSlideOnHeading = true, mediaIndex = null, preferHigh = null) {
+export function preprocessMarkdown(md, userMacros = {}, forHandout = false, media = {}, newSlideOnHeading = true, mediaIndex = null, preferHigh = null, suppressVisualElements = false) {
   const lines = md.split('\n');
   const processedLines = [];
   const attributions = [];
@@ -332,6 +361,19 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
     if (insideCodeBlock) {
       processedLines.push(line);
       continue;  // 🛑 Skip transformation inside code blocks
+    }
+
+    if (suppressVisualElements) {
+      const isMacroUse = /^\s*\{\{[^}]+\}\}\s*$/.test(line);
+      const isInlineMacro = /^\s*:[A-Za-z0-9_]+(?::.*)?:\s*$/.test(line);
+      const isAttribLine = /^\s*:ATTRIB:.*$/i.test(line) || /^\s*:AI:\s*$/i.test(line);
+      const hasMarkdownImage = /!\[[^\]]*]\([^)]*\)/.test(line);
+      const hasHtmlVisual = /<\s*(img|video|iframe|figure)\b/i.test(line);
+      const hasBackgroundData = /data-background-(image|video|audio|audio-start|audio-loop|audio-stop)/i.test(line);
+
+      if (isMacroUse || isInlineMacro || isAttribLine || hasMarkdownImage || hasHtmlVisual || hasBackgroundData) {
+        continue;
+      }
     }
 
     if(line.match(/^\{\{\}\}$/)) {

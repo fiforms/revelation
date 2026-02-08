@@ -1,0 +1,34 @@
+/**
+ * Confidence Monitor Theme for REVELation Snapshot Presenter
+ */
+
+@use "sass:color";
+
+// Reveal.js template base (via include path from node_modules)
+@import 'reveal.js/dist/reveal.css';
+@import "reveal.js/css/theme/template/mixins";
+@import "reveal.js/css/theme/template/settings";
+@import "./custom/layouts.scss";
+
+@import 'reveal.js/css/theme/source/black-contrast.scss';
+
+#fixed-overlay-wrapper {
+    background: rgba(0, 0, 0, 0.2);
+    color: white;
+}
+
+#fixed-tint-wrapper {
+        position: fixed;
+        top: 0;
+        left: 0;  
+        width: 100%;
+        height: 100%;
+        background-color: rgba(255,255,266,0.5);
+        zIndex: 0;
+        pointerEvents: none;
+}
+
+.info-head, .info-body {
+    background-color: rgba(48, 48, 48, 0.5);
+    padding: 1rem;
+}
