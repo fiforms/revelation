@@ -62,6 +62,13 @@ export async function loadAndPreprocessMarkdown(deck,selectedFile = null) {
       const { metadata, content } = extractFrontMatter(rawMarkdown);
       const contentWithBlankSlide = `${content}\n\n---\n\n`;
       const forceControls = urlParams.get('forceControls') === '1';
+      const yamlScrollSpeed = Number.parseFloat(metadata.scrollspeed);
+      window.RevelationRuntime = window.RevelationRuntime || {};
+      if (Number.isFinite(yamlScrollSpeed) && yamlScrollSpeed > 0) {
+        window.RevelationRuntime.notesScrollSpeed = yamlScrollSpeed;
+      } else {
+        delete window.RevelationRuntime.notesScrollSpeed;
+      }
 
       // check for alternative versions, create a selector drop-down
       if (!selectedFile && metadata.alternatives && typeof metadata.alternatives === 'object') {

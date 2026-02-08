@@ -53,6 +53,118 @@ pluginLoader('presentations',`/plugins_${key}`).then(async function() {
   window.deck = deck;
 
   loadAndPreprocessMarkdown(deck);
+  const NOTES_SCROLL_DELAY_MS = 3000;
+  const NOTES_SCROLL_SPEED_VH_PERCENT_PER_SEC_DEFAULT = 2;
+  const NOTES_SCROLL_READY_RETRIES = 16;
+  const NOTES_SCROLL_READY_RETRY_MS = 250;
+  let notesScrollStartTimer = null;
+  let notesScrollReadyTimer = null;
+  let notesScrollRaf = null;
+  let notesScrollContextKey = '';
+
+  function cancelNotesAutoScroll() {
+    if (notesScrollStartTimer) {
+      window.clearTimeout(notesScrollStartTimer);
+      notesScrollStartTimer = null;
+    }
+    if (notesScrollReadyTimer) {
+      window.clearTimeout(notesScrollReadyTimer);
+      notesScrollReadyTimer = null;
+    }
+    if (notesScrollRaf) {
+      window.cancelAnimationFrame(notesScrollRaf);
+      notesScrollRaf = null;
+    }
+  }
+
+  function getNotesContextKey() {
+    const idx = deck.getIndices?.() || {};
+    return `${idx.h ?? 0}:${idx.v ?? 0}:${idx.f ?? -1}`;
+  }
+
+  function getNotesScrollSpeedVhPercentPerSec() {
+    const runtimeSpeed = Number.parseFloat(window.RevelationRuntime?.notesScrollSpeed);
+    if (Number.isFinite(runtimeSpeed) && runtimeSpeed > 0) {
+      return runtimeSpeed;
+    }
+    return NOTES_SCROLL_SPEED_VH_PERCENT_PER_SEC_DEFAULT;
+  }
+
+  function scheduleNotesAutoScroll() {
+    if (document.body.dataset.variant !== 'notes') return;
+    if (document.body.classList.contains('notes-pane-hidden')) return;
+    const contextKey = getNotesContextKey();
+    const hasActiveScrollCycle = !!(notesScrollStartTimer || notesScrollReadyTimer || notesScrollRaf);
+    if (hasActiveScrollCycle && notesScrollContextKey === contextKey) {
+      return;
+    }
+    notesScrollContextKey = contextKey;
+    cancelNotesAutoScroll();
+    console.log('[notes-scroll] schedule');
+
+    notesScrollStartTimer = window.setTimeout(() => {
+      notesScrollStartTimer = null;
+
+      const beginAnimation = (notesPane) => {
+        let lastTs = null;
+        console.log('[notes-scroll] start', {
+          scrollHeight: notesPane.scrollHeight,
+          clientHeight: notesPane.clientHeight
+        });
+
+        const step = (ts) => {
+          if (!notesPane.isConnected || document.body.classList.contains('notes-pane-hidden')) {
+            notesScrollRaf = null;
+            return;
+          }
+
+          if (lastTs === null) {
+            lastTs = ts;
+          }
+
+          const deltaSeconds = (ts - lastTs) / 1000;
+          lastTs = ts;
+
+          const maxScroll = notesPane.scrollHeight - notesPane.clientHeight;
+          if (maxScroll <= 0 || notesPane.scrollTop >= maxScroll) {
+            notesPane.scrollTop = Math.max(0, maxScroll);
+            notesScrollRaf = null;
+            console.log('[notes-scroll] complete');
+            return;
+          }
+
+          const speedPercent = getNotesScrollSpeedVhPercentPerSec();
+          const speedPxPerSec = (window.innerHeight || notesPane.clientHeight || 0) * (speedPercent / 100);
+          notesPane.scrollTop = Math.min(maxScroll, notesPane.scrollTop + (speedPxPerSec * deltaSeconds));
+          notesScrollRaf = window.requestAnimationFrame(step);
+        };
+
+        notesScrollRaf = window.requestAnimationFrame(step);
+      };
+
+      const waitUntilReady = (retriesLeft) => {
+        const notesPane = document.querySelector('.reveal .speaker-notes');
+        if (!notesPane || !notesPane.isConnected || document.body.classList.contains('notes-pane-hidden')) {
+          console.log('[notes-scroll] canceled before start');
+          return;
+        }
+        const maxScroll = notesPane.scrollHeight - notesPane.clientHeight;
+        if (maxScroll > 0) {
+          beginAnimation(notesPane);
+          return;
+        }
+        if (retriesLeft <= 0) {
+          console.log('[notes-scroll] skipped: no overflow');
+          return;
+        }
+        notesScrollReadyTimer = window.setTimeout(() => {
+          waitUntilReady(retriesLeft - 1);
+        }, NOTES_SCROLL_READY_RETRY_MS);
+      };
+
+      waitUntilReady(NOTES_SCROLL_READY_RETRIES);
+    }, NOTES_SCROLL_DELAY_MS);
+  }
 
   function currentSlideHasNotes() {
     const slide = deck.getCurrentSlide?.();
@@ -88,11 +200,20 @@ pluginLoader('presentations',`/plugins_${key}`).then(async function() {
   function updateNotesPaneVisibility() {
     if (document.body.dataset.variant !== 'notes') return;
     const showNotesEnabled = !!deck.getConfig?.().showNotes;
-    if (!showNotesEnabled) return;
+    if (!showNotesEnabled) {
+      cancelNotesAutoScroll();
+      return;
+    }
     const hasNotes = currentSlideHasNotes();
     const shouldHide = !hasNotes;
     const changed = document.body.classList.contains('notes-pane-hidden') !== shouldHide;
     document.body.classList.toggle('notes-pane-hidden', shouldHide);
+    if (shouldHide) {
+      notesScrollContextKey = '';
+      cancelNotesAutoScroll();
+    } else {
+      scheduleNotesAutoScroll();
+    }
     if (changed) {
       // Re-run Reveal layout once after the CSS transition to resize slide text.
       window.setTimeout(() => {
