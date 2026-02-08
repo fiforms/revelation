@@ -91,6 +91,8 @@ const optionsBtn = document.getElementById('options-button');
 const optionsDropdown = document.getElementById('options-dropdown');
 const lanIpRow = document.getElementById('lan-ip-row');
 const lanIpDisplay = document.getElementById('lan-ip-display');
+const pairingPinRow = document.getElementById('pairing-pin-row');
+const pairingPinDisplay = document.getElementById('pairing-pin-display');
 
 let appConfig = null;
 if (window.electronAPI?.getAppConfig) {
@@ -110,6 +112,15 @@ if (lanIpRow && lanIpDisplay) {
     lanIpDisplay.textContent = port ? `${host}:${port}` : host;
   } else {
     lanIpRow.style.display = 'none';
+  }
+}
+
+if (pairingPinRow && pairingPinDisplay) {
+  if (window.electronAPI && appConfig?.mdnsPairingPin) {
+    pairingPinRow.style.display = 'block';
+    pairingPinDisplay.textContent = appConfig.mdnsPairingPin;
+  } else {
+    pairingPinRow.style.display = 'none';
   }
 }
 
