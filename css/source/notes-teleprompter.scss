@@ -1,0 +1,58 @@
+/**
+ * Notes Variant Teleprompter Styling
+ * Applied only when variant=notes via loader.js.
+ */
+
+:root {
+  --notes-main-width: 40%;
+  --notes-pane-ratio-to-main: 150%;
+}
+
+.reveal.show-notes {
+  max-width: var(--notes-main-width) !important;
+  overflow: visible;
+}
+
+.reveal.show-notes .speaker-notes {
+  top: 0;
+  left: 100%;
+  width: var(--notes-pane-ratio-to-main) !important;
+  height: 100%;
+  max-height: none;
+  transform: none;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-left: 0;
+  border-radius: 0;
+  padding: 1.2rem 1.5rem !important;
+  background: rgba(8, 8, 8, 0.92) !important;
+  color: #f7f7f7 !important;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4), 0 10px 24px rgba(0, 0, 0, 0.35);
+  font-size: clamp(4rem, 8vh, 6rem) !important;
+  line-height: 1.4 !important;
+  text-align: left;
+  overflow-y: auto;
+}
+
+.reveal.show-notes .speaker-notes p,
+.reveal.show-notes .speaker-notes li,
+.reveal.show-notes .speaker-notes blockquote {
+  color: #ffffff !important;
+  text-shadow: 0 0 6px rgba(255, 255, 255, 0.2);
+}
+
+.reveal.show-notes .speaker-notes ul,
+.reveal.show-notes .speaker-notes ol {
+  margin: 0.45em 0 0.45em 1.2em;
+}
+
+@media screen and (max-width: 1024px) {
+  .reveal.show-notes {
+    max-width: none !important;
+  }
+
+  .reveal.show-notes .speaker-notes {
+    width: 100% !important;
+    left: 0;
+    border-left: 1px solid rgba(255, 255, 255, 0.16);
+  }
+}

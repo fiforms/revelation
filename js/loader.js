@@ -11,6 +11,9 @@ export async function loadAndPreprocessMarkdown(deck,selectedFile = null) {
         lowerthirds: 'lowerthirds.css',
         confidencemonitor: 'confidencemonitor.css'
       };
+      const variantExtraStylesheetMap = {
+        notes: 'notes-teleprompter.css'
+      };
       const suppressVisualElements = variant === 'lowerthirds' || variant === 'confidencemonitor';
 
       if (variant) {
@@ -90,6 +93,20 @@ export async function loadAndPreprocessMarkdown(deck,selectedFile = null) {
         document.head.appendChild(styleEl);
       }
 
+      const variantExtraStylesheet = variantExtraStylesheetMap[variant];
+      const existingVariantStyle = document.getElementById('variant-extra-stylesheet');
+      if (variantExtraStylesheet) {
+        const styleEl = existingVariantStyle || document.createElement('link');
+        styleEl.id = 'variant-extra-stylesheet';
+        styleEl.rel = 'stylesheet';
+        styleEl.href = style_path + variantExtraStylesheet;
+        if (!existingVariantStyle) {
+          document.head.appendChild(styleEl);
+        }
+      } else if (existingVariantStyle) {
+        existingVariantStyle.remove();
+      }
+
       if (metadata.macros && typeof metadata.macros === 'object') {
         Object.assign(macros, metadata.macros); // User-defined macros from front matter 
       }
@@ -158,6 +175,9 @@ export async function loadAndPreprocessMarkdown(deck,selectedFile = null) {
 
       // Initialize Reveal.js
       const config = metadata.config || {};
+      if (variant === 'notes') {
+        config.showNotes = true;
+      }
       if (forceControls) {
         config.controls = true;
         config.progress = true;
