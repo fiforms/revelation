@@ -14,6 +14,8 @@ import { pluginLoader } from './pluginloader.js';
 
 const match = window.location.pathname.match(/presentations_([^/]+)/);
 let key = match ? match[1] : null;
+const urlParams = new URLSearchParams(window.location.search);
+const isRemoteFollower = urlParams.has('remoteMultiplexId');
 
 
 const isRemote = window.location.protocol !== 'file:' &&
@@ -66,7 +68,11 @@ pluginLoader('presentations',`/plugins_${key}`).then(async function() {
 
     // Let browser layout settle first
     window.setTimeout(() => {
-      deck.slide(indices.h, indices.v);  // Force refresh of current slide
+      // Remote followers should not force local slide state after join.
+      // The remote plugin will sync to the master's current indices.
+      if (!isRemoteFollower) {
+        deck.slide(indices.h, indices.v);  // Force refresh of current slide
+      }
       document.body.classList.remove('hidden');
       document.body.classList.add('reveal-ready');
     }, 800); // adjust if needed 
@@ -74,7 +80,6 @@ pluginLoader('presentations',`/plugins_${key}`).then(async function() {
 });
 
 
-const urlParams = new URLSearchParams(window.location.search);
 const mdFile = urlParams.get('p');
 const config = window.electronAPI ? await window.electronAPI.getAppConfig() : {};
 window.AppConfig = config;
