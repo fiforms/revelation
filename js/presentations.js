@@ -7,7 +7,7 @@ import RevealRemote from 'reveal.js-remote/plugin/remote.js';
 
 import { loadAndPreprocessMarkdown } from './loader.js';
 import { revealTweaks } from './tweaks.js';
-import { contextMenu, sendPresentationToPeers } from './contextmenu.js';
+import { contextMenu, sendPresentationToPeers, closePresentationsOnPeers } from './contextmenu.js';
 import { pluginLoader } from './pluginloader.js';
 
 (async () => {
@@ -56,6 +56,9 @@ pluginLoader('presentations',`/plugins_${key}`).then(async function() {
   contextMenu(deck);
   deck.addKeyBinding({ keyCode: 90, key: 'Z', description: 'Send presentation to peers' }, () => {
     sendPresentationToPeers();
+  });
+  deck.addKeyBinding({ keyCode: 81, key: 'Q', description: 'Close presentations on peers' }, () => {
+    closePresentationsOnPeers();
   });
 
   deck.on('ready', () => {

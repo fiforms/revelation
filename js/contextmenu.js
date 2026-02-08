@@ -42,7 +42,8 @@ export function contextMenu(deck) {
           { label: tr('Toggle Remote Control Link (r)'), action: () => fireRevealKey('r') }
 	  ] : []),
         ...(canSendToPeers ? [
-          { label: tr('Send Presentation to Peers (z)'), action: () => sendPresentationToPeers() }
+          { label: tr('Send Presentation to Peers (z)'), action: () => sendPresentationToPeers() },
+          { label: tr('Close Presentations on Peers (q)'), action: () => closePresentationsOnPeers() }
         ] : []),
         { label: deck.isOverview() ? tr('Close Overview (ESC)') : tr('Overview (ESC)'), action: () => deck.toggleOverview() },
         { label: deck.isPaused() ? tr('Unpause/Unblank (b)') : tr('Pause/Blank (b)'), action: () => deck.togglePause() }
@@ -127,6 +128,23 @@ export function sendPresentationToPeers() {
 
   if (window.parent && window.parent !== window) {
     window.parent.postMessage({ type: 'pip-send-to-peers', payload: { url } }, '*');
+    return;
+  }
+
+  console.warn('Peer commands unavailable outside Electron.');
+}
+
+export function closePresentationsOnPeers() {
+  if (window.electronAPI?.sendPeerCommand) {
+    window.electronAPI.sendPeerCommand({
+      type: 'close-presentation',
+      payload: {}
+    });
+    return;
+  }
+
+  if (window.parent && window.parent !== window) {
+    window.parent.postMessage({ type: 'pip-close-on-peers' }, '*');
     return;
   }
 

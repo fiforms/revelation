@@ -147,6 +147,14 @@
           });
         }
       }
+      if (event.data?.type === 'pip-close-on-peers') {
+        if (window.electronAPI?.sendPeerCommand) {
+          window.electronAPI.sendPeerCommand({
+            type: 'close-presentation',
+            payload: {}
+          });
+        }
+      }
     });
 
     const attachIframeKeyListener = () => {
