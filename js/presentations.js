@@ -100,6 +100,10 @@ pluginLoader('presentations',`/plugins_${key}`).then(async function() {
     }
     notesScrollContextKey = contextKey;
     cancelNotesAutoScroll();
+    const immediateNotesPane = document.querySelector('.reveal .speaker-notes');
+    if (immediateNotesPane) {
+      immediateNotesPane.scrollTop = 0;
+    }
     console.log('[notes-scroll] schedule');
 
     notesScrollStartTimer = window.setTimeout(() => {
@@ -107,6 +111,7 @@ pluginLoader('presentations',`/plugins_${key}`).then(async function() {
 
       const beginAnimation = (notesPane) => {
         let lastTs = null;
+        notesPane.scrollTop = 0;
         console.log('[notes-scroll] start', {
           scrollHeight: notesPane.scrollHeight,
           clientHeight: notesPane.clientHeight
