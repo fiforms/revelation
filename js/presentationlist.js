@@ -93,6 +93,8 @@ const lanIpRow = document.getElementById('lan-ip-row');
 const lanIpDisplay = document.getElementById('lan-ip-display');
 const pairingPinRow = document.getElementById('pairing-pin-row');
 const pairingPinDisplay = document.getElementById('pairing-pin-display');
+const selectedLanguageDisplay = document.getElementById('selected-language-display');
+const selectedVariantDisplay = document.getElementById('selected-variant-display');
 
 let appConfig = null;
 if (window.electronAPI?.getAppConfig) {
@@ -121,6 +123,35 @@ if (pairingPinRow && pairingPinDisplay) {
     pairingPinDisplay.textContent = appConfig.mdnsPairingPin;
   } else {
     pairingPinRow.style.display = 'none';
+  }
+}
+
+function formatVariantName(variant) {
+  if (!variant) return tr('Normal');
+  if (variant === 'lowerthirds') return 'Lower Thirds';
+  if (variant === 'confidencemonitor') return 'Confidence Monitor';
+  if (variant === 'notes') return 'Notes';
+  return variant;
+}
+
+if (selectedLanguageDisplay) {
+  const lang = (appConfig?.preferredPresentationLanguage || appConfig?.language || 'en').toLowerCase();
+  selectedLanguageDisplay.textContent = lang;
+}
+
+if (selectedVariantDisplay) {
+  const variant = (appConfig?.screenTypeVariant || '').toLowerCase();
+  selectedVariantDisplay.textContent = formatVariantName(variant);
+}
+
+if (optionsBtn) {
+  const variant = (appConfig?.screenTypeVariant || '').trim().toLowerCase();
+  if (variant) {
+    optionsBtn.style.background = '#8f1010';
+    optionsBtn.style.borderColor = '#d24a4a';
+  } else {
+    optionsBtn.style.background = '#222';
+    optionsBtn.style.borderColor = '#555';
   }
 }
 
