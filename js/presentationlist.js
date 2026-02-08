@@ -149,28 +149,6 @@ function appendMediaParam(url) {
   }
 }
 
-// load and persist settings via localStorage
-const mediaSelect = document.getElementById('media-version');
-const langInput = document.getElementById('lang-code');
-const variantSelect = document.getElementById('variant');
-
-// Hide Media Version if running inside Electron (handled in app settings)
-if (window.electronAPI) {
-  mediaSelect.disabled = true;
-  if (appConfig) {
-    mediaSelect.value = appConfig.preferHighBitrate ? 'high' : 'low';
-    localStorage.setItem('options_media-version', mediaSelect.value);
-  }
-}
-
-// Common persistence for other fields
-[mediaSelect, langInput, variantSelect].forEach(el => {
-  const key = `options_${el.id}`;
-  const saved = localStorage.getItem(key);
-  if (saved) el.value = saved;
-  el.addEventListener('change', () => localStorage.setItem(key, el.value));
-});
-
 // --- Open Presentation List in a New Window ---
 const openBtn = document.getElementById('open-new-window');
 if (openBtn) {

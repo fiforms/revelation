@@ -65,8 +65,8 @@ config:
 stylesheet: style.css
 
 alternatives:
-  welcome_es.md: Español
-  welcome_fr.md: Français
+  welcome_es.md: es
+  welcome_fr.md: fr
 
 media:
   fogloop:
@@ -90,7 +90,7 @@ macros:
 | -------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
 | `config`       | `object` | Any [Reveal.js configuration options](https://revealjs.com/config/). Values override defaults.                                           |
 | `stylesheet`   | `string` | Optional custom CSS file (relative to the presentation folder).                                                                          |
-| `alternatives` | `object` | Defines alternate `.md` versions, displayed as a selection menu (e.g., for translations). Keys are filenames, values are display labels. |
+| `alternatives` | `object` | Array of Language-specific `.md` versions, key is filename, value is two-letter language abbreviation. OR string "hidden"                |
 | `media`        | `object` | Defines named media aliases to simplify reuse in macros and markdown.                                                                    |
 | `macros`       | `object` | Named blocks of content or Reveal.js attributes, reusable anywhere in the Markdown body using `{{macro}}` syntax.                        |
 

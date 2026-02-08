@@ -153,19 +153,31 @@ export function closePresentationsOnPeers() {
 
 function getPeerShareUrl() {
   const baseUrl = window.location.href.replace(/#.*/, '');
+  const canonicalBaseUrl = stripPeerModeParams(baseUrl);
   if (!window.localStorage) return null;
 
   try {
     const presentations = JSON.parse(window.localStorage.getItem('presentations') || '{}');
-    const entry = presentations[baseUrl];
+    const entry = presentations[baseUrl] || presentations[canonicalBaseUrl];
     const multiplexId = entry?.multiplexId;
     if (!multiplexId) return null;
 
-    const joiner = baseUrl.includes('?') ? '&' : '?';
-    return `${baseUrl}${joiner}remoteMultiplexId=${multiplexId}`;
+    const joiner = canonicalBaseUrl.includes('?') ? '&' : '?';
+    return `${canonicalBaseUrl}${joiner}remoteMultiplexId=${multiplexId}`;
   } catch (err) {
     console.warn('Failed to read remote share link from local storage.', err);
     return null;
+  }
+}
+
+function stripPeerModeParams(url) {
+  try {
+    const parsed = new URL(url);
+    parsed.searchParams.delete('lang');
+    parsed.searchParams.delete('variant');
+    return parsed.toString();
+  } catch {
+    return url;
   }
 }
 

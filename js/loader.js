@@ -35,6 +35,16 @@ export async function loadAndPreprocessMarkdown(deck,selectedFile = null) {
 
       // check for alternative versions, create a selector drop-down
       if (!selectedFile && metadata.alternatives && typeof metadata.alternatives === 'object') {
+         const selectedLang = (urlParams.get('lang') || '').trim().toLowerCase();
+         const matchedAlternative = selectedLang
+           ? Object.entries(metadata.alternatives).find(([, langCode]) =>
+               String(langCode || '').trim().toLowerCase() === selectedLang
+             )
+           : null;
+         const matchedFile = matchedAlternative ? sanitizeMarkdownFilename(matchedAlternative[0]) : null;
+         if (matchedFile) {
+           return loadAndPreprocessMarkdown(deck, matchedFile);
+         }
          createAlternativeSelector(deck, metadata.alternatives);
          document.title = "Waiting for Selection";
          return 1;
