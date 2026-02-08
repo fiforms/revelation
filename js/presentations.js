@@ -54,6 +54,53 @@ pluginLoader('presentations',`/plugins_${key}`).then(async function() {
 
   loadAndPreprocessMarkdown(deck);
 
+  function currentSlideHasNotes() {
+    const slide = deck.getCurrentSlide?.();
+    if (!slide) return false;
+
+    const slideNotesAttr = slide.getAttribute('data-notes');
+    if (slideNotesAttr && slideNotesAttr.trim()) {
+      return true;
+    }
+
+    const slideNotes = slide.querySelectorAll('aside.notes');
+    for (const notesEl of slideNotes) {
+      if ((notesEl.textContent || '').trim()) {
+        return true;
+      }
+    }
+
+    const currentFragment = slide.querySelector('.current-fragment');
+    if (currentFragment) {
+      const fragmentNotesAttr = currentFragment.getAttribute('data-notes');
+      if (fragmentNotesAttr && fragmentNotesAttr.trim()) {
+        return true;
+      }
+      const fragmentNotes = currentFragment.querySelector('aside.notes');
+      if (fragmentNotes && (fragmentNotes.textContent || '').trim()) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  function updateNotesPaneVisibility() {
+    if (document.body.dataset.variant !== 'notes') return;
+    const showNotesEnabled = !!deck.getConfig?.().showNotes;
+    if (!showNotesEnabled) return;
+    const hasNotes = currentSlideHasNotes();
+    const shouldHide = !hasNotes;
+    const changed = document.body.classList.contains('notes-pane-hidden') !== shouldHide;
+    document.body.classList.toggle('notes-pane-hidden', shouldHide);
+    if (changed) {
+      // Re-run Reveal layout once after the CSS transition to resize slide text.
+      window.setTimeout(() => {
+        deck.layout?.();
+      }, 280);
+    }
+  }
+
   revealTweaks(deck);
   contextMenu(deck);
   deck.addKeyBinding({ keyCode: 90, key: 'Z', description: 'Send presentation to peers' }, () => {
@@ -64,6 +111,7 @@ pluginLoader('presentations',`/plugins_${key}`).then(async function() {
   });
 
   deck.on('ready', () => {
+    updateNotesPaneVisibility();
     const indices = deck.getIndices();
 
     // Let browser layout settle first
@@ -77,6 +125,10 @@ pluginLoader('presentations',`/plugins_${key}`).then(async function() {
       document.body.classList.add('reveal-ready');
     }, 800); // adjust if needed 
   });
+
+  deck.on('slidechanged', updateNotesPaneVisibility);
+  deck.on('fragmentshown', updateNotesPaneVisibility);
+  deck.on('fragmenthidden', updateNotesPaneVisibility);
 });
 
 

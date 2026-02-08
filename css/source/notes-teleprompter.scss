@@ -11,6 +11,7 @@
 .reveal.show-notes {
   max-width: var(--notes-main-width) !important;
   overflow: visible;
+  transition: max-width 260ms ease;
 }
 
 .reveal.show-notes .speaker-notes {
@@ -27,10 +28,12 @@
   background: rgba(8, 8, 8, 0.92) !important;
   color: #f7f7f7 !important;
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4), 0 10px 24px rgba(0, 0, 0, 0.35);
-  font-size: clamp(4rem, 8vh, 6rem) !important;
+  font-size: 7vh !important;
   line-height: 1.4 !important;
   text-align: left;
   overflow-y: auto;
+  opacity: 1;
+  transition: opacity 220ms ease;
 }
 
 .reveal.show-notes .speaker-notes p,
@@ -43,6 +46,15 @@
 .reveal.show-notes .speaker-notes ul,
 .reveal.show-notes .speaker-notes ol {
   margin: 0.45em 0 0.45em 1.2em;
+}
+
+body.notes-pane-hidden .reveal.show-notes {
+  max-width: 100% !important;
+}
+
+body.notes-pane-hidden .reveal.show-notes .speaker-notes {
+  opacity: 0;
+  pointer-events: none;
 }
 
 @media screen and (max-width: 1024px) {
