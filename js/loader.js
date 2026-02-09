@@ -476,7 +476,9 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
     if (inlineMacroMatch) {
       const key = inlineMacroMatch[1].trim().toLowerCase();
       const paramString = inlineMacroMatch[2];
-      const params = paramString ? paramString.split(':') : [];
+      const params = key === 'bgtint'
+        ? [paramString ?? '']
+        : (paramString ? paramString.split(':') : []);
       if (key !== 'attrib' && key !== 'ai' && !key.startsWith('column')) {
         if (key === 'animate') {
           const mode = params[0]?.trim().toLowerCase() || '';
@@ -536,7 +538,9 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
     if (macroUseMatch) {
       const key = macroUseMatch[1].trim();
       const paramString = macroUseMatch[2];
-      const params = paramString ? paramString.split(':') : [];
+      const params = key.toLowerCase() === 'bgtint'
+        ? [paramString ?? '']
+        : (paramString ? paramString.split(':') : []);
       if (key.toLowerCase() === 'animate') {
         const mode = params[0]?.trim().toLowerCase() || '';
         const animateLine = !mode

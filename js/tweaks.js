@@ -185,23 +185,42 @@ function updateAttributionFromCurrentSlide(deck) {
     }
 
     const tintcolor = currentSlide.getAttribute('data-tint-color');
-    console.log('Tint color for current slide:', tintcolor);
     const tint = document.getElementById('fixed-tint-wrapper');
     const tintFadeMs = 300;
+    const tintStyle = resolveTintStyle(tintcolor);
+    console.log('Tint style for current slide:', tintStyle);
 
     if (!tint) {
       return;
     }
 
-    tint.style.transition = `opacity ${tintFadeMs}ms ease, background-color ${tintFadeMs}ms ease`;
+    tint.style.transition = `opacity ${tintFadeMs}ms ease, background-color ${tintFadeMs}ms ease, background-image ${tintFadeMs}ms ease,`;
 
     if (tint._hideTimeout) {
       clearTimeout(tint._hideTimeout);
       tint._hideTimeout = null;
     }
 
-    if (tintcolor) {
-      tint.style.backgroundColor = tintcolor;
+    if (tintStyle) {
+      tint.style.backgroundColor = 'transparent';
+      tint.style.backgroundImage = 'none';
+      tint.style.backgroundPosition = '';
+      tint.style.backgroundRepeat = '';
+      tint.style.backgroundSize = '';
+
+      if (tintStyle.type === 'color') {
+        tint.style.backgroundColor = tintStyle.value;
+      } else {
+        console.log('Setting background image to ' + tintStyle.value)
+        tint.style.backgroundImage = tintStyle.value;
+      }
+
+      if (tintStyle.type === 'image') {
+        tint.style.backgroundPosition = 'center';
+        tint.style.backgroundRepeat = 'no-repeat';
+        tint.style.backgroundSize = 'cover';
+      }
+
       if (getComputedStyle(tint).display === 'none') {
         tint.style.display = '';
         tint.style.opacity = '0';
@@ -215,6 +234,44 @@ function updateAttributionFromCurrentSlide(deck) {
         tint.style.display = 'none';
       }, tintFadeMs);
     }
+}
+
+function resolveTintStyle(rawTint) {
+  if (!rawTint) {
+    return null;
+  }
+
+  const value = rawTint.trim();
+  if (!value) {
+    return null;
+  }
+
+  if (/^image\s*:/i.test(value)) {
+    const source = value.replace(/^image\s*:/i, '').trim();
+    if (!source) {
+      return null;
+    }
+    return {
+      type: 'image',
+      value: normalizeTintImageValue(source)
+    };
+  }
+
+  if (/^(linear-gradient|radial-gradient|conic-gradient)\s*\(/i.test(value)) {
+    return { type: 'gradient', value };
+  }
+
+  return { type: 'color', value };
+}
+
+function normalizeTintImageValue(source) {
+  if (/^url\(/i.test(source)) {
+    return source;
+  }
+
+  const unquoted = source.replace(/^['"]|['"]$/g, '');
+  const escaped = unquoted.replace(/"/g, '\\"');
+  return `url("${escaped}")`;
 }
 
 function hideControlsOnSpeakerNotes() {

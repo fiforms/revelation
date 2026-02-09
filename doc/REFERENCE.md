@@ -413,8 +413,35 @@ Add a semi-transparent color overlay (tint) between the background and text:
 {{bgtint:rgba(127,127,255,0.5)}}
 ```
 
-Use any valid CSS color (e.g. `rgba`, `#hex`, `hsl`).
-This is great for improving contrast over bright or busy backgrounds.
+`bgtint` supports three forms:
+
+1. Solid colors (applies to `background-color`)
+
+```markdown
+{{bgtint:rgba(127,127,255,0.5)}}
+{{bgtint:#00000066}}
+{{bgtint:hsl(210 100% 50% / 0.35)}}
+```
+
+2. CSS gradients (applies to `background-image`)
+
+```markdown
+{{bgtint:linear-gradient(90deg, rgba(42,123,155,1) 0%, rgba(87,199,133,1) 50%, rgba(237,221,83,1) 100%)}}
+{{bgtint:radial-gradient(circle at center, rgba(0,0,0,0.6), rgba(0,0,0,0.1))}}
+{{bgtint:conic-gradient(from 180deg at 50% 50%, #ff6b6b, #ffe66d, #4ecdc4, #ff6b6b)}}
+```
+
+3. Images using the `image:` prefix (applies to `background-image`)
+
+```markdown
+{{bgtint:image:/url/to/image.png}}
+{{bgtint:image:url('/url/to/image.png')}}
+```
+
+When `image:` is used, REVELation also sets:
+`background-position: center`, `background-repeat: no-repeat`, and `background-size: cover`.
+
+This is useful for improving contrast or layering texture/art above the slide background.
 
 ---
 
