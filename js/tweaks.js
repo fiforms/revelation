@@ -6,12 +6,19 @@ export function revealTweaks(deck) {
     const readyTweaks = () => {
       updateAttributionFromCurrentSlide(deck);
       ensureLinksOpenExternally(deck);
+      updateFixedOverlayVisibility(deck);
     }
 
     deck.on('ready', readyTweaks);       
     deck.on('slidechanged', () => {
       updateAttributionFromCurrentSlide(deck);
       ensureLinksOpenExternally(deck);
+      updateFixedOverlayVisibility(deck);
+    });
+    deck.on('overviewshown', () => updateFixedOverlayVisibility(deck));
+    deck.on('overviewhidden', () => {
+      updateAttributionFromCurrentSlide(deck);
+      updateFixedOverlayVisibility(deck);
     });
 
 
@@ -161,6 +168,9 @@ function scrubBackgroundVideos(isThumbnail) {
 
 function updateAttributionFromCurrentSlide(deck) {
     const currentSlide = deck.getCurrentSlide();
+    if (!currentSlide) {
+      return;
+    }
     const source = currentSlide.querySelector('.slide-attribution');
     const overlay = document.getElementById('fixed-overlay-wrapper');
     const aiSource = currentSlide.querySelector('.slide-ai-symbol');
@@ -234,6 +244,17 @@ function updateAttributionFromCurrentSlide(deck) {
         tint.style.display = 'none';
       }, tintFadeMs);
     }
+}
+
+function updateFixedOverlayVisibility(deck) {
+  const inOverview = !!deck?.isOverview?.();
+  const visibility = inOverview ? 'hidden' : '';
+  ['fixed-tint-wrapper', 'fixed-ai-wrapper', 'fixed-overlay-wrapper'].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.style.visibility = visibility;
+    }
+  });
 }
 
 function resolveTintStyle(rawTint) {
