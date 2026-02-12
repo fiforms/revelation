@@ -190,7 +190,7 @@ export async function loadAndPreprocessMarkdown(deck,selectedFile = null) {
         config.progress = true;
         config.slideNumber = true;
         config.showSlideNumber = 'all';
-        config.autoSlide = 0;
+        config.autoSlide = false;
         config.autoSlideStoppable = false;
       }
       deck.initialize(config);
