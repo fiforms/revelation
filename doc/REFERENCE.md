@@ -248,6 +248,32 @@ This will inject the macro content at that location before rendering.
 
 ---
 
+#### ⏱ Countdown Macro
+
+Use the built-in inline `:countdown:` macro to render a live `<h2 class="countdown">` timer on the slide.
+
+Count down from a duration:
+
+```markdown
+:countdown:from:5:00:
+```
+
+This means `5 minutes, 0 seconds` (`mm:ss`). You can also use hours:
+
+```markdown
+:countdown:from:1:05:30:
+```
+
+Count down to a clock time (24-hour local time):
+
+```markdown
+:countdown:to:12:00:
+```
+
+This shows remaining time until the next `12:00` (today if still ahead, otherwise tomorrow), displayed as `mm:ss` or `hh:mm:ss` depending on remaining duration.
+
+---
+
 #### 🔁 Sticky Behavior
 
 * Macros persist across slides unless explicitly cleared with `{{}}`

@@ -28,6 +28,7 @@ export function revealTweaks(deck) {
 
     if (!isThumbnail) {
       initBackgroundAudio(deck);
+      initCountdowns(deck);
       deck.on('slidechanged', e => {
         e.currentSlide.querySelectorAll('video[data-imagefit]').forEach(v => {
           v.play().catch(() => {});
@@ -134,6 +135,84 @@ function initBackgroundAudio(deck) {
 
   deck.on('ready', e => handleSlideAudio(e.currentSlide));
   deck.on('slidechanged', e => handleSlideAudio(e.currentSlide));
+}
+
+function initCountdowns(deck) {
+  const activeIntervals = [];
+
+  const clearCountdownIntervals = () => {
+    while (activeIntervals.length > 0) {
+      const id = activeIntervals.pop();
+      window.clearInterval(id);
+    }
+  };
+
+  const pad2 = (value) => String(Math.max(0, Number.parseInt(value, 10) || 0)).padStart(2, '0');
+
+  const formatTime = (seconds) => {
+    const total = Math.max(0, Number.parseInt(seconds, 10) || 0);
+    const hours = Math.floor(total / 3600);
+    const minutes = Math.floor((total % 3600) / 60);
+    const secs = total % 60;
+    if (hours > 0) {
+      return `${pad2(hours)}:${pad2(minutes)}:${pad2(secs)}`;
+    }
+    return `${pad2(minutes)}:${pad2(secs)}`;
+  };
+
+  const secondsUntilClockTime = (hour, minute) => {
+    const now = new Date();
+    const target = new Date(now);
+    target.setHours(hour, minute, 0, 0);
+    if (target.getTime() < now.getTime()) {
+      target.setDate(target.getDate() + 1);
+    }
+    return Math.max(0, Math.ceil((target.getTime() - now.getTime()) / 1000));
+  };
+
+  const updateCountdownsOnSlide = (slide) => {
+    clearCountdownIntervals();
+    if (!slide) {
+      return;
+    }
+
+    const countdownEls = slide.querySelectorAll('.countdown[data-countdown-mode]');
+    countdownEls.forEach((el) => {
+      const mode = (el.dataset.countdownMode || '').toLowerCase();
+
+      if (mode === 'from') {
+        const durationSeconds = Number.parseInt(el.dataset.countdownSeconds || '', 10);
+        if (!Number.isFinite(durationSeconds) || durationSeconds < 0) {
+          return;
+        }
+        const startMs = Date.now();
+        const tickFrom = () => {
+          const elapsed = Math.floor((Date.now() - startMs) / 1000);
+          const remaining = Math.max(0, durationSeconds - elapsed);
+          el.textContent = formatTime(remaining);
+        };
+        tickFrom();
+        activeIntervals.push(window.setInterval(tickFrom, 250));
+        return;
+      }
+
+      if (mode === 'to') {
+        const hour = Number.parseInt(el.dataset.countdownHour || '', 10);
+        const minute = Number.parseInt(el.dataset.countdownMinute || '', 10);
+        if (!Number.isFinite(hour) || !Number.isFinite(minute)) {
+          return;
+        }
+        const tickTo = () => {
+          el.textContent = formatTime(secondsUntilClockTime(hour, minute));
+        };
+        tickTo();
+        activeIntervals.push(window.setInterval(tickTo, 250));
+      }
+    });
+  };
+
+  deck.on('ready', e => updateCountdownsOnSlide(e.currentSlide));
+  deck.on('slidechanged', e => updateCountdownsOnSlide(e.currentSlide));
 }
 
 // Hide the cursor after a period of inactivity

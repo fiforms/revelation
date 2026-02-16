@@ -365,6 +365,60 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
     return `${basePath}${resolvedFile}`;
   };
 
+  const pad2 = (value) => String(Math.max(0, Number.parseInt(value, 10) || 0)).padStart(2, '0');
+
+  const formatCountdownDisplay = (seconds) => {
+    const total = Math.max(0, Number.parseInt(seconds, 10) || 0);
+    const hours = Math.floor(total / 3600);
+    const minutes = Math.floor((total % 3600) / 60);
+    const secs = total % 60;
+    if (hours > 0) {
+      return `${pad2(hours)}:${pad2(minutes)}:${pad2(secs)}`;
+    }
+    return `${pad2(minutes)}:${pad2(secs)}`;
+  };
+
+  const buildCountdownMarkup = (params) => {
+    const mode = (params[0] || '').trim().toLowerCase();
+
+    if (mode === 'from') {
+      const n1 = Number.parseInt(params[1], 10);
+      const n2 = Number.parseInt(params[2], 10);
+      const n3 = Number.parseInt(params[3], 10);
+      const hasThreeParts = params.length >= 4 && Number.isFinite(n3);
+
+      if (hasThreeParts) {
+        const hours = Math.max(0, n1 || 0);
+        const minutes = Math.max(0, n2 || 0);
+        const secs = Math.max(0, n3 || 0);
+        const totalSeconds = (hours * 3600) + (minutes * 60) + secs;
+        return `<h2 class="countdown" data-countdown-mode="from" data-countdown-seconds="${totalSeconds}">${formatCountdownDisplay(totalSeconds)}</h2>`;
+      }
+
+      if (Number.isFinite(n1) && Number.isFinite(n2)) {
+        const minutes = Math.max(0, n1);
+        const secs = Math.max(0, n2);
+        const totalSeconds = (minutes * 60) + secs;
+        return `<h2 class="countdown" data-countdown-mode="from" data-countdown-seconds="${totalSeconds}">${formatCountdownDisplay(totalSeconds)}</h2>`;
+      }
+
+      return '';
+    }
+
+    if (mode === 'to') {
+      const hours = Number.parseInt(params[1], 10);
+      const minutes = Number.parseInt(params[2], 10);
+      if (!Number.isFinite(hours) || !Number.isFinite(minutes)) {
+        return '';
+      }
+      const normalizedHours = ((hours % 24) + 24) % 24;
+      const normalizedMinutes = ((minutes % 60) + 60) % 60;
+      return `<h2 class="countdown" data-countdown-mode="to" data-countdown-hour="${normalizedHours}" data-countdown-minute="${normalizedMinutes}">${pad2(normalizedHours)}:${pad2(normalizedMinutes)}</h2>`;
+    }
+
+    return '';
+  };
+
   for (var line of lines) {
     index++;
 
@@ -480,6 +534,14 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
         ? [paramString ?? '']
         : (paramString ? paramString.split(':') : []);
       if (key !== 'attrib' && key !== 'ai' && !key.startsWith('column')) {
+        if (key === 'countdown') {
+          const countdownMarkup = buildCountdownMarkup(params);
+          if (countdownMarkup) {
+            processedLines.push(countdownMarkup);
+            continue;
+          }
+          console.log('Markdown Countdown Inline Macro Not Found or Invalid: ' + paramString);
+        }
         if (key === 'animate') {
           const mode = params[0]?.trim().toLowerCase() || '';
           if (!mode) {

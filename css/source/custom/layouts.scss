@@ -266,6 +266,11 @@ body.reveal-ready {
     display: none;
   }
 
+  h2.countdown {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.04em;
+  }
+
   section div.flexcontainer {
     display: flex; 
     align-items: center; 
