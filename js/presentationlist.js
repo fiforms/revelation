@@ -404,10 +404,13 @@ async function selectPresentation(pres, cardElement) {
 }
 
 function getPresentationActions(pres) {
-  const target = window.electronAPI?.editPresentation ? 'Window' : 'Tab';
   const options = [
     {
-      label: '🪟 ' + tr(`Open in ${target}`),
+      label: '🖥️ ' + tr('Slideshow (Full Screen)'),
+      action: () => openPrimaryPresentation(pres)
+    },
+    {
+      label: '🪟 ' + tr('Slideshow (Windowed)'),
       action: () => {
         if (window.electronAPI?.openPresentation) {
           window.electronAPI.openPresentation(pres.slug, pres.md, false);
