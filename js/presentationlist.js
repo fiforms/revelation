@@ -404,6 +404,7 @@ async function selectPresentation(pres, cardElement) {
 }
 
 function getPresentationActions(pres) {
+  const hasElectronAPI = !!window.electronAPI;
   const options = [
     {
       label: '🖥️ ' + tr('Slideshow (Full Screen)'),
@@ -420,11 +421,15 @@ function getPresentationActions(pres) {
       }
     },
     {
-      label: '🔗 ' + tr('Copy Link'),
+      label: '🔗 ' + tr(hasElectronAPI ? 'Slideshow (Browser)' : 'Copy Link'),
       action: async () => {
         const baseURL = await getCopyLinkBaseURL();
         let link = `${baseURL}${url_prefix}/${pres.slug}/index.html?p=${pres.md}`;
         link = appendMediaParam(link);
+        if (window.electronAPI?.openExternalURL) {
+          window.electronAPI.openExternalURL(link);
+          return;
+        }
         if (navigator.clipboard && navigator.clipboard.writeText) {
           navigator.clipboard.writeText(link)
             .then(() => console.log('✅ Link copied to clipboard'))
