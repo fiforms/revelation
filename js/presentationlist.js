@@ -1,13 +1,25 @@
 import { pluginLoader } from './pluginloader.js';
+import yaml from 'js-yaml';
 
 const urlParams = new URLSearchParams(window.location.search);
 const url_key = urlParams.get('key');
 const url_prefix = `/presentations_${url_key}`;
 
 const container = document.getElementById('presentation-list');
+let selectedCardElement = null;
+let selectedPresentationKey = '';
+const detailsCache = new Map();
 
 if(!url_key) {
     container.innerHTML = tr('No key specified, unable to load presentation list');
+}
+
+if (container) {
+  container.addEventListener('click', (event) => {
+    if (event.target === container) {
+      clearSelection();
+    }
+  });
 }
 
 // VITE Hot Reloading Hook
@@ -58,14 +70,13 @@ fetch(`${url_prefix}/index.json`)
           `;
 
           card.addEventListener('click', (e) => {
-            e.preventDefault(); // Prevent default navigation
-            if (window.electronAPI?.openPresentation) {
-              window.electronAPI.openPresentation(pres.slug, pres.md, true);
-            }
-	    else {
-	        window.open(`${url_prefix}/${pres.slug}/index.html?p=${pres.md}`, 'revelation_presentation',
-		'toolbar=no,location=no,status=no,menubar=no,scrollbars=no,resizable=yes,width=1920,height=1080')
-	    }
+            e.preventDefault();
+            selectPresentation(pres, card);
+          });
+
+          card.addEventListener('dblclick', (e) => {
+            e.preventDefault();
+            openPrimaryPresentation(pres);
           });
 
  	  card.addEventListener('contextmenu', (e) => {
@@ -75,6 +86,7 @@ fetch(`${url_prefix}/index.json`)
 
           container.appendChild(card);
         });
+
 	})
         .catch(err => {
           container.innerHTML = `
@@ -214,89 +226,222 @@ if (url_key && mediaLinkDiv) {
   mediaLinkDiv.appendChild(link);
 }
 
-function showCustomContextMenu(x, y, pres) {
-  const existing = document.getElementById('custom-context-menu');
-  if (existing) existing.remove();
+function getPresentationKey(pres) {
+  return `${pres.slug}::${pres.md}`;
+}
 
-  const menu = document.createElement('div');
-  menu.id = 'custom-context-menu';
+function openPrimaryPresentation(pres) {
+  if (window.electronAPI?.openPresentation) {
+    window.electronAPI.openPresentation(pres.slug, pres.md, true);
+  } else {
+    window.open(
+      `${url_prefix}/${pres.slug}/index.html?p=${pres.md}`,
+      'revelation_presentation',
+      'toolbar=no,location=no,status=no,menubar=no,scrollbars=no,resizable=yes,width=1920,height=1080'
+    );
+  }
+}
 
-  const scrollY = window.scrollY || document.documentElement.scrollTop;
-  const scrollX = window.scrollX || document.documentElement.scrollLeft;
+function extractFrontMatter(raw = '') {
+  const match = String(raw).match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?/);
+  if (!match) return {};
+  try {
+    return yaml.load(match[1]) || {};
+  } catch (err) {
+    console.warn('Failed to parse presentation metadata:', err.message);
+    return {};
+  }
+}
 
-  const menuWidth = 330;
-  const menuHeight = 480; // Estimate or measure depending on items
+function readAuthorName(metadata = {}) {
+  if (typeof metadata.author === 'string') return metadata.author;
+  if (metadata.author && typeof metadata.author === 'object') {
+    return metadata.author.name || metadata.author.fullname || metadata.author.full || '';
+  }
+  return '';
+}
 
-  const maxLeft = window.innerWidth - menuWidth - 10;
-  const maxTop = window.innerHeight - menuHeight - 10;
+async function loadPresentationDetails(pres) {
+  const key = getPresentationKey(pres);
+  if (detailsCache.has(key)) return detailsCache.get(key);
 
-  const clampedX = Math.min(x - scrollX, maxLeft);
-  const clampedY = Math.min(y - scrollY, maxTop);
+  const details = {
+    author: '',
+    variants: []
+  };
 
-  menu.style = `
-    position: fixed;
-    top: ${clampedY}px;
-    left: ${clampedX}px;
-    background: #222;
-    border: 1px solid #555;
-    border-radius: 8px;
-    color: white;
-    z-index: 9999;
-    font-family: sans-serif;
-    min-width: ${menuWidth}px;
-    box-shadow: 0 0 10px #000;
+  try {
+    const response = await fetch(`${url_prefix}/${pres.slug}/${pres.md}`);
+    if (response.ok) {
+      const markdown = await response.text();
+      const metadata = extractFrontMatter(markdown);
+      details.author = readAuthorName(metadata);
+      if (metadata.alternatives && typeof metadata.alternatives === 'object' && !Array.isArray(metadata.alternatives)) {
+        details.variants = Object.entries(metadata.alternatives).map(([mdFile, language]) => ({
+          mdFile,
+          language: String(language || '').trim().toLowerCase(),
+          isCurrent: mdFile === pres.md,
+          isMaster: mdFile === pres.md
+        }));
+      }
+    }
+  } catch (err) {
+    console.warn('Failed to load markdown metadata for presentation details:', err);
+  }
+
+  if (window.electronAPI?.getPresentationVariants) {
+    try {
+      const variantState = await window.electronAPI.getPresentationVariants({ slug: pres.slug, mdFile: pres.md });
+      if (Array.isArray(variantState?.entries)) {
+        details.variants = variantState.entries;
+      }
+    } catch (err) {
+      console.warn('Failed to load presentation variants:', err);
+    }
+  }
+
+  detailsCache.set(key, details);
+  return details;
+}
+
+function formatVariantDetails(variants = []) {
+  if (!Array.isArray(variants) || !variants.length) {
+    return tr('Default only');
+  }
+  return variants
+    .filter((entry) => !entry?.hidden)
+    .map((entry) => {
+      const language = String(entry.language || '').trim() || tr('default');
+      const masterSuffix = entry.isMaster ? ` (${tr('master')})` : '';
+      return `${language}${masterSuffix}`;
+    })
+    .join(', ') || tr('Default only');
+}
+
+function getSelectedPanelHost() {
+  let host = document.getElementById('selected-presentation-panel-host');
+  if (host) {
+    const sidebarSlot = document.getElementById('sidebar-current-presentation');
+    if (sidebarSlot && host.parentElement !== sidebarSlot) {
+      sidebarSlot.prepend(host);
+    }
+    return host;
+  }
+
+  const sidebarSlot = document.getElementById('sidebar-current-presentation');
+  if (sidebarSlot) {
+    host = document.createElement('div');
+    host.id = 'selected-presentation-panel-host';
+    sidebarSlot.prepend(host);
+    return host;
+  }
+
+  const heading = document.querySelector('h1');
+  if (!heading) return null;
+  host = document.createElement('div');
+  host.id = 'selected-presentation-panel-host';
+  heading.insertAdjacentElement('afterend', host);
+  return host;
+}
+
+function renderSelectedPresentationPanel(pres, details = null) {
+  const host = getSelectedPanelHost();
+  if (!host) return;
+
+  const actions = getPresentationActions(pres);
+  const detailsLoaded = !!details;
+  const author = detailsLoaded ? (details.author || tr('Unknown')) : tr('Loading...');
+  const variants = detailsLoaded ? formatVariantDetails(details.variants) : tr('Loading...');
+
+  host.innerHTML = `
+    <section id="selected-presentation-panel" class="selected-presentation-panel">
+      <div class="selected-presentation-header">${tr('Selected Presentation')}</div>
+      <img class="selected-presentation-thumb" src="${url_prefix}/${pres.slug}/${pres.thumbnail}" alt="${pres.title}">
+      <div class="selected-presentation-title">${pres.title}</div>
+      <div class="selected-presentation-meta">${pres.description || ''}</div>
+      <div class="selected-presentation-meta"><strong>${tr('Author')}:</strong> ${author}</div>
+      <div class="selected-presentation-meta"><strong>${tr('Language variants')}:</strong> ${variants}</div>
+      <div class="selected-presentation-help">${tr('Double-click any tile to open immediately.')}</div>
+      <div class="selected-presentation-actions"></div>
+    </section>
   `;
 
+  const actionsContainer = host.querySelector('.selected-presentation-actions');
+  for (const opt of actions) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'selected-presentation-action-btn';
+    button.textContent = opt.label;
+    button.onclick = () => opt.action();
+    actionsContainer.appendChild(button);
+  }
+}
+
+function clearSelection() {
+  selectedPresentationKey = '';
+  if (selectedCardElement) {
+    selectedCardElement.classList.remove('card-selected');
+    selectedCardElement = null;
+  }
+  const host = document.getElementById('selected-presentation-panel-host');
+  if (host) {
+    host.innerHTML = '';
+  }
+}
+
+async function selectPresentation(pres, cardElement) {
+  selectedPresentationKey = getPresentationKey(pres);
+  if (selectedCardElement) {
+    selectedCardElement.classList.remove('card-selected');
+  }
+  selectedCardElement = cardElement;
+  selectedCardElement.classList.add('card-selected');
+
+  renderSelectedPresentationPanel(pres);
+  const details = await loadPresentationDetails(pres);
+  if (selectedPresentationKey !== getPresentationKey(pres)) return;
+  renderSelectedPresentationPanel(pres, details);
+}
+
+function getPresentationActions(pres) {
   const target = window.electronAPI?.editPresentation ? 'Window' : 'Tab';
   const options = [
-    { label: '🪟 '+ tr(`Open in ${target}`), action: () => {
-            if (window.electronAPI?.openPresentation) {
-	        window.electronAPI.openPresentation(pres.slug, pres.md, false);
-	    }
-	    else {
-	        window.open(`${url_prefix}/${pres.slug}/index.html?p=${pres.md}`, '_blank')
-	    }
+    {
+      label: '🪟 ' + tr(`Open in ${target}`),
+      action: () => {
+        if (window.electronAPI?.openPresentation) {
+          window.electronAPI.openPresentation(pres.slug, pres.md, false);
+        } else {
+          window.open(`${url_prefix}/${pres.slug}/index.html?p=${pres.md}`, '_blank');
         }
-      },
-    { 
-        label: '🔗 ' + tr('Copy Link'),
-        action: async () => {
-                const baseURL = await getCopyLinkBaseURL();
-                let link = `${baseURL}${url_prefix}/${pres.slug}/index.html?p=${pres.md}`;
-                link = appendMediaParam(link);
-                if (navigator.clipboard && navigator.clipboard.writeText) {
-                  navigator.clipboard.writeText(link)
-                    .then(() => console.log('✅ Link copied to clipboard'))
-                    .catch(err => {
-                      console.error('❌ Clipboard error:', err);
-                      fallbackCopyText(link);
-                    });
-                } else {
-                  fallbackCopyText(link);
-                }
-          }
-      },
-    { label: '📄 ' + tr('Handout View'), action: () => handoutView(pres.slug,pres.md) }
+      }
+    },
+    {
+      label: '🔗 ' + tr('Copy Link'),
+      action: async () => {
+        const baseURL = await getCopyLinkBaseURL();
+        let link = `${baseURL}${url_prefix}/${pres.slug}/index.html?p=${pres.md}`;
+        link = appendMediaParam(link);
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(link)
+            .then(() => console.log('✅ Link copied to clipboard'))
+            .catch(err => {
+              console.error('❌ Clipboard error:', err);
+              fallbackCopyText(link);
+            });
+        } else {
+          fallbackCopyText(link);
+        }
+      }
+    },
+    { label: '📄 ' + tr('Handout View'), action: () => handoutView(pres.slug, pres.md) }
   ];
 
-
   if (window.electronAPI?.editPresentation) {
-    /*
-    options.push({
-      label: '✏️ ' + tr('Edit Markdown'),
-      action: () => window.electronAPI.editPresentation(pres.slug, pres.md)
-    });
-    */
     options.push({
       label: '🧩 ' + tr('Open Presentation Builder'),
       action: () => window.electronAPI.openPresentationBuilder(pres.slug, pres.md)
     });
-    /*
-    options.push({
-      label: '🧾 ' + tr('Edit Presentation Metadata'),
-      action: () => window.electronAPI.editPresentationMetadata(pres.slug, pres.md)
-    });
-    */
     options.push({
       label: '📂 ' + tr('Show Presentation Files'),
       action: () => window.electronAPI.showPresentationFolder(pres.slug)
@@ -305,7 +450,7 @@ function showCustomContextMenu(x, y, pres) {
       label: '🖼️ ' + tr('Regenerate Thumbnail'),
       action: async () => {
         await window.electronAPI.exportImages(pres.slug, pres.md, 853, 480, 2, true);
-        window.location = window.location.href; // reload
+        window.location = window.location.href;
       }
     });
     options.push({
@@ -356,39 +501,20 @@ function showCustomContextMenu(x, y, pres) {
         }
       }
     });
-    /*
-    options.push({
-      label: '✅ ' + tr('Select for Modification'),
-      action: () => {
-        const selected = {
-          slug: pres.slug,
-          mdFile: pres.md,
-          title: pres.title,
-          thumbnail: `${url_prefix}/${pres.slug}/${pres.thumbnail}`
-        };
-        window.electronAPI.saveCurrentPresentation(selected);
-        window.dispatchEvent(new CustomEvent('current-presentation-changed'));
-        showToast(`✅ ${tr('Selected')}: ${pres.title}`);
-      }
-    });
-    */
-  }
-  else {
-    // These options ONLY appear in the web view, not the electron app
+  } else {
     options.push({
       label: '📑 ' + tr('Export as PDF'),
       action: () => exportPDF(pres.slug, pres.md)
     });
   }
 
-
-  const plugins = Object.entries(window.RevelationPlugins)
+  const plugins = Object.entries(window.RevelationPlugins || {})
     .map(([name, plugin]) => ({
       name,
       plugin,
       priority: plugin.priority
     }))
-    .sort((a, b) => a.priority - b.priority);  // Ascending = high priority first
+    .sort((a, b) => a.priority - b.priority);
 
   for (const { plugin } of plugins) {
     if (typeof plugin.getListMenuItems === 'function') {
@@ -398,6 +524,44 @@ function showCustomContextMenu(x, y, pres) {
       }
     }
   }
+
+  return options;
+}
+
+function showCustomContextMenu(x, y, pres) {
+  const existing = document.getElementById('custom-context-menu');
+  if (existing) existing.remove();
+
+  const menu = document.createElement('div');
+  menu.id = 'custom-context-menu';
+
+  const scrollY = window.scrollY || document.documentElement.scrollTop;
+  const scrollX = window.scrollX || document.documentElement.scrollLeft;
+
+  const menuWidth = 330;
+  const menuHeight = 480; // Estimate or measure depending on items
+
+  const maxLeft = window.innerWidth - menuWidth - 10;
+  const maxTop = window.innerHeight - menuHeight - 10;
+
+  const clampedX = Math.min(x - scrollX, maxLeft);
+  const clampedY = Math.min(y - scrollY, maxTop);
+
+  menu.style = `
+    position: fixed;
+    top: ${clampedY}px;
+    left: ${clampedX}px;
+    background: #222;
+    border: 1px solid #555;
+    border-radius: 8px;
+    color: white;
+    z-index: 9999;
+    font-family: sans-serif;
+    min-width: ${menuWidth}px;
+    box-shadow: 0 0 10px #000;
+  `;
+
+  const options = getPresentationActions(pres);
 
 
   for (const opt of options) {
