@@ -9,6 +9,7 @@ const container = document.getElementById('presentation-list');
 let selectedCardElement = null;
 let selectedPresentationKey = '';
 const detailsCache = new Map();
+const isStandaloneMode = !window.electronAPI;
 
 if(!url_key) {
     container.innerHTML = tr('No key specified, unable to load presentation list');
@@ -318,12 +319,59 @@ function formatVariantDetails(variants = []) {
     .join(', ') || tr('Default only');
 }
 
+function setStandaloneSidebarOpen(open) {
+  const shell = document.getElementById('standalone-selected-sidebar');
+  const toggle = document.getElementById('standalone-selected-sidebar-toggle');
+  if (!shell || !toggle) return;
+  shell.classList.toggle('is-open', !!open);
+  toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+  toggle.textContent = open ? '▶' : '◀';
+}
+
+function ensureStandalonePanelHost() {
+  if (!isStandaloneMode || document.getElementById('sidebar-current-presentation')) return null;
+
+  let shell = document.getElementById('standalone-selected-sidebar');
+  if (!shell) {
+    shell = document.createElement('aside');
+    shell.id = 'standalone-selected-sidebar';
+    shell.className = 'standalone-selected-sidebar';
+
+    const toggle = document.createElement('button');
+    toggle.id = 'standalone-selected-sidebar-toggle';
+    toggle.className = 'standalone-selected-sidebar-toggle';
+    toggle.type = 'button';
+    toggle.setAttribute('aria-expanded', 'false');
+    toggle.textContent = '◀';
+    toggle.addEventListener('click', () => {
+      const isOpen = shell.classList.contains('is-open');
+      setStandaloneSidebarOpen(!isOpen);
+    });
+    shell.appendChild(toggle);
+
+    document.body.appendChild(shell);
+  }
+
+  let host = document.getElementById('selected-presentation-panel-host');
+  if (!host) {
+    host = document.createElement('div');
+    host.id = 'selected-presentation-panel-host';
+  }
+  if (host.parentElement !== shell) {
+    shell.appendChild(host);
+  }
+  return host;
+}
+
 function getSelectedPanelHost() {
   let host = document.getElementById('selected-presentation-panel-host');
   if (host) {
     const sidebarSlot = document.getElementById('sidebar-current-presentation');
     if (sidebarSlot && host.parentElement !== sidebarSlot) {
       sidebarSlot.prepend(host);
+    }
+    if (!sidebarSlot && isStandaloneMode) {
+      return ensureStandalonePanelHost();
     }
     return host;
   }
@@ -334,6 +382,10 @@ function getSelectedPanelHost() {
     host.id = 'selected-presentation-panel-host';
     sidebarSlot.prepend(host);
     return host;
+  }
+
+  if (isStandaloneMode) {
+    return ensureStandalonePanelHost();
   }
 
   const heading = document.querySelector('h1');
@@ -375,6 +427,10 @@ function renderSelectedPresentationPanel(pres, details = null) {
     button.onclick = () => opt.action();
     actionsContainer.appendChild(button);
   }
+
+  if (isStandaloneMode) {
+    setStandaloneSidebarOpen(true);
+  }
 }
 
 function clearSelection() {
@@ -386,6 +442,9 @@ function clearSelection() {
   const host = document.getElementById('selected-presentation-panel-host');
   if (host) {
     host.innerHTML = '';
+  }
+  if (isStandaloneMode) {
+    setStandaloneSidebarOpen(false);
   }
 }
 

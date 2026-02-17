@@ -145,3 +145,43 @@
     .selected-presentation-action-btn:hover {
       background: #2a2a2a;
     }
+
+    .standalone-selected-sidebar {
+      position: fixed;
+      top: 0;
+      right: 0;
+      width: min(400px, 94vw);
+      height: 100vh;
+      padding: 4rem 0.75rem 1rem;
+      background: #0f0f0f;
+      border-left: 1px solid #2f2f2f;
+      box-shadow: -10px 0 28px rgba(0, 0, 0, 0.55);
+      z-index: 1200;
+      overflow-y: auto;
+      transform: translateX(calc(100% - 42px));
+      transition: transform 180ms ease;
+    }
+
+    .standalone-selected-sidebar.is-open {
+      transform: translateX(0);
+    }
+
+    .standalone-selected-sidebar-toggle {
+      position: absolute;
+      left: -42px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 42px;
+      height: 64px;
+      border: 1px solid #2f2f2f;
+      border-right: 0;
+      border-radius: 8px 0 0 8px;
+      background: #171717;
+      color: #ddd;
+      cursor: pointer;
+      font-size: 1.05rem;
+    }
+
+    .standalone-selected-sidebar-toggle:hover {
+      background: #242424;
+    }
