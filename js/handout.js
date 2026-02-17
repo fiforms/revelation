@@ -42,6 +42,15 @@ function splitSlides(markdown) {
   return slides;
 }
 
+function isCommentOnlyMarkdown(markdown) {
+  if (!markdown || !markdown.trim()) return true;
+  const withoutComments = markdown
+    // Remove HTML comments (including multiline)
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .trim();
+  return withoutComments.length === 0;
+}
+
 // VITE Hot Reloading Hook
 if (import.meta.hot) {
   import.meta.hot.on('reload-presentations', (data) => {
@@ -74,20 +83,6 @@ if (!mdFile) {
       let started = false;
 
       for (let slide of slides) {
-          const rawSlide = slide.content;
-          const lines = rawSlide.trim().split('\nNote:\n');
-          const cleanedMarkdown = lines[0].replace(/^\s*(\*\*\*|---)\s*$/gm, '').trim();
-          const slideHTML = marked.parse(cleanedMarkdown);
-          const cleanedNote = (lines.length > 1) ? lines[1].replace(/^\s*(\*\*\*|---)\s*$/gm, '').trim() : '';
-          const noteHTML = marked.parse(cleanedNote);
-
-	  if((!cleanedMarkdown || 
-		   /^#+$/.test(cleanedMarkdown) ||
-		   /^\s*<!--[\s\S]*?-->\s*$/.test(cleanedMarkdown)
-	          ) && !cleanedNote) {
-	    continue;
-          }
-
       if (!started) {
         hIndex = 1;
         vIndex = 1;
@@ -103,7 +98,21 @@ if (!mdFile) {
         vIndex = 1;
       }
 
-	  slideCount++;
+      slideCount++;
+
+          const rawSlide = slide.content;
+          const lines = rawSlide.trim().split('\nNote:\n');
+          const cleanedMarkdown = lines[0].replace(/^\s*(\*\*\*|---)\s*$/gm, '').trim();
+          const slideHTML = marked.parse(cleanedMarkdown);
+          const cleanedNote = (lines.length > 1) ? lines[1].replace(/^\s*(\*\*\*|---)\s*$/gm, '').trim() : '';
+          const noteHTML = marked.parse(cleanedNote);
+
+	  if((!cleanedMarkdown || 
+		   /^#+$/.test(cleanedMarkdown) ||
+		   isCommentOnlyMarkdown(cleanedMarkdown)
+	          ) && !cleanedNote) {
+	    continue;
+          }
 	  const slideno = incremental ? slideCount : `${hIndex}.${vIndex}` ;
 
           output.push('<section class="slide">');
