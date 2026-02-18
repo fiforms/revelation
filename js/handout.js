@@ -1,4 +1,4 @@
-import { extractFrontMatter, preprocessMarkdown } from './loader.js';
+import { extractFrontMatter, preprocessMarkdown, sanitizeRenderedHTML } from './loader.js';
 import { marked } from 'marked';
 
 const urlParams = new URLSearchParams(window.location.search);
@@ -103,9 +103,9 @@ if (!mdFile) {
           const rawSlide = slide.content;
           const lines = rawSlide.trim().split('\nNote:\n');
           const cleanedMarkdown = lines[0].replace(/^\s*(\*\*\*|---)\s*$/gm, '').trim();
-          const slideHTML = marked.parse(cleanedMarkdown);
+          const slideHTML = sanitizeRenderedHTML(marked.parse(cleanedMarkdown));
           const cleanedNote = (lines.length > 1) ? lines[1].replace(/^\s*(\*\*\*|---)\s*$/gm, '').trim() : '';
-          const noteHTML = marked.parse(cleanedNote);
+          const noteHTML = sanitizeRenderedHTML(marked.parse(cleanedNote));
 
 	  if((!cleanedMarkdown || 
 		   /^#+$/.test(cleanedMarkdown) ||

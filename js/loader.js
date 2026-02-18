@@ -2,6 +2,108 @@ import yaml from 'js-yaml';
 import convertSmartQuotes from './smart-quotes';
 
 let style_path = '/css/';
+const URL_ATTR_NAMES = new Set(['href', 'src', 'xlink:href', 'formaction', 'action', 'poster']);
+const BLOCKED_TAGS = new Set(['script', 'object', 'embed', 'applet', 'base', 'meta']);
+
+function isDangerousURL(value) {
+  const normalized = String(value || '')
+    .replace(/[\u0000-\u001F\u007F\s]+/g, '')
+    .toLowerCase();
+  return (
+    normalized.startsWith('javascript:') ||
+    normalized.startsWith('vbscript:') ||
+    normalized.startsWith('data:text/html') ||
+    normalized.startsWith('data:application/javascript')
+  );
+}
+
+function sanitizeHTMLFragment(html) {
+  const template = document.createElement('template');
+  template.innerHTML = String(html || '');
+  const elements = template.content.querySelectorAll('*');
+
+  for (const el of elements) {
+    const tagName = el.tagName.toLowerCase();
+    if (BLOCKED_TAGS.has(tagName)) {
+      el.remove();
+      continue;
+    }
+
+    const attrs = Array.from(el.attributes || []);
+    for (const attr of attrs) {
+      const name = attr.name.toLowerCase();
+      const value = attr.value;
+
+      if (name.startsWith('on') || name === 'srcdoc') {
+        el.removeAttribute(attr.name);
+        continue;
+      }
+
+      if (URL_ATTR_NAMES.has(name) && isDangerousURL(value)) {
+        el.removeAttribute(attr.name);
+        continue;
+      }
+
+      if (
+        name === 'style' &&
+        /expression\s*\(|url\s*\(\s*['"]?\s*javascript:|@import/i.test(String(value || ''))
+      ) {
+        el.removeAttribute(attr.name);
+      }
+    }
+
+    if (tagName === 'a' && String(el.getAttribute('target') || '').toLowerCase() === '_blank') {
+      const currentRel = String(el.getAttribute('rel') || '');
+      const relSet = new Set(currentRel.split(/\s+/).filter(Boolean).map((part) => part.toLowerCase()));
+      relSet.add('noopener');
+      relSet.add('noreferrer');
+      el.setAttribute('rel', Array.from(relSet).join(' '));
+    }
+  }
+
+  return template.innerHTML;
+}
+
+export function sanitizeMarkdownEmbeddedHTML(markdown) {
+  let source = String(markdown || '');
+
+  // Strip active script blocks entirely.
+  source = source.replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, '');
+
+  // Remove inline event handlers and srcdoc.
+  source = source.replace(/\son[a-z0-9_-]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '');
+  source = source.replace(/\ssrcdoc\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '');
+
+  // Remove dangerous URL-bearing attributes.
+  source = source.replace(
+    /\s(href|src|xlink:href|formaction|action|poster)\s*=\s*("([^"]*)"|'([^']*)'|([^\s>]+))/gi,
+    (fullMatch, attrName, fullValue, dqValue, sqValue, bareValue) => {
+      const rawValue = dqValue ?? sqValue ?? bareValue ?? '';
+      if (isDangerousURL(rawValue)) {
+        return '';
+      }
+      return ` ${attrName}=${fullValue}`;
+    }
+  );
+
+  // Remove dangerous inline style payloads.
+  source = source.replace(
+    /\sstyle\s*=\s*("([^"]*)"|'([^']*)'|([^\s>]+))/gi,
+    (fullMatch, fullValue, dqValue, sqValue, bareValue) => {
+      const rawValue = dqValue ?? sqValue ?? bareValue ?? '';
+      if (/expression\s*\(|url\s*\(\s*['"]?\s*javascript:|@import/i.test(rawValue)) {
+        return '';
+      }
+      return ` style=${fullValue}`;
+    }
+  );
+
+  return source;
+}
+
+export function sanitizeRenderedHTML(html) {
+  return sanitizeHTMLFragment(html);
+}
 
 export async function loadAndPreprocessMarkdown(deck,selectedFile = null) {
       const defaultFile = 'presentation.md';
@@ -171,6 +273,7 @@ export async function loadAndPreprocessMarkdown(deck,selectedFile = null) {
         suppressVisualElements
       );
       const processedMarkdown = metadata.convertSmartQuotes === false ? partProcessedMarkdown : convertSmartQuotes(partProcessedMarkdown);
+      const sanitizedMarkdown = sanitizeMarkdownEmbeddedHTML(processedMarkdown);
 
       // Create a temporary element to convert markdown into HTML slides
       const section = document.getElementById('markdown-container');
@@ -178,7 +281,10 @@ export async function loadAndPreprocessMarkdown(deck,selectedFile = null) {
       section.setAttribute('data-separator', '^\n\\*\\*\\*\n$');
       section.setAttribute('data-separator-vertical', '^\n---\n$');
       section.setAttribute('data-separator-notes', '^Note:$');
-      section.innerHTML = `<textarea data-template>${processedMarkdown}</textarea>`;
+      const markdownTemplate = document.createElement('textarea');
+      markdownTemplate.setAttribute('data-template', '');
+      markdownTemplate.textContent = sanitizedMarkdown;
+      section.replaceChildren(markdownTemplate);
 
       // Initialize Reveal.js
       const config = metadata.config || {};
