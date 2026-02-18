@@ -381,22 +381,34 @@ body.reveal-ready {
         pointerEvents: none;
 }
 
-cite {
+cite:not(.attrib) {
   display: block;
   font-size: 0.7em;
   font-style: italic;
-  color: #666;
+  opacity: 0.55;
   margin: 0.25em 0;
 }
 
-/* If the citation is the first thing inside its parent */
-cite:first-child {
+/* If the citation is the first thing inside its parent AND it's not .attrib */
+cite:first-child:not(.attrib) {
   text-align: left;
   margin-bottom: 0.3em;
 }
 
-/* If the citation is the last thing inside its parent */
-cite:last-child {
+/* If the citation is the last thing inside its parent AND it's not .attrib */
+cite:last-child:not(.attrib) {
   text-align: right;
   margin-top: 0.3em;
 }
+
+cite.attrib {
+  display: block;
+  width: 50%;
+  margin-left: 50%;
+  text-align: left;
+  font-size: 0.35em;
+  font-style: normal;
+  margin-top: 2em;
+  opacity: 0.7;
+}
+

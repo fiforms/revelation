@@ -142,6 +142,7 @@ export async function loadAndPreprocessMarkdown(deck,selectedFile = null) {
       let rawMarkdown;
       let mediaIndex = null;
       let prefersHigh = false;
+      let appConfig = window.AppConfig || null;
 
       // 🧠 Check for global offlineMarkdown
       if (typeof window.offlineMarkdown === 'string') {
@@ -231,6 +232,15 @@ export async function loadAndPreprocessMarkdown(deck,selectedFile = null) {
         prefersHigh = stored === 'high';
       }
 
+      if (!appConfig && window.electronAPI?.getAppConfig) {
+        try {
+          appConfig = await window.electronAPI.getAppConfig();
+          window.AppConfig = appConfig;
+        } catch {
+          // Keep processing even if config is unavailable.
+        }
+      }
+
       // Load media index (if available) for high-bitrate availability checks
       try {
         let mediaBasePath = '../_media/';
@@ -270,7 +280,8 @@ export async function loadAndPreprocessMarkdown(deck,selectedFile = null) {
         metadata.newSlideOnHeading,
         mediaIndex,
         prefersHigh,
-        suppressVisualElements
+        suppressVisualElements,
+        appConfig
       );
       const processedMarkdown = metadata.convertSmartQuotes === false ? partProcessedMarkdown : convertSmartQuotes(partProcessedMarkdown);
       const sanitizedMarkdown = sanitizeMarkdownEmbeddedHTML(processedMarkdown);
@@ -352,7 +363,7 @@ export function extractFrontMatter(md) {
   }
 }
 
-export function preprocessMarkdown(md, userMacros = {}, forHandout = false, media = {}, newSlideOnHeading = true, mediaIndex = null, preferHigh = null, suppressVisualElements = false) {
+export function preprocessMarkdown(md, userMacros = {}, forHandout = false, media = {}, newSlideOnHeading = true, mediaIndex = null, preferHigh = null, suppressVisualElements = false, appConfig = null) {
   const lines = md.split('\n');
   const processedLines = [];
   const attributions = [];
@@ -436,6 +447,12 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
   let currentFence = '';
   let columnPipeState = 0; // 0=start, 1=break, 2=end
   const mediaIndexMap = mediaIndex && typeof mediaIndex === 'object' ? mediaIndex : null;
+  const fallbackConfig = (typeof window !== 'undefined' && window.AppConfig) ? window.AppConfig : null;
+  const ccliLicenseNumber = String(appConfig?.ccliLicenseNumber || fallbackConfig?.ccliLicenseNumber || '').trim();
+  const replaceSettingMacros = (value) => {
+    if (!ccliLicenseNumber) return value;
+    return String(value).replace(/:ccli:/gi, ccliLicenseNumber);
+  };
   const prefersHigh = typeof preferHigh === 'boolean'
     ? preferHigh
     : (localStorage.getItem('options_media-version') === 'high');
@@ -571,6 +588,8 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
       processedLines.push(line);
       continue;  // 🛑 Skip transformation inside code blocks
     }
+
+    line = replaceSettingMacros(line);
 
     const stackCommentMatch = line.match(/^\s*<!--\s*\.stack:\s*(\S.+?)\s*-->\s*$/i);
     if (stackCommentMatch) {

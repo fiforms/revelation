@@ -68,11 +68,30 @@ if (!mdFile) {
 } else {
   fetch(`${mdFile}`)
     .then(res => res.text())
-    .then(rawMarkdown => {
+    .then(async (rawMarkdown) => {
+      let appConfig = window.AppConfig || null;
+      if (!appConfig && window.electronAPI?.getAppConfig) {
+        try {
+          appConfig = await window.electronAPI.getAppConfig();
+          window.AppConfig = appConfig;
+        } catch {
+          // Keep rendering handout even if config cannot be loaded.
+        }
+      }
       const { metadata, content } = extractFrontMatter(rawMarkdown);
       document.title = metadata.title || "Presentation Handout";
 
-      const processed = preprocessMarkdown(content, metadata.macros || {}, true, metadata.media, metadata.newSlideOnHeading);
+      const processed = preprocessMarkdown(
+        content,
+        metadata.macros || {},
+        true,
+        metadata.media,
+        metadata.newSlideOnHeading,
+        null,
+        null,
+        false,
+        appConfig
+      );
       const slides = splitSlides(processed);
       const output = [];
       const incremental = metadata && metadata.config && (metadata.config.slideNumber === 'c' || metadata.config.slideNumber === 'c/t');
