@@ -20,6 +20,69 @@ const isRemoteFollower = urlParams.has('remoteMultiplexId');
 
 const isRemote = window.location.protocol !== 'file:' &&
                  !['localhost', '127.0.0.1'].includes(window.location.hostname);
+const builderPreviewMode = urlParams.get('builderPreview') === '1';
+const PREVIEW_BRIDGE = 'revelation-builder-preview-bridge';
+
+function setupBuilderPreviewBridge(deck) {
+  if (!builderPreviewMode) return;
+  if (!window.parent || window.parent === window) return;
+
+  const postPreviewEvent = (eventName, payload = {}) => {
+    window.parent.postMessage(
+      {
+        bridge: PREVIEW_BRIDGE,
+        type: 'preview-event',
+        event: eventName,
+        payload
+      },
+      '*'
+    );
+  };
+
+  const postCurrentState = (eventName = 'ready') => {
+    const indices = deck.getIndices ? deck.getIndices() : { h: 0, v: 0 };
+    const isOverview = deck.isOverview ? deck.isOverview() : false;
+    postPreviewEvent(eventName, { indices, isOverview });
+  };
+
+  window.addEventListener('message', (event) => {
+    if (event.source !== window.parent) return;
+    const data = event.data || {};
+    if (data.bridge !== PREVIEW_BRIDGE || data.type !== 'builder-command') return;
+
+    const command = String(data.command || '');
+    const payload = data.payload && typeof data.payload === 'object' ? data.payload : {};
+
+    if (command === 'hello') {
+      postCurrentState('ready');
+      return;
+    }
+
+    if (command === 'slide') {
+      const h = Number.isFinite(Number(payload.h)) ? Number(payload.h) : 0;
+      const v = Number.isFinite(Number(payload.v)) ? Number(payload.v) : 0;
+      deck.slide(h, v);
+      return;
+    }
+
+    if (command === 'toggleOverview' && typeof deck.toggleOverview === 'function') {
+      deck.toggleOverview();
+    }
+  });
+
+  deck.on('ready', () => {
+    postCurrentState('ready');
+  });
+  deck.on('slidechanged', () => {
+    postCurrentState('slidechanged');
+  });
+  deck.on('overviewshown', () => {
+    postCurrentState('overview');
+  });
+  deck.on('overviewhidden', () => {
+    postCurrentState('overview');
+  });
+}
 
 
 pluginLoader('presentations',`/plugins_${key}`).then(async function() {
@@ -51,6 +114,7 @@ pluginLoader('presentations',`/plugins_${key}`).then(async function() {
   });
   
   window.deck = deck;
+  setupBuilderPreviewBridge(deck);
 
   loadAndPreprocessMarkdown(deck);
   const NOTES_SCROLL_DELAY_MS = 3000;
