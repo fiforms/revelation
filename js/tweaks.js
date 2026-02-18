@@ -318,13 +318,14 @@ function updateAttributionFromCurrentSlide(deck) {
     const tint = document.getElementById('fixed-tint-wrapper');
     const tintFadeMs = 300;
     const tintStyle = resolveTintStyle(tintcolor);
-    console.log('Tint style for current slide:', tintStyle);
 
     if (!tint) {
       return;
     }
 
-    tint.style.transition = `opacity ${tintFadeMs}ms ease, background-color ${tintFadeMs}ms ease, background-image ${tintFadeMs}ms ease,`;
+    const tintLayers = ensureTintLayers(tint, tintFadeMs);
+    const wasHidden = getComputedStyle(tint).display === 'none';
+    tint.style.transition = `opacity ${tintFadeMs}ms ease`;
 
     if (tint._hideTimeout) {
       clearTimeout(tint._hideTimeout);
@@ -332,33 +333,39 @@ function updateAttributionFromCurrentSlide(deck) {
     }
 
     if (tintStyle) {
-      tint.style.backgroundColor = 'transparent';
-      tint.style.backgroundImage = 'none';
-      tint.style.backgroundPosition = '';
-      tint.style.backgroundRepeat = '';
-      tint.style.backgroundSize = '';
+      const activeIndex = tint._activeTintLayerIndex ?? 0;
+      const inactiveIndex = activeIndex === 0 ? 1 : 0;
+      const activeLayer = tintLayers[activeIndex];
+      const inactiveLayer = tintLayers[inactiveIndex];
+      const targetSignature = tintStyleSignature(tintStyle);
+      const activeSignature = activeLayer.dataset.tintSignature || '';
 
-      if (tintStyle.type === 'color') {
-        tint.style.backgroundColor = tintStyle.value;
+      if (activeSignature !== targetSignature) {
+        applyTintStyleToLayer(inactiveLayer, tintStyle);
+
+        if (wasHidden) {
+          activeLayer.style.opacity = '0';
+          inactiveLayer.style.opacity = '1';
+        } else {
+          inactiveLayer.style.opacity = '0';
+          void inactiveLayer.offsetHeight;
+          inactiveLayer.style.opacity = '1';
+          activeLayer.style.opacity = '0';
+        }
+
+        tint._activeTintLayerIndex = inactiveIndex;
       } else {
-        console.log('Setting background image to ' + tintStyle.value)
-        tint.style.backgroundImage = tintStyle.value;
+        activeLayer.style.opacity = '1';
+        inactiveLayer.style.opacity = '0';
       }
 
-      if (tintStyle.type === 'image') {
-        tint.style.backgroundPosition = 'center';
-        tint.style.backgroundRepeat = 'no-repeat';
-        tint.style.backgroundSize = 'cover';
-      }
-
-      if (getComputedStyle(tint).display === 'none') {
+      if (wasHidden) {
         tint.style.display = '';
         tint.style.opacity = '0';
-        // Force a reflow so the opacity transition starts from 0.
         void tint.offsetHeight;
       }
       tint.style.opacity = '1';
-    } else if (getComputedStyle(tint).display !== 'none') {
+    } else if (!wasHidden) {
       tint.style.opacity = '0';
       tint._hideTimeout = setTimeout(() => {
         tint.style.display = 'none';
@@ -413,6 +420,68 @@ function normalizeTintImageValue(source) {
   const unquoted = source.replace(/^['"]|['"]$/g, '');
   const escaped = unquoted.replace(/"/g, '\\"');
   return `url("${escaped}")`;
+}
+
+function ensureTintLayers(tint, tintFadeMs) {
+  if (Array.isArray(tint._tintLayers) && tint._tintLayers.length === 2) {
+    tint.style.backgroundColor = 'transparent';
+    tint.style.backgroundImage = 'none';
+    tint._tintLayers.forEach((layer) => {
+      layer.style.transition = `opacity ${tintFadeMs}ms ease`;
+    });
+    return tint._tintLayers;
+  }
+
+  const createLayer = () => {
+    const layer = document.createElement('div');
+    layer.style.position = 'absolute';
+    layer.style.top = '0';
+    layer.style.left = '0';
+    layer.style.width = '100%';
+    layer.style.height = '100%';
+    layer.style.pointerEvents = 'none';
+    layer.style.opacity = '0';
+    layer.style.transition = `opacity ${tintFadeMs}ms ease`;
+    layer.style.backgroundColor = 'transparent';
+    layer.style.backgroundImage = 'none';
+    return layer;
+  };
+
+  const layerA = createLayer();
+  const layerB = createLayer();
+  tint.style.backgroundColor = 'transparent';
+  tint.style.backgroundImage = 'none';
+  tint.append(layerA, layerB);
+
+  tint._tintLayers = [layerA, layerB];
+  tint._activeTintLayerIndex = 0;
+  return tint._tintLayers;
+}
+
+function tintStyleSignature(tintStyle) {
+  return tintStyle ? `${tintStyle.type}:${tintStyle.value}` : '';
+}
+
+function applyTintStyleToLayer(layer, tintStyle) {
+  layer.style.backgroundColor = 'transparent';
+  layer.style.backgroundImage = 'none';
+  layer.style.backgroundPosition = '';
+  layer.style.backgroundRepeat = '';
+  layer.style.backgroundSize = '';
+
+  if (tintStyle.type === 'color') {
+    layer.style.backgroundColor = tintStyle.value;
+  } else {
+    layer.style.backgroundImage = tintStyle.value;
+  }
+
+  if (tintStyle.type === 'image') {
+    layer.style.backgroundPosition = 'center';
+    layer.style.backgroundRepeat = 'no-repeat';
+    layer.style.backgroundSize = 'cover';
+  }
+
+  layer.dataset.tintSignature = tintStyleSignature(tintStyle);
 }
 
 function hideControlsOnSpeakerNotes() {
