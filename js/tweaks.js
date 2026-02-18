@@ -4,6 +4,7 @@ export function revealTweaks(deck) {
     const isThumbnail = window.location.href.includes('backgroundTransition=none');
 
     const readyTweaks = () => {
+      applyStackAttributes(deck);
       updateAttributionFromCurrentSlide(deck);
       ensureLinksOpenExternally(deck);
       updateFixedOverlayVisibility(deck);
@@ -59,6 +60,46 @@ function ensureLinksOpenExternally(deck) {
     relParts.add('noopener');
     relParts.add('noreferrer');
     link.setAttribute('rel', Array.from(relParts).join(' '));
+  });
+}
+
+function applyStackAttributes(deck) {
+  const revealElement = deck?.getRevealElement?.();
+  if (!revealElement) {
+    return;
+  }
+
+  const stacks = revealElement.querySelectorAll('.slides > section.stack');
+  const attributeRegex = /([^"= ]+?)="([^"]+?)"|(data-[^"= ]+?)(?=[" ]|$)/g;
+
+  stacks.forEach((stack) => {
+    const firstVerticalSlide = Array.from(stack.children).find((child) => child.tagName === 'SECTION');
+    if (!firstVerticalSlide) {
+      return;
+    }
+
+    const markers = firstVerticalSlide.querySelectorAll('.revelation-stack-attrs[data-stack-attrs]');
+    markers.forEach((marker) => {
+      const encoded = marker.getAttribute('data-stack-attrs') || '';
+      let attributeString = encoded;
+      try {
+        attributeString = decodeURIComponent(encoded);
+      } catch {
+        // Keep raw value if decode fails.
+      }
+
+      attributeRegex.lastIndex = 0;
+      let match;
+      while ((match = attributeRegex.exec(attributeString)) !== null) {
+        if (match[2]) {
+          stack.setAttribute(match[1], match[2]);
+        } else if (match[3]) {
+          stack.setAttribute(match[3], '');
+        }
+      }
+
+      marker.remove();
+    });
   });
 }
 

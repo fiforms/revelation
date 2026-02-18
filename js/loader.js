@@ -269,6 +269,7 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
     columnbreak: `</div><div class="second">`,
     columnend: `</div></div>`,
     bgtint: `<!-- .slide: data-tint-color="$1" -->`,
+    transition: `<!-- .slide: data-transition="$1" -->`,
     animate: `<!-- .slide: data-auto-animate -->`,
     autoslide: `<!-- .slide: data-autoslide="$1" -->`,
     audiostart: `<!-- .slide: data-background-audio-start="$1" -->`,
@@ -419,6 +420,27 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
     return '';
   };
 
+  const toStackAttrsMarker = (attributeString) => {
+    const stackAttrs = encodeURIComponent(attributeString);
+    return `<div class="revelation-stack-attrs" data-stack-attrs="${stackAttrs}" hidden></div>`;
+  };
+
+  const extractSlideTransitionValue = (value) => {
+    const match = value.match(/<!--\s*\.slide:\s*[^>]*\bdata-transition="([^"]+)"[^>]*-->/i);
+    return match ? match[1] : null;
+  };
+
+  const convertStackDirectiveLine = (value) => {
+    const stackCommentMatch = value.match(/^\s*<!--\s*\.stack:\s*(\S.+?)\s*-->\s*$/i);
+    if (!stackCommentMatch) {
+      return value;
+    }
+    return toStackAttrsMarker(stackCommentMatch[1]);
+  };
+
+  let previousSeparatorType = null; // null | 'horizontal' | 'vertical'
+  let pendingAutoStackTransition = null;
+
   for (var line of lines) {
     index++;
 
@@ -442,6 +464,12 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
     if (insideCodeBlock) {
       processedLines.push(line);
       continue;  // 🛑 Skip transformation inside code blocks
+    }
+
+    const stackCommentMatch = line.match(/^\s*<!--\s*\.stack:\s*(\S.+?)\s*-->\s*$/i);
+    if (stackCommentMatch) {
+      processedLines.push(toStackAttrsMarker(stackCommentMatch[1]));
+      continue;
     }
 
     if (suppressVisualElements) {
@@ -581,12 +609,17 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
           const expanded = template.replace(/\$(\d+)/g, (_, n) => resolveMediaAlias(params[+n - 1] ?? ''));
           const mlines = expanded.split('\n');
           for (const mline of mlines) {
-            const attribMatch = mline.match(/^\{\{attrib:(.*)}}\s*$/i);
+            const normalizedLine = convertStackDirectiveLine(mline);
+            const attribMatch = normalizedLine.match(/^\{\{attrib:(.*)}}\s*$/i);
             if (attribMatch) {
               attributions.push(attribMatch[1]);
               continue;
             }
-            processedLines.push(mline);
+            const transitionValue = extractSlideTransitionValue(normalizedLine);
+            if (transitionValue) {
+              pendingAutoStackTransition = transitionValue;
+            }
+            processedLines.push(normalizedLine);
           }
           continue;
         } else {
@@ -603,6 +636,18 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
       const params = key.toLowerCase() === 'bgtint'
         ? [paramString ?? '']
         : (paramString ? paramString.split(':') : []);
+      if (key.toLowerCase() === 'transition') {
+        const transitionValue = params[0]?.trim() || '';
+        if (transitionValue) {
+          const transitionLine = `<!-- .slide: data-transition="${transitionValue}" -->`;
+          thismacros.push(transitionLine);
+          processedLines.push(transitionLine);
+          pendingAutoStackTransition = transitionValue;
+          lastmacros.length = 0;
+          continue;
+        }
+        console.log('Markdown Transition Macro Not Found: ' + paramString);
+      }
       if (key.toLowerCase() === 'animate') {
         const mode = params[0]?.trim().toLowerCase() || '';
         const animateLine = !mode
@@ -649,13 +694,18 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
         let expanded = template.replace(/\$(\d+)/g, (_, n) => resolveMediaAlias(params[+n - 1] ?? ''));
         const mlines = expanded.split('\n');
         for (const mline of mlines) {
-          thismacros.push(mline);
-          const attribMatch = mline.match(/^\{\{attrib:(.*)}}\s*$/i);
+          const normalizedLine = convertStackDirectiveLine(mline);
+          thismacros.push(normalizedLine);
+          const attribMatch = normalizedLine.match(/^\{\{attrib:(.*)}}\s*$/i);
           if (attribMatch) {
             attributions.push(attribMatch[1]);
             continue;
           }
-          processedLines.push(mline);
+          const transitionValue = extractSlideTransitionValue(normalizedLine);
+          if (transitionValue) {
+            pendingAutoStackTransition = transitionValue;
+          }
+          processedLines.push(normalizedLine);
         }
         lastmacros.length = 0;
         continue;
@@ -710,6 +760,9 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
     // Inject saved macros and attribution HTML before slide break
     if (autoSlide || line === '---' || line === '***' || line.match(/^[Nn][Oo][Tt][Ee]\:/) || index >= lines.length - 1) {
       var blankslide = !autoSlide;
+      const breakType = autoSlide
+        ? (/^###\s*/.test(line) ? 'vertical' : 'horizontal')
+        : (line === '---' ? 'vertical' : (line === '***' ? 'horizontal' : null));
       if (columnPipeState !== 0) {
         console.warn('Unclosed column section before slide break.');
         columnPipeState = 0;
@@ -731,6 +784,10 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
               aiSymbolRequested = true;
             }
             continue;
+          }
+          const transitionValue = extractSlideTransitionValue(val);
+          if (transitionValue) {
+            pendingAutoStackTransition = transitionValue;
           }
           processedLines.push(val);
         }
@@ -756,6 +813,15 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
         aiSymbolRequested = false;
       }
 
+      if (
+        breakType === 'vertical' &&
+        previousSeparatorType !== 'vertical' &&
+        pendingAutoStackTransition
+      ) {
+        processedLines.push(toStackAttrsMarker(`data-transition="${pendingAutoStackTransition}"`));
+        processedLines.push('');
+      }
+
       if(autoSlide) {
         if (/^###\s*/.test(line)) {
           processedLines.push('---');
@@ -767,6 +833,10 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
         }
       }
       processedLines.push(line); // Preserve the slide break itself
+      if (breakType) {
+        previousSeparatorType = breakType;
+      }
+      pendingAutoStackTransition = null;
       continue;
     }
 
@@ -775,6 +845,10 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
         line.replace(/\s*\+\+$/, '') + ' <!-- .element: class="fragment" -->'
       );
     } else {
+      const transitionValue = extractSlideTransitionValue(line);
+      if (transitionValue) {
+        pendingAutoStackTransition = transitionValue;
+      }
       processedLines.push(line);
     }
   }
