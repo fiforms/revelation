@@ -18,6 +18,7 @@ author:
 theme: softblood.css
 thumbnail: preview.webp
 created: 2025-07-24
+version: 0.2.6
 --- 
 ```
 
@@ -35,6 +36,7 @@ created: 2025-07-24
 | `theme`       | `string`             | Filename of the Reveal.js-compatible theme (e.g., `softblood.css`).             |
 | `thumbnail`   | `string`             | Filename of the image used for preview in the presentation list.                |
 | `created`     | `string`             | Date string (e.g., `2025-07-24`). Used for sorting or reference only.           |
+| `version`     | `string`             | Application version that last wrote the file. Useful for future migration logic. |
 
 > 💡 `theme` should match a `.css` file in `css/`, and `thumbnail` should be in the same folder as the presentation.
 
