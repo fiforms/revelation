@@ -45,6 +45,7 @@ const outputFile = path.join(presentationsDir, 'index.json');
 const readmePresDir = path.join(presentationsDir, 'readme');
 const readmePresentationPath = path.join(readmePresDir, 'presentation.md');
 const readmeYamlPath = path.join(readmePresDir, 'header.yaml');
+const readmeTemplatePath = path.resolve(__dirname, 'templates/readme');
 const projectReadmePath = path.resolve(__dirname, 'README.md');
 const referencePath = path.resolve(__dirname, 'doc/REFERENCE.md');
 
@@ -62,6 +63,7 @@ function getLocalIp() {
 
 function generatePresentationIndex() {
   // Refresh README presentation first, if needed:
+  ensureReadmeTemplate();
   
   if (fs.existsSync(readmeYamlPath) && fs.existsSync(projectReadmePath)) {
     const shouldGenerate =
@@ -134,6 +136,14 @@ function generatePresentationIndex() {
 
     fs.writeFileSync(outputFile, JSON.stringify(indexData, null, 2), 'utf-8');
     console.log(`📄 presentations/index.json regenerated`);
+}
+
+function ensureReadmeTemplate() {
+  if (!fs.existsSync(readmeTemplatePath)) {
+    console.warn(`⚠️ README template folder missing: ${readmeTemplatePath}`);
+    return;
+  }
+  copyTemplateRecursiveSync(readmeTemplatePath, readmePresDir, new Set(['header.yaml']));
 }
 
 function presentationIndexPlugin() {
@@ -552,6 +562,22 @@ function copyRecursiveSync(src, dest) {
     if (fs.lstatSync(srcPath).isDirectory()) {
       copyRecursiveSync(srcPath, destPath);
     } else {
+      fs.copyFileSync(srcPath, destPath);
+    }
+  }
+}
+
+function copyTemplateRecursiveSync(src, dest, overwriteNames = new Set()) {
+  if (!fs.existsSync(src)) return;
+  if (!fs.existsSync(dest)) fs.mkdirSync(dest, { recursive: true });
+
+  for (const item of fs.readdirSync(src)) {
+    const srcPath = path.join(src, item);
+    const destPath = path.join(dest, item);
+
+    if (fs.lstatSync(srcPath).isDirectory()) {
+      copyTemplateRecursiveSync(srcPath, destPath, overwriteNames);
+    } else if (overwriteNames.has(item) || !fs.existsSync(destPath)) {
       fs.copyFileSync(srcPath, destPath);
     }
   }
