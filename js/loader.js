@@ -4,6 +4,37 @@ import convertSmartQuotes from './smart-quotes';
 let style_path = '/css/';
 const URL_ATTR_NAMES = new Set(['href', 'src', 'xlink:href', 'formaction', 'action', 'poster']);
 const BLOCKED_TAGS = new Set(['script', 'object', 'embed', 'applet', 'base', 'meta']);
+const NOTE_SEPARATOR_LEGACY = 'Note:';
+const NOTE_SEPARATOR_CURRENT = ':note:';
+const NOTE_VERSION_BREAKPOINT = [0, 2, 6];
+
+function parseSemverTuple(version) {
+  const raw = String(version || '').trim();
+  const match = raw.match(/^v?(\d+)\.(\d+)\.(\d+)/i);
+  if (!match) return null;
+  return [Number(match[1]), Number(match[2]), Number(match[3])];
+}
+
+function compareVersionTuples(a, b) {
+  if (!Array.isArray(a) || !Array.isArray(b)) return 0;
+  for (let i = 0; i < 3; i += 1) {
+    const av = Number(a[i] || 0);
+    const bv = Number(b[i] || 0);
+    if (av > bv) return 1;
+    if (av < bv) return -1;
+  }
+  return 0;
+}
+
+export function usesNewNoteSeparator(metadata = {}) {
+  const tuple = parseSemverTuple(metadata?.version);
+  if (!tuple) return false;
+  return compareVersionTuples(tuple, NOTE_VERSION_BREAKPOINT) > 0;
+}
+
+export function getNoteSeparator(metadata = {}) {
+  return usesNewNoteSeparator(metadata) ? NOTE_SEPARATOR_CURRENT : NOTE_SEPARATOR_LEGACY;
+}
 
 function isDangerousURL(value) {
   const normalized = String(value || '')
@@ -296,7 +327,8 @@ export async function loadAndPreprocessMarkdown(deck,selectedFile = null) {
       section.setAttribute('data-markdown', '');
       section.setAttribute('data-separator', '^\n\\*\\*\\*\n$');
       section.setAttribute('data-separator-vertical', '^\n---\n$');
-      section.setAttribute('data-separator-notes', '^Note:$');
+      const noteSeparator = getNoteSeparator(metadata);
+      section.setAttribute('data-separator-notes', noteSeparator === NOTE_SEPARATOR_CURRENT ? '^:note:$' : '^Note:$');
       const markdownTemplate = document.createElement('textarea');
       markdownTemplate.setAttribute('data-template', '');
       markdownTemplate.textContent = sanitizedMarkdown;

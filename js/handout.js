@@ -1,4 +1,9 @@
-import { extractFrontMatter, preprocessMarkdown, sanitizeRenderedHTML } from './loader.js';
+import {
+  extractFrontMatter,
+  preprocessMarkdown,
+  sanitizeRenderedHTML,
+  getNoteSeparator
+} from './loader.js';
 import { marked } from 'marked';
 
 const urlParams = new URLSearchParams(window.location.search);
@@ -51,6 +56,18 @@ function isCommentOnlyMarkdown(markdown) {
   return withoutComments.length === 0;
 }
 
+function splitSlideContentAndNotes(rawSlide, noteSeparator) {
+  const lines = String(rawSlide || '').split(/\r?\n/);
+  const noteIndex = lines.findIndex((line) => line.trim() === noteSeparator);
+  if (noteIndex < 0) {
+    return { content: String(rawSlide || ''), notes: '' };
+  }
+  return {
+    content: lines.slice(0, noteIndex).join('\n'),
+    notes: lines.slice(noteIndex + 1).join('\n')
+  };
+}
+
 // VITE Hot Reloading Hook
 if (import.meta.hot) {
   import.meta.hot.on('reload-presentations', (data) => {
@@ -95,6 +112,7 @@ if (!mdFile) {
       const slides = splitSlides(processed);
       const output = [];
       const incremental = metadata && metadata.config && (metadata.config.slideNumber === 'c' || metadata.config.slideNumber === 'c/t');
+      const noteSeparator = getNoteSeparator(metadata);
 	
       let hIndex = 1;
       let vIndex = 1;
@@ -120,10 +138,10 @@ if (!mdFile) {
       slideCount++;
 
           const rawSlide = slide.content;
-          const lines = rawSlide.trim().split('\nNote:\n');
-          const cleanedMarkdown = lines[0].replace(/^\s*(\*\*\*|---)\s*$/gm, '').trim();
+          const parsedSlide = splitSlideContentAndNotes(rawSlide.trim(), noteSeparator);
+          const cleanedMarkdown = parsedSlide.content.replace(/^\s*(\*\*\*|---)\s*$/gm, '').trim();
           const slideHTML = sanitizeRenderedHTML(marked.parse(cleanedMarkdown));
-          const cleanedNote = (lines.length > 1) ? lines[1].replace(/^\s*(\*\*\*|---)\s*$/gm, '').trim() : '';
+          const cleanedNote = parsedSlide.notes ? parsedSlide.notes.replace(/^\s*(\*\*\*|---)\s*$/gm, '').trim() : '';
           const noteHTML = sanitizeRenderedHTML(marked.parse(cleanedNote));
 
 	  if((!cleanedMarkdown || 

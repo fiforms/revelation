@@ -58,7 +58,9 @@ called using curly braces on a new line
 
 This slide should fade in and out because we called the macro
 
-Note: These are speaker notes that will only appear in speaker view. 
+:note:
+
+These are speaker notes that will only appear in speaker view. 
 Notice how in the above example, we define the macro on the first line,
 then call the macro on the same slide.
 Macros can be defined anywhere in the markdown as long as you define
@@ -76,4 +78,3 @@ call the macro, it's remembered from the last slide
 
 This slide has a normal transition because we used the special empty macro
 call to reset the macros.
-

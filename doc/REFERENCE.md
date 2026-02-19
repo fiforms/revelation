@@ -18,7 +18,7 @@ author:
 theme: softblood.css
 thumbnail: preview.webp
 created: 2025-07-24
-version: 0.2.6
+version: 0.2.7
 --- 
 ```
 
@@ -169,18 +169,19 @@ This is a vertical child of the second slide
 
 #### 🗒 Speaker Notes
 
-Add notes for each slide using the `Note:` label:
+Add notes for each slide using the `:note:` label:
 
 ```markdown
 # Intro Slide
 Welcome to the session.
 
-Note: 
+:note:
+
 Use this moment to greet the audience and adjust your mic.
 ```
 
 Notes will appear in speaker view (`s`) and in the handout view if enabled.
-It's important that "Note:" appear on its own line with no whitespace after it!
+It's important that `:note:` appear on its own line.
 
 ---
 
