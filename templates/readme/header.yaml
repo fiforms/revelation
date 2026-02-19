@@ -2,10 +2,12 @@
 title: README
 description: REVELation Snapshot Presenter Quickstart
 author: Daniel McFeeters
-date: 2025-06-24
-theme: night.css
+date: 2026-02-19
+theme: revelation_dark.css
 stylesheet: readmestyle.css
 thumbnail: icon.webp
+version: 0.2.7
+newSlideOnHeading: false
 config:
   slideNumber: c
   showSlideNumber: speaker

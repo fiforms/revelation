@@ -12,15 +12,23 @@ creators.
 
 REVELation Snapshot Presenter is the easiest way to create 
 and deliver elegant, media-rich presentations using Reveal.js 
-— no web dev skills required. It gets you up and running out 
-of the box with zero config, extended Markdown support, and a 
-simple file-based system. Whether you're a teacher, speaker, or 
-content creator, REVELation helps you focus on your message — 
+— no web dev skills required. 
+
+---
+
+It gets you up and running out of the box with zero config, extended 
+Markdown support, and a simple file-based system. Whether you're a teacher, 
+speaker, or content creator, REVELation helps you focus on your message — 
 not your markup — with features like background videos, reusable 
-macros, and one-command presentation scaffolding. Use it 
-directly (to incorporate into your web development project)
+macros, and one-command presentation scaffolding. 
+
+---
+
+Use it directly (to incorporate into your web development project)
 or download our companion [GUI app](https://github.com/fiforms/revelation-electron-wrapper)
 for a seamless authoring experience.
+
+---
 
 ## 🔧 Quick Start
 
@@ -46,6 +54,8 @@ npm run serve       # LAN-ready with remote control features
 
 The link to access your presentation hub will show on the terminal.
 
+---
+
 ### 2. Create a Presentation
 
 ```bash
@@ -55,6 +65,8 @@ npm run make
 This will scaffold a new presentation folder under `presentations_<key>/`.
 
 Edit the `presentation.md` file in your new folder to start creating content.
+
+---
 
 ## 🎁 Features
 
@@ -72,6 +84,8 @@ macros, and layout conventions is available in:
 doc/REFERENCE.md
 ```
 
+---
+
 ## 💻 GUI Application (Recommended)
 
 For easier authoring and media management, install the companion desktop app:
@@ -80,7 +94,6 @@ For easier authoring and media management, install the companion desktop app:
 *(Cross-platform Electron GUI with presentation manager, editor, and offline export)
 
 ---
-
 
 
 This offers:

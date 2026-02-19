@@ -4,6 +4,8 @@
 
 Each REVELation presentation begins with a **YAML front matter block**, enclosed by triple dashes `---`. This defines metadata, visual settings, and optional macros.
 
+---
+
 ### 1.1 Basic Metadata Fields
 
 These fields help identify and describe your presentation. All fields are optional, but `title` is strongly recommended.
@@ -17,7 +19,8 @@ author:
   email: jane@example.com
 theme: softblood.css
 thumbnail: preview.webp
-created: 2025-07-24
+created: 2026-02-19
+newSlideOnHeading: false
 version: 0.2.7
 --- 
 ```
@@ -84,7 +87,7 @@ macros:
 ---
 ```
 
----
+***
 
 #### Field Reference
 
@@ -105,11 +108,13 @@ macros:
 
 > 📁 **Media aliases** resolve to files inside the `_media/` folder of your presentation and are automatically substituted during preprocessing.
 
----
+***
 
 ## 2. 📝 Markdown Syntax Extensions
 
 REVELation extends standard Markdown to make slide authoring intuitive and expressive, with minimal syntax.
+
+---
 
 ### 2.1 Slide Structure
 
@@ -191,9 +196,11 @@ It's important that `:note:` appear on its own line.
 * Use `{{}}` to clear active macros on a slide:
 
 ```markdown
-{{darkbg}}
+{{lightbg}}
 
-# This slide has a dark background
+--- 
+
+# This slide has a light background
 
 *** 
 
@@ -278,6 +285,7 @@ Sticky means the macro state is reapplied on following slides until reset with `
 #### ✅ Built-in Audio Macro Reference
 
 | Name | `{{...}}` | `:...:` | Description |
+| --- | --- | --- | --- |
 | `audio:play:$1` | ✅ sticky | ✅ non-sticky | start background audio |
 | `audio:playloop:$1` / `audio:loop:$1` | ✅ sticky | ✅ non-sticky | start looping background audio |
 | `audio:stop` | ❌ one-shot | ✅ non-sticky | stop background audio (does not become sticky) |
@@ -290,9 +298,12 @@ Sticky means the macro state is reapplied on following slides until reset with `
 #### ✅ Built-in Countdown Macro Reference
 
 | Name | `{{...}}` | `:...:` | Description |
+| --- | --- | --- | --- |
 | `countdown:from:mm:ss` | ❌ | ✅ non-sticky | countdown timer from duration |
 | `countdown:from:hh:mm:ss` | ❌ | ✅ non-sticky | countdown timer from duration |
 | `countdown:to:hh:mm` | ❌ | ✅ non-sticky | countdown timer to local clock time |
+
+---
 
 Notes:
 * User `macros:` override built-ins when names collide.
@@ -326,11 +337,11 @@ When a parameter value is `media:alias`, REVELation resolves it to the `_media/`
 
 # Slide A
 
-***
+*** 
 
 # Slide B (inherits both)
 
-***
+*** 
 
 {{}}
 
@@ -442,6 +453,7 @@ Add a semi-transparent color overlay (tint) between the background and text:
 ```markdown
 {{bgtint:rgba(127,127,255,0.5)}}
 ```
+---
 
 `bgtint` supports three forms:
 
@@ -453,6 +465,8 @@ Add a semi-transparent color overlay (tint) between the background and text:
 {{bgtint:hsl(210 100% 50% / 0.35)}}
 ```
 
+---
+
 2. CSS gradients (applies to `background-image`)
 
 ```markdown
@@ -461,12 +475,16 @@ Add a semi-transparent color overlay (tint) between the background and text:
 {{bgtint:conic-gradient(from 180deg at 50% 50%, #ff6b6b, #ffe66d, #4ecdc4, #ff6b6b)}}
 ```
 
+---
+
 3. Images using the `image:` prefix (applies to `background-image`)
 
 ```markdown
 {{bgtint:image:/url/to/image.png}}
 {{bgtint:image:url('/url/to/image.png')}}
 ```
+
+---
 
 When `image:` is used, REVELation also sets:
 `background-position: center`, `background-repeat: no-repeat`, and `background-size: cover`.
@@ -629,13 +647,13 @@ Use `{{attrib:...}}` to persist attribution across slides until reset with `{{}}
 
 # Slide A
 
-***
+*** 
 
 # Slide B (still attributed)
 
-***
+*** 
 
-{{}}
+{{}} 
 
 # Slide C (attribution cleared)
 ```
@@ -652,6 +670,8 @@ macros:
     <!-- .slide: data-background-image="fog.jpg" -->
     {{attrib:Background by Unsplash Contributor}}
 ```
+
+---
 
 Then use:
 
@@ -761,6 +781,8 @@ media:
 ![background](media:fogloop)
 ```
 
+***
+
 ## 3. 📂 Media Integration
 
 REVELation supports a simple, scalable way to manage images and videos for your presentations using **media aliases** and a shared `_media/` folder. This is generally managed by the REVELation Snapshot Builder (Electron GUI) although it can be used separately.
@@ -781,6 +803,8 @@ presentations\_abc123/
 └────── long_hashed_filename_1.mp4.thumbnail.webp
 └────── etc...
 ```
+
+---
 
 Place all shared assets (videos, images, etc.) in the `_media/` folder with unique filenames, e.g. fog_loop.mp4
 
@@ -821,8 +845,11 @@ You can now refer to media by alias in your Markdown:
 
 REVELation will resolve the alias to the correct path during preprocessing.
 
+---
+
 > 🛠 If the alias can't be resolved, it will leave the placeholder untouched and emit a warning in the console.
 
+***
 
 ### 🧰 Media Library
 
@@ -833,11 +860,13 @@ If using the GUI app, the **Media Library** helps you:
 * Auto-create `media:` YAML snippets
 * Preview or delete items
 
+***
 
 ## 4. 🖥 Handout Mode
 
 REVELation includes a dedicated **handout view** for printing, sharing, and reviewing presentation content outside of slideshow mode.
 
+---
 
 ### 📄 What It Shows
 
@@ -848,13 +877,16 @@ The handout view renders:
 - Attributions (optional)
 - Slide numbers (with or without links)
 
-It's ideal for:
+---
+
+*It's ideal for:*
 
 - Speaker prep
 - PDF export
 - Offline review
 - Printed materials
 
+---
 
 ### 🚀 How to Use
 
@@ -865,6 +897,8 @@ Append `/handout?p=presentation.md` to the URL of any presentation:
 ```
 
 Or right-click a presentation card and select **"Handout View"**.
+
+---
 
 ### 🧩 UI Toggles
 
@@ -877,6 +911,8 @@ At the top of the handout page, you'll see toggles:
 
 You can enable or disable these dynamically.
 
+***
+
 ### 🖨 Export as PDF
 
 To print or save as PDF:
@@ -887,10 +923,13 @@ To print or save as PDF:
 
 > On some systems, PDF export is also available directly from the Electron GUI app.
 
+***
+
 ## 5. ⚙ Reveal.js Compatibility
 
 REVELation is fully powered by [Reveal.js](https://revealjs.com/), giving you access to the complete feature set — with easier defaults and Markdown-centric authoring.
 
+***
 
 ### 🎛 Reveal.js `config` in YAML
 
@@ -955,7 +994,7 @@ All Reveal.js data attributes and HTML structures are fully supported — includ
 
 Anything supported by Reveal.js can be injected using macros, HTML comments, or raw HTML.
 
----
+***
 
 ## 📎 Appendix: Tips, Gotchas & Commands
 
