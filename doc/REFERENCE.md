@@ -203,113 +203,135 @@ It's important that "Note:" appear on its own line with no whitespace after it!
 
 ### 2.2 Macros
 
-Macros let you reuse snippets of content, layout hints, and Reveal.js attributes throughout your presentation. They're defined in the YAML front matter and invoked inline in the Markdown body.
+Macros let you reuse snippets of content, layout hints, and Reveal.js attributes. They are defined in front matter and invoked in Markdown.
 
 ---
 
 #### 🧱 Defining Macros
 
-Define your macros under the `macros:` key in YAML using multiline `|` blocks:
-
 ```yaml
 macros:
-  darkbg: |
-    <!-- .slide: data-darkbg -->
-  fade: |
-    <!-- .slide: data-transition="fade" -->
-  credits: |
-    :ATTRIB:Photo by John Doe
+  fogbg: |
+    <!-- .slide: data-background-image="$1" -->
+    {{attrib:$2}}
 ```
+
+User-defined macros support `$1`, `$2`, etc. parameter substitution.
 
 ---
 
-You can define as many macros as you like. Macros can contain:
+#### 🧩 Invocation Syntax (Sticky vs Non-Sticky)
 
-* Reveal.js data attributes
-* Markdown or HTML
-* Attribution lines
-* Any content you want to insert repeatedly
+| Syntax | Behavior | Sticky |
+| --- | --- | --- |
+| `{{name}}` | Expands macro or built-in command | ✅ |
+| `{{name:param1:param2}}` | Expands with params | ✅ |
+| `:name:` | Inline one-slide expansion | ❌ |
+| `:name:param1:param2:` | Inline one-slide expansion with params | ❌ |
+| `{{}}` | Clears inherited sticky macro state | N/A |
 
----
-
-#### 🧩 Using Macros
-
-Invoke a macro anywhere in your markdown by placing it on its own line:
-
-```markdown
-{{darkbg}}
-
-# Welcome
-
-Content with a dark background.
-```
-
-This will inject the macro content at that location before rendering.
+Sticky means the macro state is reapplied on following slides until reset with `{{}}`.
 
 ---
 
-#### ⏱ Countdown Macro
+#### ✅ Built-in Color and Overlay Macro Reference
 
-Use the built-in inline `:countdown:` macro to render a live `<h2 class="countdown">` timer on the slide.
-
-Count down from a duration:
-
-```markdown
-:countdown:from:5:00:
-```
-
-This means `5 minutes, 0 seconds` (`mm:ss`). You can also use hours:
-
-```markdown
-:countdown:from:1:05:30:
-```
-
-Count down to a clock time (24-hour local time):
-
-```markdown
-:countdown:to:12:00:
-```
-
-This shows remaining time until the next `12:00` (today if still ahead, otherwise tomorrow), displayed as `mm:ss` or `hh:mm:ss` depending on remaining duration.
+| Name | `{{...}}` | `:...:` | Description |
+| --- | --- | --- | --- |
+| `darkbg` | ✅ sticky | ✅ non-sticky | `<!-- .slide: data-darkbg -->` |
+| `lightbg` | ✅ sticky | ✅ non-sticky | `<!-- .slide: data-lightbg -->` |
+| `darktext` | ✅ sticky | ✅ non-sticky | `<!-- .slide: data-darktext -->` |
+| `lighttext` | ✅ sticky | ✅ non-sticky | `<!-- .slide: data-lighttext -->` |
+| `bgtint:$1` | ✅ sticky | ✅ non-sticky | `<!-- .slide: data-tint-color="$1" -->` |
+| `info` | ✅ sticky | ✅ non-sticky | info slide helper markup |
+| `infofull` | ✅ sticky | ✅ non-sticky | full-width info slide helper markup |
+| `attrib:text` | ✅ sticky (`{{attrib:...}}`) | ✅ non-sticky (`:ATTRIB:...`) | slide attribution text |
+| `ai` | ✅ sticky (`{{ai}}`) | ✅ non-sticky (`:AI:`) | show AI symbol badge |
 
 ---
 
-#### 🔁 Sticky Behavior
+#### ✅ Built-in Positioning Macro Reference
 
-* Macros persist across slides unless explicitly cleared with `{{}}`
-* This is useful for setting up background styles or transitions that apply to a series of slides
+| Name | `{{...}}` | `:...:` | Description |
+| --- | --- | --- | --- |
+| `shiftleft` | ✅ sticky | ✅ non-sticky | `<!-- .slide: data-shiftleft -->` |
+| `shiftright` | ✅ sticky | ✅ non-sticky | `<!-- .slide: data-shiftright -->` |
+| `upperthird` | ✅ sticky | ✅ non-sticky | `<!-- .slide: data-upper-third -->` |
+| `lowerthird` | ✅ sticky | ✅ non-sticky | `<!-- .slide: data-lower-third -->` |
 
 ---
 
-#### 🧮 Macro Parameters
+#### ✅ Built-in Transition Macro Reference
 
-Macros can accept parameters using `{{macro:param1:param2}}` syntax, which will replace `$1`, `$2`, etc. inside the macro body:
+| Name | `{{...}}` | `:...:` | Description |
+| --- | --- | --- | --- |
+| `transition:$1` | ✅ sticky | ✅ non-sticky | `<!-- .slide: data-transition="$1" -->` |
+| `animate` | ✅ sticky | ✅ non-sticky | `<!-- .slide: data-auto-animate -->` |
+| `animate:restart` | ✅ sticky | ✅ non-sticky | `<!-- .slide: data-auto-animate-restart -->` |
+| `autoslide:$1` | ✅ sticky | ✅ non-sticky | `<!-- .slide: data-autoslide="$1" -->` |
+
+---
+
+#### ✅ Built-in Audio Macro Reference
+
+| Name | `{{...}}` | `:...:` | Description |
+| `audio:play:$1` | ✅ sticky | ✅ non-sticky | start background audio |
+| `audio:playloop:$1` / `audio:loop:$1` | ✅ sticky | ✅ non-sticky | start looping background audio |
+| `audio:stop` | ❌ one-shot | ✅ non-sticky | stop background audio (does not become sticky) |
+| `audiostart:$1` | ✅ sticky | ✅ non-sticky | direct `data-background-audio-start` attribute |
+| `audioloop:$1` | ✅ sticky | ✅ non-sticky | direct `data-background-audio-loop` attribute |
+| `audiostop` | ✅ sticky | ✅ non-sticky | direct `data-background-audio-stop` attribute |
+
+---
+
+#### ✅ Built-in Countdown Macro Reference
+
+| Name | `{{...}}` | `:...:` | Description |
+| `countdown:from:mm:ss` | ❌ | ✅ non-sticky | countdown timer from duration |
+| `countdown:from:hh:mm:ss` | ❌ | ✅ non-sticky | countdown timer from duration |
+| `countdown:to:hh:mm` | ❌ | ✅ non-sticky | countdown timer to local clock time |
+
+Notes:
+* User `macros:` override built-ins when names collide.
+* `:countdown:` is inline-only (no `{{countdown...}}` form).
+* For `bgtint`, everything after the first `:` is treated as one parameter, so gradients/colors work.
+
+---
+
+#### 🧮 Parameters & Media Aliases
 
 ```yaml
 macros:
   bgimage: |
     <!-- .slide: data-background-image="$1" -->
-    :ATTRIB:$2
+    {{attrib:$2}}
 ```
 
 ```markdown
-{{bgimage:morning.jpg:Photo by Alice}}
+{{bgimage:media:hero_image:Photo by Alice}}
 ```
 
-> This expands to a background image with attribution.
+When a parameter value is `media:alias`, REVELation resolves it to the `_media/` path (including high-variant selection when enabled).
 
 ---
 
-#### 🧯 Resetting Macros
-
-Use `{{}}` on a slide to clear any inherited macros:
+#### 🧯 Resetting Sticky State
 
 ```markdown
+{{darkbg}}
+{{transition:fade}}
+
+# Slide A
+
+***
+
+# Slide B (inherits both)
+
+***
+
 {{}}
 
-# New Slide
-
-This slide starts fresh with no inherited background or styles.
+# Slide C (reset)
 ```
 
 ***
@@ -363,28 +385,7 @@ This is most commonly used to trigger fragments, transitions, or custom styling.
 
 #### 💡 Built-in Macros for Convenience
 
-REVELation defines several built-in macros for commonly used slide attributes:
-
-| Macro Name    | Expands To                                                    |
-| ------------- | ------------------------------------------------------------- |
-| `darkbg`      | `<!-- .slide: data-darkbg -->`                                |
-| `lightbg`     | `<!-- .slide: data-lightbg -->`                               |
-| `darktext`    | `<!-- .slide: data-darktext -->`                              |
-| `lighttext`   | `<!-- .slide: data-lighttext -->`                             |
-| `lowerthird`  | `<!-- .slide: data-lower-third -->`                           |
-| `upperthird`  | `<!-- .slide: data-upper-third -->`                           |
-| `shiftleft`   | `<!-- .slide: data-shiftleft -->`                             |
-| `shiftright`  | `<!-- .slide: data-shiftright -->`                            |
-| `bgtint`      | `<!-- .slide: data-tint-color="$1" -->`                       |
-| `audio`       | Controls background audio (`play`, `playloop`, `stop`)         |
-
-You can override or redefine these in your YAML if needed.
-
----
-
-#### 💡 Built-in Macros for Convenience
-
-REVELation defines several built-in macros to simplify commonly used slide attributes.
+For the full implementation-accurate list (including sticky/non-sticky forms and special commands like `countdown`, `attrib`, and `ai`), see section **2.2 Macros** above.
 
 ---
 
@@ -590,11 +591,11 @@ But for most use cases, `++` is all you need.
 
 ### 2.5 Attributions
 
-REVELation makes it easy to include copyright notices, credits, or source information using special `:ATTRIB:` lines.
+REVELation supports both non-sticky and sticky attribution syntax.
 
 ---
 
-#### 🖊 Inline Attribution Syntax
+#### 🖊 Non-Sticky Attribution (`:ATTRIB:`)
 
 Add an attribution to any slide using a line that starts with `:ATTRIB:`:
 
@@ -603,6 +604,8 @@ Add an attribution to any slide using a line that starts with `:ATTRIB:`:
 ```
 
 ---
+
+This applies to the current slide only.
 
 Attributions can appear:
 
@@ -614,15 +617,37 @@ Attributions can appear:
 
 ---
 
+#### 📌 Sticky Attribution (`{{attrib:...}}`)
+
+Use `{{attrib:...}}` to persist attribution across slides until reset with `{{}}`:
+
+```markdown
+{{attrib:Photo by Alice Johnson}}
+
+# Slide A
+
+***
+
+# Slide B (still attributed)
+
+***
+
+{{}}
+
+# Slide C (attribution cleared)
+```
+
+---
+
 #### 🧩 In Macros
 
-You can also define `:ATTRIB:` lines in macros for reuse:
+Use `{{attrib:...}}` inside a sticky macro if you want attribution to inherit with that macro:
 
 ```yaml
 macros:
   fogbg: |
     <!-- .slide: data-background-image="fog.jpg" -->
-    :ATTRIB:Background by Unsplash Contributor
+    {{attrib:Background by Unsplash Contributor}}
 ```
 
 Then use:
@@ -631,7 +656,7 @@ Then use:
 {{fogbg}}
 ```
 
-The attribution will be attached automatically to that slide.
+If you only want attribution on the current slide, use `:ATTRIB:` instead.
 
 ***
 
