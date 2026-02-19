@@ -75,6 +75,8 @@ Edit the `presentation.md` file in your new folder to start creating content.
 * 🧰 **Macros** — Reuse content and slide attributes using `{{macroname}}` calls
 * 📲 **Remote Control** — Keep multiple screens in sync with built-in remote
 
+***
+
 ## 📘 Reference
 
 Full documentation of the Markdown features, YAML schema, 
@@ -100,6 +102,8 @@ This offers:
 
 * 📁 **Presentation Portal** — Browse and launch all presentations from a central UI
 * 📦 **Export** — Export handouts, offline HTML, or ZIPs for sharing
+
+***
 
 ## 📜 License
 

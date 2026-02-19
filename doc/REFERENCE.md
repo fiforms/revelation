@@ -1,6 +1,10 @@
 # 📘 REVELation Authoring Reference
 
+---
+
 ## 1. 📄 YAML Front Matter
+
+---
 
 Each REVELation presentation begins with a **YAML front matter block**, enclosed by triple dashes `---`. This defines metadata, visual settings, and optional macros.
 
@@ -9,6 +13,8 @@ Each REVELation presentation begins with a **YAML front matter block**, enclosed
 ### 1.1 Basic Metadata Fields
 
 These fields help identify and describe your presentation. All fields are optional, but `title` is strongly recommended.
+
+---
 
 ```yaml
 --- 
@@ -40,6 +46,8 @@ version: 0.2.7
 | `thumbnail`   | `string`             | Filename of the image used for preview in the presentation list.                |
 | `created`     | `string`             | Date string (e.g., `2025-07-24`). Used for sorting or reference only.           |
 | `version`     | `string`             | Application version that last wrote the file. Useful for future migration logic. |
+
+---
 
 > 💡 `theme` should match a `.css` file in `css/`, and `thumbnail` should be in the same folder as the presentation.
 
@@ -126,6 +134,8 @@ Slides are defined implicitly using headings or explicitly using slide separator
 
 Any top-level heading (`#`, `##`, or `###`) automatically starts a new slide. This makes simple slide decks very easy to write:
 
+---
+
 ```markdown
 # Welcome
 This is the opening slide.
@@ -194,6 +204,8 @@ It's important that `:note:` appear on its own line.
 
 * Macros remain active until explicitly reset.
 * Use `{{}}` to clear active macros on a slide:
+
+---
 
 ```markdown
 {{lightbg}}
@@ -497,6 +509,8 @@ This is useful for improving contrast or layering texture/art above the slide ba
 
 Create flexible two-column sections inside a slide using a simple marker line:
 
+---
+
 ```markdown
 ||
 Left side content here
@@ -641,6 +655,8 @@ Attributions can appear:
 #### 📌 Sticky Attribution (`{{attrib:...}}`)
 
 Use `{{attrib:...}}` to persist attribution across slides until reset with `{{}}`:
+
+---
 
 ```markdown
 {{attrib:Photo by Alice Johnson}}
