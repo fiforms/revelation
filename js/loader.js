@@ -109,6 +109,7 @@ export async function loadAndPreprocessMarkdown(deck,selectedFile = null) {
       const defaultFile = 'presentation.md';
       const urlParams = new URLSearchParams(window.location.search);
       const variant = (urlParams.get('variant') || '').trim().toLowerCase();
+      const ccliFromUrl = (urlParams.get('ccli') || '').trim();
       const variantThemeMap = {
         lowerthirds: 'lowerthirds.css',
         confidencemonitor: 'confidencemonitor.css'
@@ -239,6 +240,10 @@ export async function loadAndPreprocessMarkdown(deck,selectedFile = null) {
         } catch {
           // Keep processing even if config is unavailable.
         }
+      }
+
+      if (ccliFromUrl) {
+        appConfig = { ...(appConfig || {}), ccliLicenseNumber: ccliFromUrl };
       }
 
       // Load media index (if available) for high-bitrate availability checks
@@ -448,7 +453,7 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
   let columnPipeState = 0; // 0=start, 1=break, 2=end
   const mediaIndexMap = mediaIndex && typeof mediaIndex === 'object' ? mediaIndex : null;
   const fallbackConfig = (typeof window !== 'undefined' && window.AppConfig) ? window.AppConfig : null;
-  const ccliLicenseNumber = String(appConfig?.ccliLicenseNumber || fallbackConfig?.ccliLicenseNumber || '').trim();
+  const ccliLicenseNumber = String(appConfig?.ccliLicenseNumber || fallbackConfig?.ccliLicenseNumber || '{Please set in settings}').trim();
   const replaceSettingMacros = (value) => {
     if (!ccliLicenseNumber) return value;
     return String(value).replace(/:ccli:/gi, ccliLicenseNumber);

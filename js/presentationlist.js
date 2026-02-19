@@ -182,14 +182,26 @@ if (optionsBtn && optionsDropdown) {
   });
 }
 
-function appendMediaParam(url) {
-  if (!appConfig?.preferHighBitrate) return url;
+function appendBrowserPresentationParams(url) {
+  const ccli = String(appConfig?.ccliLicenseNumber || '').trim();
+  const needsMedia = !!appConfig?.preferHighBitrate;
+  if (!needsMedia && !ccli) return url;
+
   try {
     const parsed = new URL(url, window.location.origin);
-    parsed.searchParams.set('media', 'high');
+    if (needsMedia) {
+      parsed.searchParams.set('media', 'high');
+    }
+    if (ccli) {
+      parsed.searchParams.set('ccli', ccli);
+    }
     return parsed.toString();
   } catch {
-    return url + (url.includes('?') ? '&' : '?') + 'media=high';
+    const params = [];
+    if (needsMedia) params.push('media=high');
+    if (ccli) params.push(`ccli=${encodeURIComponent(ccli)}`);
+    if (!params.length) return url;
+    return `${url}${url.includes('?') ? '&' : '?'}${params.join('&')}`;
   }
 }
 
@@ -484,7 +496,7 @@ function getPresentationActions(pres) {
       action: async () => {
         const baseURL = await getCopyLinkBaseURL();
         let link = `${baseURL}${url_prefix}/${pres.slug}/index.html?p=${pres.md}`;
-        link = appendMediaParam(link);
+        link = appendBrowserPresentationParams(link);
         if (window.electronAPI?.openExternalURL) {
           window.electronAPI.openExternalURL(link);
           return;
