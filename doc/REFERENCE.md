@@ -987,6 +987,148 @@ REVELation automatically includes these Reveal.js plugins:
 
 ---
 
+### 🧰 Builder Plugin Hooks
+
+Plugins can add entries to the builder **Add Content** menu.
+
+Supported browser-side hooks:
+
+* `getContentCreators(context)` (legacy, still supported)
+* `getBuilderTemplates(context)` (recommended)
+
+For `getBuilderTemplates`, each returned item can include:
+
+* `label` or `title`: menu label
+* `template` / `markdown` / `content`: markdown inserted into slides
+* `slides` / `stacks`: structured slide payloads
+* `onSelect(ctx)` or `build(ctx)`: optional callback for plugin UI/lightbox
+
+Callback context (`ctx`) includes:
+
+* `slug`, `mdFile`, `dir`, `origin`, `insertAt`
+* `insertContent(payload)`: helper to insert content at current builder position
+
+If `onSelect`/`build` calls `insertContent(...)`, the builder treats insertion as complete.
+
+Example:
+
+```js
+window.RevelationPlugins.example = {
+  getBuilderTemplates() {
+    return [
+      {
+        label: 'Insert Example Block',
+        template: ':note:\n  Add your content here\n',
+        async onSelect(ctx) {
+          // Optional: open custom UI, then insert dynamically
+          // ctx.insertContent({ markdown: '## Generated Slide' });
+        }
+      }
+    ];
+  }
+};
+```
+
+---
+
+### 📈 Chart Blocks (`:chart:`)
+
+When the `revealchart` plugin is enabled, you can define charts in markdown with a YAML block:
+
+In the Presentation Builder, use **Add Content → Insert Chart Block** to open a chart dialog that generates this block for you.
+
+```yaml
+:chart:
+  items:
+    - type: line
+      data:
+        labels: ["Jan", "Feb", "Mar"]
+        datasets:
+          - label: Attendance
+            data: [12, 19, 9]
+      options:
+        responsive: true
+```
+
+This is preprocessed into chart canvas markup understood by RevealChart.
+
+You can control chart size per item with `height` and `width`:
+
+```yaml
+:chart:
+  items:
+    - type: line
+      height: 520px
+      width: 80%
+```
+
+- Default chart height is `400px`.
+- Default chart width is `100%`.
+- Charts are centered automatically when width is less than 100%.
+- Accepted `height`/`width` values: numbers (treated as px), `px`, `vh`, `vw`, `%`, `rem`, `em`.
+
+You can also load chart data from a CSV file with `datasource` (instead of `data`):
+
+```yaml
+:chart:
+  items:
+    - type: bar
+      datasource: attendance.csv
+      options:
+        responsive: true
+```
+
+Expected CSV format:
+
+```csv
+,"Adult","Children","Pets"
+"Jan",5,3,7
+"Feb",4,8,9
+"Mar",1,7,2
+```
+
+This maps first-column values to chart labels (`Jan`, `Feb`, `Mar`) and header row values to dataset labels (`Adult`, `Children`, `Pets`).
+
+You can also use an object form for `datasource` to pull subsets from one CSV:
+
+```yaml
+:chart:
+  items:
+    - type: line
+      datasource:
+        file: attendance.csv
+        series: column-series
+        labelColumn: C
+        dataColumns: E,F
+        headerRow: 1
+        dataRows: 2:4
+```
+
+- `series: column-series` (default): each selected column becomes a dataset.
+- `series: row-series`: each selected row becomes a dataset.
+- `labelColumn`: column used for x-axis labels (for `column-series`) or dataset names (for `row-series`).
+- `dataColumns`: selected data columns (`E,F`, `E:F`, or `[E, F]`).
+- `headerRow`: row with dataset labels for `column-series` (default `1`).
+- `labelRow`: row with x-axis labels for `row-series` (default `1`).
+- `dataRows`: selected rows (`2,3,4`, `2:4`, or `[2, 3, 4]`).
+
+Example row-series:
+
+```yaml
+:chart:
+  items:
+    - type: radar
+      datasource:
+        file: attendance.csv
+        series: row-series
+        labelRow: 1
+        labelColumn: A
+        dataColumns: B:D
+        dataRows: 2:4
+```
+
+---
+
 ### 🧱 Add Your Own Styles
 
 You can include a custom stylesheet in the YAML:
