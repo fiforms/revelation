@@ -437,11 +437,13 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
   if (!forHandout) {
     magicImageHandlers.background = (src, modifier, attribution) => {
       const isVideo = /\.(webm|mp4|mov|m4v)$/i.test(src);
+      const normalizedModifier = String(modifier || '').trim().toLowerCase();
+      const shouldLoop = normalizedModifier !== 'noloop';
 
       const tag = isVideo
-        ? `<!-- .slide: data-background-video="${src}" data-background-video-loop -->`
+        ? `<!-- .slide: data-background-video="${src}"${shouldLoop ? ' data-background-video-loop' : ''} -->`
         : `<!-- .slide: data-background-image="${src}" -->`;
-      if(modifier === 'sticky') {
+      if(normalizedModifier === 'sticky') {
         thismacros.push(tag);
         if(attribution) {
           thismacros.push(`{{attrib:${attribution}}}`);
@@ -635,6 +637,10 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
     }
 
     if (suppressVisualElements) {
+      const trimmedLine = line.trim();
+      const isNoteSeparator =
+        trimmedLine.toLowerCase() === NOTE_SEPARATOR_CURRENT ||
+        trimmedLine.toLowerCase() === NOTE_SEPARATOR_LEGACY.toLowerCase();
       const isMacroUse = /^\s*\{\{[^}]+\}\}\s*$/.test(line);
       const isInlineMacro = /^\s*:[A-Za-z0-9_]+(?::.*)?:\s*$/.test(line);
       const isAttribLine = /^\s*:ATTRIB:.*$/i.test(line) || /^\s*:AI:\s*$/i.test(line);
@@ -642,7 +648,7 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
       const hasHtmlVisual = /<\s*(img|video|iframe|figure)\b/i.test(line);
       const hasBackgroundData = /data-background-(image|video|audio|audio-start|audio-loop|audio-stop)/i.test(line);
 
-      if (isMacroUse || isInlineMacro || isAttribLine || hasMarkdownImage || hasHtmlVisual || hasBackgroundData) {
+      if (!isNoteSeparator && (isMacroUse || isInlineMacro || isAttribLine || hasMarkdownImage || hasHtmlVisual || hasBackgroundData)) {
         continue;
       }
     }

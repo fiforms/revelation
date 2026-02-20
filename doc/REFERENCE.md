@@ -722,6 +722,7 @@ REVELation supports enhanced image syntax that simplifies adding background vide
 | Keyword             | Behavior                                              |
 | ------------------- | ----------------------------------------------------- |
 | `background`        | Converts to a background image or video               |
+| `background:noloop` | Uses video background without adding loop             |
 | `background:sticky` | Resets macros and continues background to next slides |
 | `fit`               | Scales image to fit inside slide with styling         |
 | `caption`           | Adds a `<figure>` and `<figcaption>` wrapper          |
