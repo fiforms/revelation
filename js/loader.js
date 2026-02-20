@@ -400,7 +400,52 @@ export function extractFrontMatter(md) {
   }
 }
 
+function runPluginMarkdownPreprocessors(md, context = {}) {
+  if (typeof window === 'undefined' || !window.RevelationPlugins) {
+    return md;
+  }
+
+  const plugins = Object.entries(window.RevelationPlugins)
+    .map(([name, plugin]) => ({
+      name,
+      plugin,
+      priority: Number.isFinite(plugin?.priority) ? plugin.priority : 100
+    }))
+    .sort((a, b) => a.priority - b.priority);
+
+  let transformed = String(md ?? '');
+  for (const { name, plugin } of plugins) {
+    if (typeof plugin?.preprocessMarkdown !== 'function') {
+      continue;
+    }
+    try {
+      const next = plugin.preprocessMarkdown(transformed, context);
+      if (typeof next === 'string') {
+        transformed = next;
+      } else if (next !== undefined && next !== null) {
+        console.warn(`Plugin '${name}' preprocessMarkdown returned non-string value; ignoring.`);
+      }
+    } catch (err) {
+      console.error(`Plugin '${name}' preprocessMarkdown failed:`, err);
+    }
+  }
+
+  return transformed;
+}
+
 export function preprocessMarkdown(md, userMacros = {}, forHandout = false, media = {}, newSlideOnHeading = true, mediaIndex = null, preferHigh = null, suppressVisualElements = false, appConfig = null) {
+  md = runPluginMarkdownPreprocessors(md, {
+    forHandout,
+    userMacros,
+    media,
+    newSlideOnHeading,
+    mediaIndex,
+    preferHigh,
+    suppressVisualElements,
+    appConfig,
+    parseYAML: (text) => yaml.load(text)
+  });
+
   const lines = md.split('\n');
   const processedLines = [];
   const attributions = [];
