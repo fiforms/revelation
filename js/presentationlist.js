@@ -147,6 +147,13 @@ function formatVariantName(variant) {
   return variant;
 }
 
+const SCREEN_TYPE_VARIANTS = [
+  { value: '', label: 'Normal' },
+  { value: 'lowerthirds', label: 'Lower Thirds' },
+  { value: 'confidencemonitor', label: 'Confidence Monitor' },
+  { value: 'notes', label: 'Notes' }
+];
+
 if (selectedLanguageDisplay) {
   const lang = (appConfig?.preferredPresentationLanguage || appConfig?.language || 'en').toLowerCase();
   selectedLanguageDisplay.textContent = lang;
@@ -182,10 +189,18 @@ if (optionsBtn && optionsDropdown) {
   });
 }
 
-function appendBrowserPresentationParams(url) {
+function appendBrowserPresentationParams(url, overrides = {}) {
   const ccli = String(appConfig?.ccliLicenseNumber || '').trim();
   const needsMedia = !!appConfig?.preferHighBitrate;
-  if (!needsMedia && !ccli) return url;
+  const requestedLanguage = Object.prototype.hasOwnProperty.call(overrides, 'language')
+    ? overrides.language
+    : (appConfig?.preferredPresentationLanguage || appConfig?.language || 'en');
+  const requestedVariant = Object.prototype.hasOwnProperty.call(overrides, 'variant')
+    ? overrides.variant
+    : (appConfig?.screenTypeVariant || '');
+  const lang = String(requestedLanguage || '').trim().toLowerCase();
+  const variant = String(requestedVariant || '').trim().toLowerCase();
+  if (!needsMedia && !ccli && !lang && !variant) return url;
 
   try {
     const parsed = new URL(url, window.location.origin);
@@ -195,11 +210,21 @@ function appendBrowserPresentationParams(url) {
     if (ccli) {
       parsed.searchParams.set('ccli', ccli);
     }
+    if (lang) {
+      parsed.searchParams.set('lang', lang);
+    }
+    if (variant) {
+      parsed.searchParams.set('variant', variant);
+    } else {
+      parsed.searchParams.delete('variant');
+    }
     return parsed.toString();
   } catch {
     const params = [];
     if (needsMedia) params.push('media=high');
     if (ccli) params.push(`ccli=${encodeURIComponent(ccli)}`);
+    if (lang) params.push(`lang=${encodeURIComponent(lang)}`);
+    if (variant) params.push(`variant=${encodeURIComponent(variant)}`);
     if (!params.length) return url;
     return `${url}${url.includes('?') ? '&' : '?'}${params.join('&')}`;
   }
@@ -322,13 +347,166 @@ function formatVariantDetails(variants = []) {
     return tr('Default only');
   }
   return variants
-    .filter((entry) => !entry?.hidden)
     .map((entry) => {
       const language = String(entry.language || '').trim() || tr('default');
       const masterSuffix = entry.isMaster ? ` (${tr('master')})` : '';
       return `${language}${masterSuffix}`;
     })
     .join(', ') || tr('Default only');
+}
+
+function getLanguageFromMdFile(mdFile = '') {
+  const match = String(mdFile || '').trim().toLowerCase().match(/_([a-z]{2,8}(?:-[a-z0-9]{2,8})?)\.md$/);
+  return match ? match[1] : '';
+}
+
+function getLanguageVariantOptions(pres, details = null) {
+  const entries = Array.isArray(details?.variants) ? details.variants : [];
+  const seenMdFiles = new Set();
+  const options = [];
+  const addOption = (mdFile, language, isMaster = false) => {
+    const safeMdFile = String(mdFile || '').trim();
+    if (!safeMdFile || seenMdFiles.has(safeMdFile)) return;
+    seenMdFiles.add(safeMdFile);
+    const normalizedLanguage = String(language || '').trim().toLowerCase() || getLanguageFromMdFile(safeMdFile);
+    options.push({
+      mdFile: safeMdFile,
+      language: normalizedLanguage,
+      isMaster: !!isMaster
+    });
+  };
+
+  entries.forEach((entry) => {
+    addOption(entry?.mdFile, entry?.language, entry?.isMaster);
+  });
+
+  addOption(pres.md, appConfig?.preferredPresentationLanguage || appConfig?.language || 'en', true);
+  return options;
+}
+
+function buildLanguageOptionLabel(option) {
+  const language = option.language || tr('default');
+  const masterSuffix = option.isMaster ? ` (${tr('master')})` : '';
+  return `${language}${masterSuffix}`;
+}
+
+async function buildPresentationBrowserUrl(pres, mdFile, overrides = {}) {
+  const baseURL = await getCopyLinkBaseURL();
+  const parsed = new URL(`${url_prefix}/${pres.slug}/index.html`, baseURL);
+  parsed.searchParams.set('p', mdFile);
+  return appendBrowserPresentationParams(parsed.toString(), overrides);
+}
+
+async function launchPresentationWithOptions(pres, options = {}) {
+  const mode = String(options.mode || 'fullscreen').trim().toLowerCase();
+  const mdFile = String(options.mdFile || pres.md).trim() || pres.md;
+  const language = String(options.language || '').trim().toLowerCase();
+  const variant = String(options.variant || '').trim().toLowerCase();
+  const overrides = { language, variant };
+
+  if (mode === 'browser') {
+    const link = await buildPresentationBrowserUrl(pres, mdFile, overrides);
+    if (window.electronAPI?.openExternalURL) {
+      window.electronAPI.openExternalURL(link);
+      return;
+    }
+    window.open(link, '_blank', 'noopener,noreferrer');
+    return;
+  }
+
+  if (window.electronAPI?.openPresentation) {
+    const fullscreen = mode !== 'window';
+    window.electronAPI.openPresentation(pres.slug, mdFile, fullscreen, overrides);
+    return;
+  }
+
+  const parsed = new URL(`${url_prefix}/${pres.slug}/index.html`, window.location.origin);
+  parsed.searchParams.set('p', mdFile);
+  const targetUrl = appendBrowserPresentationParams(parsed.toString(), overrides);
+  window.open(targetUrl, '_blank');
+}
+
+async function openSlideshowOptionsLightbox(pres, details = null) {
+  const variantDetails = details || await loadPresentationDetails(pres);
+  const languageOptions = getLanguageVariantOptions(pres, variantDetails);
+  const defaultLanguage = String(appConfig?.preferredPresentationLanguage || appConfig?.language || 'en').trim().toLowerCase();
+  const defaultVariant = String(appConfig?.screenTypeVariant || '').trim().toLowerCase();
+  const defaultOption = languageOptions.find((entry) => entry.language === defaultLanguage)
+    || languageOptions.find((entry) => entry.mdFile === pres.md)
+    || languageOptions[0];
+
+  const existing = document.getElementById('slideshow-options-overlay');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'slideshow-options-overlay';
+  overlay.className = 'slideshow-options-overlay';
+  const languageSelectOptions = languageOptions.map((entry) => (
+    `<option value="${entry.mdFile}" data-language="${entry.language}">${buildLanguageOptionLabel(entry)}</option>`
+  )).join('');
+  const screenTypeOptions = SCREEN_TYPE_VARIANTS.map((entry) => (
+    `<option value="${entry.value}">${tr(entry.label)}</option>`
+  )).join('');
+
+  overlay.innerHTML = `
+    <div class="slideshow-options-dialog" role="dialog" aria-modal="true" aria-labelledby="slideshow-options-title">
+      <div class="slideshow-options-title" id="slideshow-options-title">${tr('Slideshow Options')}</div>
+      <label class="slideshow-options-label" for="slideshow-open-in">${tr('Open in')}</label>
+      <select id="slideshow-open-in" class="slideshow-options-input">
+        <option value="window">${tr('Window')}</option>
+        <option value="fullscreen">${tr('Fullscreen')}</option>
+        <option value="browser">${tr('Browser')}</option>
+      </select>
+
+      <label class="slideshow-options-label" for="slideshow-language-variant">${tr('Language Variant')}</label>
+      <select id="slideshow-language-variant" class="slideshow-options-input">
+        ${languageSelectOptions}
+      </select>
+
+      <label class="slideshow-options-label" for="slideshow-screen-variant">${tr('Screen Type Variant')}</label>
+      <select id="slideshow-screen-variant" class="slideshow-options-input">
+        ${screenTypeOptions}
+      </select>
+
+      <div class="slideshow-options-actions">
+        <button type="button" id="slideshow-options-cancel" class="slideshow-options-btn">${tr('Cancel')}</button>
+        <button type="button" id="slideshow-options-open" class="slideshow-options-btn slideshow-options-btn-primary">${tr('Open')}</button>
+      </div>
+    </div>
+  `;
+
+  const closeOverlay = () => overlay.remove();
+  overlay.addEventListener('click', (event) => {
+    if (event.target === overlay) closeOverlay();
+  });
+  document.body.appendChild(overlay);
+
+  const openInSelect = overlay.querySelector('#slideshow-open-in');
+  const languageSelect = overlay.querySelector('#slideshow-language-variant');
+  const screenVariantSelect = overlay.querySelector('#slideshow-screen-variant');
+  const cancelBtn = overlay.querySelector('#slideshow-options-cancel');
+  const openBtn = overlay.querySelector('#slideshow-options-open');
+
+  openInSelect.value = 'window';
+  if (defaultOption) {
+    languageSelect.value = defaultOption.mdFile;
+  }
+  screenVariantSelect.value = defaultVariant;
+
+  cancelBtn.addEventListener('click', closeOverlay);
+  openBtn.addEventListener('click', async () => {
+    const selectedMd = String(languageSelect.value || pres.md);
+    const selectedLanguage = languageSelect.selectedOptions?.[0]?.dataset?.language || '';
+    const selectedVariant = String(screenVariantSelect.value || '');
+    const selectedMode = String(openInSelect.value || 'window');
+    await launchPresentationWithOptions(pres, {
+      mode: selectedMode,
+      mdFile: selectedMd,
+      language: selectedLanguage,
+      variant: selectedVariant
+    });
+    closeOverlay();
+  });
 }
 
 function setStandaloneSidebarOpen(open) {
@@ -412,7 +590,7 @@ function renderSelectedPresentationPanel(pres, details = null) {
   const host = getSelectedPanelHost();
   if (!host) return;
 
-  const actions = getPresentationActions(pres);
+  const actions = getPresentationActions(pres, details);
   const detailsLoaded = !!details;
   const author = detailsLoaded ? (details.author || tr('Unknown')) : tr('Loading...');
   const variants = detailsLoaded ? formatVariantDetails(details.variants) : tr('Loading...');
@@ -474,44 +652,15 @@ async function selectPresentation(pres, cardElement) {
   renderSelectedPresentationPanel(pres, details);
 }
 
-function getPresentationActions(pres) {
-  const hasElectronAPI = !!window.electronAPI;
+function getPresentationActions(pres, details = null) {
   const options = [
     {
       label: '🖥️ ' + tr('Slideshow (Full Screen)'),
       action: () => openPrimaryPresentation(pres)
     },
     {
-      label: '🪟 ' + tr('Slideshow (Windowed)'),
-      action: () => {
-        if (window.electronAPI?.openPresentation) {
-          window.electronAPI.openPresentation(pres.slug, pres.md, false);
-        } else {
-          window.open(`${url_prefix}/${pres.slug}/index.html?p=${pres.md}`, '_blank');
-        }
-      }
-    },
-    {
-      label: '🔗 ' + tr(hasElectronAPI ? 'Slideshow (Browser)' : 'Copy Link'),
-      action: async () => {
-        const baseURL = await getCopyLinkBaseURL();
-        let link = `${baseURL}${url_prefix}/${pres.slug}/index.html?p=${pres.md}`;
-        link = appendBrowserPresentationParams(link);
-        if (window.electronAPI?.openExternalURL) {
-          window.electronAPI.openExternalURL(link);
-          return;
-        }
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(link)
-            .then(() => console.log('✅ Link copied to clipboard'))
-            .catch(err => {
-              console.error('❌ Clipboard error:', err);
-              fallbackCopyText(link);
-            });
-        } else {
-          fallbackCopyText(link);
-        }
-      }
+      label: '⚙️ ' + tr('Slideshow') + '...',
+      action: () => openSlideshowOptionsLightbox(pres, details)
     },
     { label: '📄 ' + tr('Handout View'), action: () => handoutView(pres.slug, pres.md) }
   ];
@@ -702,23 +851,6 @@ function exportPDF(slug, mdFile) {
     else {
       window.open(`${url_prefix}/${slug}/index.html?print-pdf&p=${mdFile}`, '_blank') 
     }
-}
-
-function fallbackCopyText(text) {
-  const textarea = document.createElement('textarea');
-  textarea.value = text;
-  textarea.style.position = 'fixed';  // avoid scroll jump
-  document.body.appendChild(textarea);
-  textarea.focus();
-  textarea.select();
-  try {
-    document.execCommand('copy');
-    console.log('✅ Link copied (fallback)');
-  } catch (err) {
-    console.error('❌ Fallback copy failed', err);
-    alert(tr('Failed to copy the link. You can do it manually') + ':\n' + text);
-  }
-  document.body.removeChild(textarea);
 }
 
 function showToast(message) {
