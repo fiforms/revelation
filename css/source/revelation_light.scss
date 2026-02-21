@@ -75,15 +75,15 @@ $heading4Size: 2.0em;
 }
 
 .reveal h1 {
-    text-shadow: 1px 2px 3px rgba(0, 0, 0, 0.2);
+    text-shadow: 1px 2px 3px rgba(255, 255, 255, 0.5);
 }
 
 .reveal h2, .reveal h3, .reveal h4, .reveal h5, .reveal h6 {
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.16);
+    text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.3);
 }
 
 .reveal p {
-    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.12);
+    text-shadow: 0 1px 1px rgba(255, 255, 255, 0.3);
 }
 
 .reveal h4 {
@@ -100,3 +100,16 @@ $heading4Size: 2.0em;
     padding: 1rem;
     border-radius: 8px;
 }
+
+
+  section[data-lighttext],
+  section[data-lighttext] p,
+  section[data-lighttext] li,
+  section[data-lighttext] h1,
+  section[data-lighttext] h2,
+  section[data-lighttext] h3,
+  section[data-lighttext] h4,
+  section[data-lighttext] h5,
+  section[data-lighttext] h6 {
+    text-shadow: 2px 2px 3px rgba(0,0,0,0.8);
+  }

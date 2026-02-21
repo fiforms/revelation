@@ -126,6 +126,8 @@ body.reveal-ready {
   }
 
   section[data-lighttext],
+  section[data-lighttext] p,
+  section[data-lighttext] li,
   section[data-lighttext] h1,
   section[data-lighttext] h2,
   section[data-lighttext] h3,
@@ -136,6 +138,8 @@ body.reveal-ready {
   }
 
   section[data-darktext],
+  section[data-darktext] p,
+  section[data-darktext] li,
   section[data-darktext] h1,
   section[data-darktext] h2,
   section[data-darktext] h3,

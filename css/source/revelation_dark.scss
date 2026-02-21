@@ -95,6 +95,18 @@ $heading4Size: 2.0em;
     font-weight: 400;
 }
 
+  section[data-darktext],
+  section[data-darktext] p,
+  section[data-darktext] li,
+  section[data-darktext] h1,
+  section[data-darktext] h2,
+  section[data-darktext] h3,
+  section[data-darktext] h4,
+  section[data-darktext] h5,
+  section[data-darktext] h6 {
+    text-shadow: 2px 2px 3px rgba(255,255,255,0.8);
+  }
+
 .info-head, .info-body {
     background-color: rgba(0, 0, 0, 0.5);
     padding: 1rem;
