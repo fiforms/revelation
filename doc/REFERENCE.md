@@ -1146,6 +1146,7 @@ Supported keys:
 
 * `datasource`: CSV file path (or object form with `file`, `dataColumns`, `dataRows`, `headerRow`)
 * `class`: extra class name applied to `<table>` (for example `lighttable` or `darktable`)
+* `style`: raw inline CSS style applied to `<table>` (for example `font-size: 8pt`)
 * `overflow`: CSS overflow mode for a wrapper (`scroll`, `auto`, `hidden`, etc.)
 * `height`: overall table box height (`320px`, `45vh`, etc.). If set without `overflow`, overflow defaults to `auto`.
 * `dataColumns`: selected columns (`A,C,D` or `A:D`)
