@@ -1165,6 +1165,7 @@ Supported keys:
 * `format`: default value format (`normal`, `currency`, `percentage`)
 * `formatColumns`: per-column format map, e.g. `{ C: currency, D: percentage }`
 * `currency`: currency code for `currency` format (default `USD`)
+* `summarizeColumns`: per-column summary map, e.g. `{ C: sum, D: average }`
 
 Built-in table styles:
 
@@ -1188,6 +1189,9 @@ Formatting example:
   formatColumns:
     C: currency
     D: percentage
+  summarizeColumns:
+    C: sum
+    D: average
   currency: USD
 ```
 
