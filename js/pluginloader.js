@@ -1,6 +1,15 @@
 export function pluginLoader(page, prefix) {
   window.RevelationPlugins = {};
 
+  if (window.location.protocol === 'file:') {
+    showFileProtocolPluginWarning();
+    return Promise.resolve([]);
+  }
+
+  if (window.__offlinePluginList && typeof window.__offlinePluginList === 'object') {
+    return handlePluginList(window.__offlinePluginList, page);
+  }
+
   if (window.electronAPI && window.electronAPI.getPluginList) {
     // Use Electron API
     return window.electronAPI.getPluginList({ host: window.location.host }).then(pluginList => {
@@ -25,12 +34,31 @@ export function pluginLoader(page, prefix) {
   }
 }
 
+function showFileProtocolPluginWarning() {
+  const warning =
+    'Plugins and some advanced features are disabled when opening presentation HTML directly as file:///.\n\nUse a local web server (http://localhost/...) to enable full functionality.';
+
+  if (!window.__revelationFileProtocolPluginWarningShown) {
+    window.__revelationFileProtocolPluginWarningShown = true;
+    console.warn(`[pluginloader] ${warning}`);
+    window.alert(warning);
+  }
+}
+
 function handlePluginList(pluginList, page) {
     const pluginPromises = [];
 
     for (const [name, plugin] of Object.entries(pluginList)) {
       if (plugin.baseURL && plugin.clientHookJS) {
-        const scriptURL = `${plugin.baseURL}/${plugin.clientHookJS}`;
+        let normalizedBaseURL = String(plugin.baseURL || '').replace(/\/+$/, '');
+        try {
+          normalizedBaseURL = new URL(normalizedBaseURL, window.location.href).toString().replace(/\/+$/, '');
+        } catch (err) {
+          console.warn(`⚠️ Plugin '${name}' has invalid baseURL '${plugin.baseURL}':`, err);
+          continue;
+        }
+
+        const scriptURL = `${normalizedBaseURL}/${plugin.clientHookJS}`;
 
         const promise = new Promise((resolve) => {
           const script = document.createElement('script');
@@ -45,7 +73,12 @@ function handlePluginList(pluginList, page) {
             ) {
               const pluginModule = window.RevelationPlugins[name];
               if (typeof pluginModule.init === 'function') {
-                pluginModule.init({ pluginName: name, baseURL: plugin.baseURL, page: page, config: plugin.config });
+                pluginModule.init({
+                  pluginName: name,
+                  baseURL: normalizedBaseURL,
+                  page: page,
+                  config: plugin.config
+                });
               }
               window.RevelationPlugins[name].priority = plugin.priority;
               console.log(`✅ Plugin '${name}' loaded`);

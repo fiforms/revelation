@@ -1031,6 +1031,45 @@ window.RevelationPlugins.example = {
 
 ---
 
+### 📦 Offline Export Plugin Hooks
+
+Plugins can optionally add an `offline.js` file in their plugin folder to participate in offline export packaging.
+
+Supported Node-side hooks:
+
+* `build(context)` (optional): runs from `scripts/build-offline-plugins.js`
+* `export(context)` (optional): runs during Electron offline ZIP export
+
+`export(context)` can return:
+
+* `pluginListEntry`: plugin metadata injected into offline pages for `pluginLoader`
+* `headTags`: array of HTML strings injected into `<head>`
+* `bodyTags`: array of HTML strings injected before `offline-bundle.js`
+* `copy`: array of files/folders to copy into `_resources` with `{ from, to }`
+
+Example shape:
+
+```js
+module.exports = {
+  async export(ctx) {
+    return {
+      pluginListEntry: {
+        baseURL: './_resources/plugins/example',
+        clientHookJS: 'client.js',
+        priority: 100,
+        config: {}
+      },
+      copy: [
+        { from: 'client.js', to: 'plugins/example/client.js' },
+        { from: 'dist', to: 'plugins/example/dist' }
+      ]
+    };
+  }
+};
+```
+
+---
+
 ### 📈 Chart Blocks (`:chart:`)
 
 When the `revealchart` plugin is enabled, you can define charts in markdown with a YAML block:
