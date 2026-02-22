@@ -1035,7 +1035,7 @@ window.RevelationPlugins.example = {
 
 When the `revealchart` plugin is enabled, you can define charts in markdown with a YAML block:
 
-In the Presentation Builder, use **Add Content → Insert Chart Block** to open a chart dialog that generates this block for you.
+In the Presentation Builder, use **Add Content → Insert Chart Block** or **Add Content → Insert Table Block** to open a data-block dialog that generates these blocks for you.
 
 ```yaml
 :chart:
@@ -1125,6 +1125,61 @@ Example row-series:
         labelColumn: A
         dataColumns: B:D
         dataRows: 2:4
+```
+
+---
+
+### 📋 Table Blocks (`:table:`)
+
+You can also render CSV data directly as an HTML table:
+
+```yaml
+:table:
+  datasource: attendance.csv
+  class: lighttable
+  overflow: scroll
+  height: 320px
+  dataColumns: A,C,D,E,F
+```
+
+Supported keys:
+
+* `datasource`: CSV file path (or object form with `file`, `dataColumns`, `dataRows`, `headerRow`)
+* `class`: extra class name applied to `<table>` (for example `lighttable` or `darktable`)
+* `overflow`: CSS overflow mode for a wrapper (`scroll`, `auto`, `hidden`, etc.)
+* `height`: overall table box height (`320px`, `45vh`, etc.). If set without `overflow`, overflow defaults to `auto`.
+* `dataColumns`: selected columns (`A,C,D` or `A:D`)
+* `dataRows`: selected rows (`2,3,4` or `2:4`)
+* `headerRow`: header row index (default `1`)
+* `align`: default cell alignment (`left`, `right`, `center`)
+* `alignColumns`: per-column alignment map, e.g. `{ A: left, C: right, D: right }`
+* `format`: default value format (`normal`, `currency`, `percentage`)
+* `formatColumns`: per-column format map, e.g. `{ C: currency, D: percentage }`
+* `currency`: currency code for `currency` format (default `USD`)
+
+Built-in table styles:
+
+* `datatable` is always applied as the base table style.
+* `lighttable` applies a light surface + dark text variant.
+* `darktable` applies a dark surface + light text variant.
+
+Formatting example:
+
+```yaml
+:table:
+  datasource: attendance.csv
+  class: darktable
+  dataColumns: A,C,D,E,F
+  align: left
+  alignColumns:
+    C: right
+    D: right
+    E: right
+    F: right
+  formatColumns:
+    C: currency
+    D: percentage
+  currency: USD
 ```
 
 ---

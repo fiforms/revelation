@@ -416,3 +416,105 @@ cite.attrib {
   opacity: 0.7;
 }
 
+// Basic styling for :table: blocks from the revealchart plugin.
+.reveal .table-overflow-wrap {
+  max-width: 100%;
+}
+
+.reveal table.datatable {
+  width: min(100%, calc(var(--slide-width) * 0.95));
+  border-collapse: collapse;
+  border-spacing: 0;
+  margin: 0.42em auto;
+  font-size: 0.5em;
+  line-height: 1.35;
+  border-radius: 0.45em;
+  overflow: hidden;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.18);
+}
+
+.reveal table.datatable thead th,
+.reveal table.datatable tbody td {
+  padding: 0.34em 0.44em;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  text-align: left;
+  vertical-align: top;
+}
+
+.reveal table.datatable thead th {
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.reveal table.datatable tbody tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.reveal table.datatable tbody tr:hover {
+  background: rgba(59, 130, 246, 0.18);
+}
+
+.reveal table.datatable .datatable-align-left {
+  text-align: left;
+}
+
+.reveal table.datatable .datatable-align-center {
+  text-align: center;
+}
+
+.reveal table.datatable .datatable-align-right {
+  text-align: right;
+}
+
+.reveal table.datatable .datatable-negative-currency {
+  color: #c93b3b;
+  font-weight: 600;
+}
+
+.reveal table.datatable.lighttable {
+  background: rgba(255, 255, 255, 0.95);
+  color: #1f2733;
+  box-shadow: 0 8px 24px rgba(10, 20, 40, 0.22);
+}
+
+.reveal table.datatable.lighttable thead th {
+  background: #e9f1ff;
+  color: #172033;
+  border-color: rgba(33, 53, 84, 0.26);
+}
+
+.reveal table.datatable.lighttable tbody td {
+  border-color: rgba(33, 53, 84, 0.2);
+}
+
+.reveal table.datatable.lighttable tbody tr:nth-child(even) {
+  background: rgba(233, 241, 255, 0.58);
+}
+
+.reveal table.datatable.lighttable tbody tr:hover {
+  background: rgba(173, 206, 255, 0.62);
+}
+
+.reveal table.datatable.darktable {
+  background: rgba(17, 21, 32, 0.95);
+  color: #e8eefb;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.4);
+}
+
+.reveal table.datatable.darktable thead th {
+  background: #222a3d;
+  color: #f1f5ff;
+  border-color: rgba(202, 221, 255, 0.26);
+}
+
+.reveal table.datatable.darktable tbody td {
+  border-color: rgba(202, 221, 255, 0.16);
+}
+
+.reveal table.datatable.darktable tbody tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.reveal table.datatable.darktable tbody tr:hover {
+  background: rgba(86, 151, 255, 0.22);
+}
