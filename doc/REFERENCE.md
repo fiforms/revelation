@@ -1052,15 +1052,6 @@ In the Presentation Builder, use **Add Content → Insert Chart Block** or **Add
 
 This is preprocessed into chart canvas markup understood by RevealChart.
 
-If you have many chart-heavy slides in a row and some charts render blank while navigating, disable animation:
-
-```yaml
-options:
-  animation: false
-```
-
-This reduces re-animation load during slide transitions and can improve reliability.
-
 You can control chart size per item with `height` and `width`:
 
 ```yaml
