@@ -1136,6 +1136,7 @@ You can also render CSV data directly as an HTML table:
 ```yaml
 :table:
   datasource: attendance.csv
+  dataId: attendance-window
   class: lighttable
   overflow: scroll
   height: 320px
@@ -1145,6 +1146,8 @@ You can also render CSV data directly as an HTML table:
 Supported keys:
 
 * `datasource`: CSV file path (or object form with `file`, `dataColumns`, `dataRows`, `headerRow`)
+* `id`: optional DOM id for the generated `<table>`
+* `dataId`: optional Reveal auto-animate identity (`data-id`) for matching the same table across slides
 * `class`: extra class name applied to `<table>` (for example `lighttable` or `darktable`)
 * `style`: raw inline CSS style applied to `<table>` (for example `font-size: 8pt`)
 * `overflow`: CSS overflow mode for a wrapper (`scroll`, `auto`, `hidden`, etc.)
