@@ -304,6 +304,22 @@ body.reveal-ready {
     object-fit: contain;
   }
 
+  // Inside columns, fit media should behave like normal in-flow media, not full-slide absolute fit.
+  section div.flexcontainer img[data-imagefit],
+  section div.flexcontainer video[data-imagefit] {
+    position: static;
+    top: auto;
+    left: auto;
+    right: auto;
+    bottom: auto;
+    margin: 0;
+    width: auto;
+    height: auto;
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+  }
+
   figure.captioned-image {
     display: block;
     position: absolute;
