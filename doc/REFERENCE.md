@@ -1091,6 +1091,21 @@ In the Presentation Builder, use **Add Content → Insert Chart Block** or **Add
 
 This is preprocessed into chart canvas markup understood by RevealChart.
 
+⚠️ **RevealChart rendering note**
+
+If charts render blank when you navigate to later slides, set both `config.viewDistance` and `config.mobileViewDistance` higher than your total slide count:
+
+```yaml
+---
+config:
+  viewDistance: 120
+  mobileViewDistance: 120
+---
+```
+
+This keeps more slides pre-rendered so chart canvases are initialized before you reach them. Always test your slide decks from the beginning
+after inserting a chart block!
+
 You can control chart size per item with `height` and `width`:
 
 ```yaml
