@@ -30,6 +30,7 @@ export function revealTweaks(deck) {
     if (!isThumbnail) {
       initBackgroundAudio(deck);
       initCountdowns(deck);
+      initFitVideoControls(deck);
       deck.on('slidechanged', e => {
         e.currentSlide.querySelectorAll('video[data-imagefit]').forEach(v => {
           v.play().catch(() => {});
@@ -47,6 +48,45 @@ export function revealTweaks(deck) {
     hideControlsOnSpeakerNotes();
     doubleClickFullScreen();
     hideCursorOnIdle();
+}
+
+function initFitVideoControls(deck) {
+  const wireSlideFitVideos = (slide) => {
+    if (!slide) {
+      return;
+    }
+
+    slide.querySelectorAll('video[data-imagefit]').forEach((video) => {
+      if (video.dataset.fitVideoControlsWired === '1') {
+        return;
+      }
+      video.dataset.fitVideoControlsWired = '1';
+
+      const syncControlsToState = () => {
+        video.controls = !!(video.paused || video.ended);
+      };
+
+      // With controls hidden, keep click useful by toggling pause/play directly.
+      video.addEventListener('click', () => {
+        if (video.controls) {
+          return;
+        }
+        if (video.paused || video.ended) {
+          video.play().catch(() => {});
+          return;
+        }
+        video.pause();
+      });
+
+      video.addEventListener('play', syncControlsToState);
+      video.addEventListener('pause', syncControlsToState);
+      video.addEventListener('ended', syncControlsToState);
+      syncControlsToState();
+    });
+  };
+
+  deck.on('ready', (e) => wireSlideFitVideos(e.currentSlide));
+  deck.on('slidechanged', (e) => wireSlideFitVideos(e.currentSlide));
 }
 
 function ensureLinksOpenExternally(deck) {

@@ -336,6 +336,12 @@ export async function loadAndPreprocessMarkdown(deck,selectedFile = null) {
 
       // Initialize Reveal.js
       const config = metadata.config || {};
+      if (Object.prototype.hasOwnProperty.call(config, 'margin')) {
+        const parsedMargin = Number(config.margin);
+        if (Number.isFinite(parsedMargin) && parsedMargin < 0.002) {
+          config.margin = 0.002;
+        }
+      }
       if (variant === 'notes') {
         config.showNotes = true;
       }
@@ -792,6 +798,17 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
       const handler = magicImageHandlers[keyword];
       if (handler) {
         processedLines.push(handler(src, modifier, lastattribution));
+        continue;
+      }
+    }
+
+    // Auto-promote plain markdown image syntax to fit-style video when the source is a video file.
+    const plainMediaMatch = line.match(/^!\[(.*?)\]\((.+?)\)$/);
+    if (plainMediaMatch) {
+      const altText = plainMediaMatch[1].trim();
+      const src = plainMediaMatch[2].trim();
+      if (!altText && /\.(webm|mp4|mov|m4v)(\?.*)?$/i.test(src)) {
+        processedLines.push(`<video src="${src}" controls playsinline data-imagefit data-imagefit-autovideo></video>`);
         continue;
       }
     }
