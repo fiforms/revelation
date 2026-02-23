@@ -1,5 +1,3 @@
----
-
 # REVELation
 
 **Snapshot Presenter Framework**
