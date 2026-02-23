@@ -30,6 +30,8 @@ export function contextMenu(deck) {
       `;
 
       const isLocal = window.location.hostname === 'localhost';
+      const isElectron = !!window.electronAPI;
+      const hasBackHistory = canGoBack();
 
       const canSendToPeers = !!window.electronAPI?.sendPeerCommand || (window.parent && window.parent !== window);
 
@@ -37,6 +39,10 @@ export function contextMenu(deck) {
         { label: tr('Show Reveal.js Help (?)'), action: () => deck.toggleHelp() },
         { label: tr('Show Speaker Notes (s)'), action: () => deck.getPlugins().notes.open() },
         { label: tr('Toggle Fullscreen'), action: () => toggleFullscreen() },
+        ...(isElectron ? [
+          { label: tr('Copy Presentation URL'), action: () => copyPresentationUrl() },
+          ...(hasBackHistory ? [{ label: tr('Back'), action: () => goBack() }] : [])
+        ] : []),
         ...(!isLocal ? [
           { label: tr('Toggle Remote Follower Link (a)'), action: () => fireRevealKey('a') },
           { label: tr('Toggle Remote Control Link (r)'), action: () => fireRevealKey('r') }
@@ -236,6 +242,21 @@ function closePresentation() {
       alert(tr("Please close this tab manually."));
     }
   }
+}
+
+function copyPresentationUrl() {
+  fallbackCopyText(window.location.href);
+}
+
+function goBack() {
+  window.history.back();
+}
+
+function canGoBack() {
+  if (window.navigation && typeof window.navigation.canGoBack === 'boolean') {
+    return window.navigation.canGoBack;
+  }
+  return window.history.length > 1;
 }
 
 function fireRevealKey(key) {
