@@ -9,6 +9,41 @@ import { marked } from 'marked';
 const urlParams = new URLSearchParams(window.location.search);
 const mdFile = urlParams.get('p');
 const SAFE_MD_LINK_RE = /^(?:\.\/)?[a-zA-Z0-9_.-]+\.md$/;
+const optionsToggleButton = document.getElementById('handout-options-toggle');
+const optionsPanel = document.getElementById('handout-options');
+
+function setHandoutOptionsOpen(isOpen) {
+  if (!optionsToggleButton || !optionsPanel) return;
+  optionsPanel.hidden = !isOpen;
+  optionsToggleButton.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+}
+
+function setupHandoutOptionsMenu() {
+  if (!optionsToggleButton || !optionsPanel) return;
+
+  optionsToggleButton.addEventListener('click', (event) => {
+    event.stopPropagation();
+    const nextOpen = optionsPanel.hidden;
+    setHandoutOptionsOpen(nextOpen);
+  });
+
+  optionsPanel.addEventListener('click', (event) => {
+    event.stopPropagation();
+  });
+
+  document.addEventListener('click', () => {
+    if (!optionsPanel.hidden) {
+      setHandoutOptionsOpen(false);
+    }
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && !optionsPanel.hidden) {
+      setHandoutOptionsOpen(false);
+      optionsToggleButton.focus();
+    }
+  });
+}
 
 function resolveHandoutMarkdownTarget(href) {
   if (!href) return null;
@@ -146,6 +181,7 @@ const container = document.getElementById('handout-content');
 if (!mdFile) {
   container.innerHTML = '<p>No markdown file specified.</p>';
 } else {
+  setupHandoutOptionsMenu();
   setupInterPresentationHandoutLinks();
   fetch(`${mdFile}`)
     .then(res => res.text())
@@ -217,8 +253,8 @@ if (!mdFile) {
 	  const slideno = incremental ? slideCount : `${hIndex}.${vIndex}` ;
 
           output.push('<section class="slide">');
-	  output.push(`<div class="slide-number slide-number-link" style="display: none"><a data-handout-skip-intercept=\"1\" href=\"index.html?p=${encodeURIComponent(mdFile)}#${hIndex}/${vIndex}\" target=\"_blank\">${slideno}</a></div>`);
-	  output.push(`<div class="slide-number slide-number-nolink">${slideno}</div>`);
+	  output.push(`<div class="slide-number slide-number-link"><a data-handout-skip-intercept=\"1\" href=\"index.html?p=${encodeURIComponent(mdFile)}#${hIndex}/${vIndex}\" target=\"_blank\">${slideno}</a></div>`);
+	  output.push(`<div class="slide-number slide-number-nolink" style="display: none">${slideno}</div>`);
           output.push(slideHTML);
 	  if(cleanedNote) {
               output.push(`<div class="note">${noteHTML}</div>`);

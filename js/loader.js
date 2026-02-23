@@ -595,6 +595,7 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
   const prefersHigh = typeof preferHigh === 'boolean'
     ? preferHigh
     : (localStorage.getItem('options_media-version') === 'high');
+  const isVideoSource = (value) => /\.(webm|mp4|mov|m4v)(\?.*)?(#.*)?$/i.test(String(value || '').trim());
   const isHighVariantAvailable = (item) => {
     if (!item?.large_variant?.filename) return false;
     if (!mediaIndexMap) return false;
@@ -863,7 +864,10 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
       const keyword = magicImageMatch[1].toLowerCase();
       const modifier = magicImageMatch[2]?.trim() || '';
       const src = magicImageMatch[3];
-      if (forHandout && keyword === 'background' && modifier === 'sticky') {
+      if (forHandout && isVideoSource(src)) {
+        continue;
+      }
+      if (forHandout && keyword === 'background') {
         continue;
       }
       const handler = magicImageHandlers[keyword];
@@ -878,6 +882,9 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
     if (plainMediaMatch) {
       const altText = plainMediaMatch[1].trim();
       const src = plainMediaMatch[2].trim();
+      if (forHandout && isVideoSource(src)) {
+        continue;
+      }
       if (!altText && /\.(webm|mp4|mov|m4v)(\?.*)?$/i.test(src)) {
         processedLines.push(`<video src="${src}" controls playsinline data-imagefit data-imagefit-autovideo></video>`);
         continue;

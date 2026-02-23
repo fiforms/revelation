@@ -7,14 +7,25 @@
   <link rel="stylesheet" href="/css/handout.css" />
 </head>
 <body>
-  <div id="handout-options">
-    <label><input type="checkbox" id="toggle-images" checked> Show Images</label>
-    <label><input type="checkbox" id="toggle-notes" checked> Show Speaker Notes</label>
-    <label><input type="checkbox" id="toggle-attributions"> Show Attributions</label>
-    <label><input type="checkbox" id="toggle-links"> Slide Numbers as Links</label>
+  <div id="handout-options-ui">
+    <button
+      id="handout-options-toggle"
+      type="button"
+      aria-label="Handout options"
+      aria-controls="handout-options"
+      aria-expanded="false"
+    >
+      ⚙
+    </button>
+    <div id="handout-options" hidden>
+      <h2 class="handout-options-title">Handout Options</h2>
+      <label><input type="checkbox" id="toggle-images" checked> Show Images</label>
+      <label><input type="checkbox" id="toggle-notes" checked> Show Speaker Notes</label>
+      <label><input type="checkbox" id="toggle-attributions"> Show Attributions</label>
+      <label><input type="checkbox" id="toggle-links" checked> Slide Numbers as Links</label>
+    </div>
   </div>
   <main id="handout-content">Loading...</main>
   <script type="module" src="/js/handout.js"></script>
 </body>
 </html>
-
