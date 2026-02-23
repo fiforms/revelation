@@ -94,12 +94,46 @@ function ensureLinksOpenExternally(deck) {
   scope.querySelectorAll('a[href]').forEach((link) => {
     const href = link.getAttribute('href');
     if (!href || href.trim().startsWith('#')) return;
-    link.setAttribute('target', '_blank');
+    const trimmed = href.trim();
+
+    let shouldOpenExternally = false;
+    if (/^(mailto:|tel:)/i.test(trimmed)) {
+      shouldOpenExternally = true;
+    } else {
+      try {
+        const resolved = new URL(trimmed, window.location.href);
+        const isHttp = resolved.protocol === 'http:' || resolved.protocol === 'https:';
+        shouldOpenExternally = isHttp && resolved.host !== window.location.host;
+      } catch {
+        shouldOpenExternally = false;
+      }
+    }
+
+    if (shouldOpenExternally) {
+      link.setAttribute('target', '_blank');
+      const rel = link.getAttribute('rel') || '';
+      const relParts = new Set(rel.split(/\s+/).filter(Boolean));
+      relParts.add('noopener');
+      relParts.add('noreferrer');
+      link.setAttribute('rel', Array.from(relParts).join(' '));
+      return;
+    }
+
+    if (String(link.getAttribute('target') || '').toLowerCase() === '_blank') {
+      link.removeAttribute('target');
+    }
     const rel = link.getAttribute('rel') || '';
-    const relParts = new Set(rel.split(/\s+/).filter(Boolean));
-    relParts.add('noopener');
-    relParts.add('noreferrer');
-    link.setAttribute('rel', Array.from(relParts).join(' '));
+    if (rel) {
+      const relParts = rel.split(/\s+/).filter(Boolean).filter((part) => {
+        const lower = part.toLowerCase();
+        return lower !== 'noopener' && lower !== 'noreferrer';
+      });
+      if (relParts.length) {
+        link.setAttribute('rel', relParts.join(' '));
+      } else {
+        link.removeAttribute('rel');
+      }
+    }
   });
 }
 

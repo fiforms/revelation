@@ -22,6 +22,7 @@ const isRemote = window.location.protocol !== 'file:' &&
                  !['localhost', '127.0.0.1'].includes(window.location.hostname);
 const builderPreviewMode = urlParams.get('builderPreview') === '1';
 const PREVIEW_BRIDGE = 'revelation-builder-preview-bridge';
+const SAFE_MD_LINK_RE = /^(?:\.\/)?[a-zA-Z0-9_.-]+\.md$/;
 
 function setupBuilderPreviewBridge(deck) {
   if (!builderPreviewMode) return;
@@ -84,6 +85,67 @@ function setupBuilderPreviewBridge(deck) {
   });
 }
 
+function setupInterPresentationLinkHandler() {
+  const resolveInternalMarkdownTarget = (href) => {
+    if (!href) return null;
+    const trimmed = String(href).trim();
+    if (!trimmed || trimmed.startsWith('#')) return null;
+    if (/^(https?:|mailto:|tel:|javascript:|data:)/i.test(trimmed)) return null;
+
+    try {
+      const parsed = new URL(trimmed, window.location.href);
+      if (
+        (parsed.protocol === 'http:' || parsed.protocol === 'https:') &&
+        parsed.host !== window.location.host
+      ) {
+        return null;
+      }
+
+      const rawPath = decodeURIComponent(parsed.pathname.split('/').pop() || '');
+      const isIndexPath = /^index\.html?$/i.test(rawPath);
+      const hasPathTraversal = trimmed.includes('../');
+      if (hasPathTraversal) {
+        console.warn(`Blocked parent-directory markdown link: ${trimmed}`);
+        return null;
+      }
+
+      // Existing generated links like index.html?p=foo.md
+      if (isIndexPath && parsed.searchParams.has('p')) {
+        const p = parsed.searchParams.get('p') || '';
+        if (!SAFE_MD_LINK_RE.test(p)) return null;
+        return { mdFile: p, hash: parsed.hash || '' };
+      }
+
+      // Authoring contract: [Next](something.md)
+      const pathWithoutLeadingDot = trimmed.startsWith('./') ? trimmed.slice(2) : trimmed;
+      const [candidatePath, hashPart = ''] = pathWithoutLeadingDot.split('#', 2);
+      if (!SAFE_MD_LINK_RE.test(candidatePath)) return null;
+      return { mdFile: candidatePath, hash: hashPart ? `#${hashPart}` : '' };
+    } catch {
+      return null;
+    }
+  };
+
+  document.addEventListener('click', (event) => {
+    if (event.defaultPrevented) return;
+    if (event.button !== 0) return;
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+
+    const anchor = event.target?.closest?.('a[href]');
+    if (!anchor) return;
+
+    const href = anchor.getAttribute('href');
+    const target = resolveInternalMarkdownTarget(href);
+    if (!target) return;
+
+    event.preventDefault();
+    const nextUrl = new URL(window.location.href);
+    nextUrl.searchParams.set('p', target.mdFile);
+    nextUrl.hash = target.hash || '';
+    window.location.href = nextUrl.toString();
+  }, true);
+}
+
 
 pluginLoader('presentations',`/plugins_${key}`).then(async function() {
 
@@ -115,6 +177,7 @@ pluginLoader('presentations',`/plugins_${key}`).then(async function() {
   
   window.deck = deck;
   setupBuilderPreviewBridge(deck);
+  setupInterPresentationLinkHandler();
 
   loadAndPreprocessMarkdown(deck);
   const NOTES_SCROLL_DELAY_MS = 3000;
