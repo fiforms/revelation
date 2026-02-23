@@ -271,10 +271,19 @@ body.reveal-ready {
     overflow: hidden;
   }
 
-  section .revelation-web-embed iframe {
+  section iframe.revelation-web-iframe {
     display: block;
     width: 100%;
-    height: calc(100% + 8192px);
+    height: 100%;
+    max-width: none;
+    max-height: none;
+    border: 0;
+  }
+
+  section .revelation-web-embed iframe {
+    display: block;
+    width: calc(100% + var(--web-overflow-x, 0px));
+    height: calc(100% + var(--web-overflow-y, 0px));
     max-width: none;
     max-height: none;
     margin-left: 0;

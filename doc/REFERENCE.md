@@ -295,6 +295,7 @@ Sticky means the macro state is reapplied on following slides until reset with `
 | `animate` | ✅ sticky | ✅ non-sticky | `<!-- .slide: data-auto-animate -->` |
 | `animate:restart` | ✅ sticky | ✅ non-sticky | `<!-- .slide: data-auto-animate-restart -->` |
 | `autoslide:$1` | ✅ sticky | ✅ non-sticky | `<!-- .slide: data-autoslide="$1" -->` |
+| `web:$1` / `web:scrollX=...,scrollY=...:$1` | ❌ inline-only | ✅ non-sticky | embed website iframe; optional pixel pan offsets |
 
 ---
 
@@ -326,6 +327,7 @@ Notes:
 * `:countdown:` is inline-only (no `{{countdown...}}` form).
 * For `bgtint`, everything after the first `:` is treated as one parameter, so gradients/colors work.
 * One-shot override commands (`nobg`, `clearbg`, `shiftnone`, `nothird`) affect only the current slide and do not clear sticky macro state globally.
+* `:web:` is inline-only and supports optional `scrollX` / `scrollY` offsets in pixels.
 
 ---
 
@@ -559,6 +561,35 @@ Right side content here
 ```
 
 Each `||` advances the column state (start → break → end) and expands to the same HTML `<div>` structure as before.
+
+---
+
+### 🌐 Website Embed (`:web:`)
+
+Use `:web:` to embed a website iframe in a slide.
+
+Basic interactive embed (no pan offsets):
+
+```markdown
+:web:https://example.com:
+```
+
+Animated pan between slides using `scrollY` + `:animate:`:
+
+```markdown
+:web:scrollY=0:https://revealjs.com/math/:
+:animate:
+
+---
+
+:web:scrollY=500:https://revealjs.com/math/:
+:animate:
+```
+
+Notes:
+* `scrollX` and `scrollY` are pixel values.
+* Keep the same URL across slides when animating pan offsets.
+* Some websites block iframe embedding via CSP / `X-Frame-Options`.
 
 ---
 

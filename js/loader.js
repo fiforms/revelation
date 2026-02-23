@@ -641,7 +641,13 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
       return null;
     }
 
-    const options = { scrollX: 0, scrollY: 0 };
+    const options = {
+      scrollX: 0,
+      scrollY: 0,
+      overflowX: 0,
+      overflowY: 8192,
+      hasScrollDirective: false
+    };
     if (optionsPart) {
       for (const token of optionsPart.split(',')) {
         const [rawKey, rawVal] = token.split('=');
@@ -650,8 +656,14 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
         if (Number.isFinite(parsed) && parsed >= 0) {
           if (key === 'scrollx') {
             options.scrollX = Math.round(parsed);
+            options.hasScrollDirective = true;
           } else if (key === 'scrolly') {
             options.scrollY = Math.round(parsed);
+            options.hasScrollDirective = true;
+          } else if (key === 'overflowx') {
+            options.overflowX = Math.round(parsed);
+          } else if (key === 'overflowy') {
+            options.overflowY = Math.round(parsed);
           }
         }
       }
@@ -660,7 +672,10 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
     return {
       src: resolvedSrc,
       scrollX: options.scrollX,
-      scrollY: options.scrollY
+      scrollY: options.scrollY,
+      overflowX: options.overflowX,
+      overflowY: options.overflowY,
+      hasScrollDirective: options.hasScrollDirective
     };
   };
 
@@ -943,8 +958,18 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
           const safeSrc = escapeHtmlAttr(embed.src);
           const safeScrollX = Number(embed.scrollX) || 0;
           const safeScrollY = Number(embed.scrollY) || 0;
+          const safeOverflowX = Number(embed.overflowX);
+          const safeOverflowY = Number(embed.overflowY);
+          const overflowX = Number.isFinite(safeOverflowX) ? safeOverflowX : 0;
+          const overflowY = Number.isFinite(safeOverflowY) ? safeOverflowY : 8192;
+          if (!embed.hasScrollDirective) {
+            processedLines.push(
+              `<iframe class="revelation-web-iframe" src="${safeSrc}" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>`
+            );
+            continue;
+          }
           processedLines.push(
-            `<div class="revelation-web-embed"><iframe src="${safeSrc}" style="margin-left:-${safeScrollX}px;margin-top:-${safeScrollY}px;" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe></div>`
+            `<div class="revelation-web-embed" style="--web-overflow-x:${overflowX}px;--web-overflow-y:${overflowY}px;"><iframe src="${safeSrc}" style="margin-left:-${safeScrollX}px;margin-top:-${safeScrollY}px;" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe></div>`
           );
           continue;
         }
