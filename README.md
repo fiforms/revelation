@@ -1,3 +1,5 @@
+---
+
 # REVELation
 
 **Snapshot Presenter Framework**
@@ -31,6 +33,8 @@ for a seamless authoring experience.
 ---
 
 ## 🔧 Quick Start
+
+---
 
 ### 1. Install and Launch
 
@@ -77,14 +81,17 @@ Edit the `presentation.md` file in your new folder to start creating content.
 
 ***
 
+---
+
 ## 📘 Reference
 
 Full documentation of the Markdown features, YAML schema, 
 macros, and layout conventions is available in:
 
-```
-doc/REFERENCE.md
-```
+* [doc/REFERENCE.md](doc/REFERENCE.md) - top-level reference index
+* [doc/AUTHORING_REFERENCE.md](doc/AUTHORING_REFERENCE.md) - markdown authoring syntax extensions
+* [doc/METADATA_REFERENCE.md](doc/METADATA_REFERENCE.md) - YAML front matter, macros, and media aliases
+* [doc/ARCHITECTURE.md](doc/ARCHITECTURE.md) - framework architecture and extension model
 
 ---
 
@@ -104,6 +111,8 @@ This offers:
 * 📦 **Export** — Export handouts, offline HTML, or ZIPs for sharing
 
 ***
+
+---
 
 ## 📜 License
 
