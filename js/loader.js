@@ -512,6 +512,8 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
     }
   };
 
+  const iframeSandboxAttr = 'sandbox="allow-scripts allow-same-origin allow-forms"';
+
   const magicImageHandlers = {}
   if (!forHandout) {
     magicImageHandlers.background = (src, modifier, attribution) => {
@@ -545,8 +547,26 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
       const id = match ? match[1] : null;
       const widthHeight = modifier === 'fit' ? 'class="youtube-fit"' : 'class="youtube-iframe"';
       return id
-        ? `<iframe ${widthHeight} src="https://www.youtube.com/embed/${id}?autoplay=0&mute=1&loop=1&playlist=${id}" frameborder="0" allowfullscreen></iframe>`
+        ? `<iframe ${widthHeight} src="https://www.youtube.com/embed/${id}?autoplay=0&mute=1&loop=1&playlist=${id}" frameborder="0" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen ${iframeSandboxAttr}></iframe>`
         : `<!-- Invalid YouTube URL: ${src} -->`;
+    };
+
+    magicImageHandlers.web = (src, modifier) => {
+      const embed = parseWebEmbedSpec(modifier, src);
+      if (!embed) {
+        return `<!-- Invalid embed URL: ${src} -->`;
+      }
+      const safeSrc = escapeHtmlAttr(embed.src);
+      const safeScrollX = Number(embed.scrollX) || 0;
+      const safeScrollY = Number(embed.scrollY) || 0;
+      const safeOverflowX = Number(embed.overflowX);
+      const safeOverflowY = Number(embed.overflowY);
+      const overflowX = Number.isFinite(safeOverflowX) ? safeOverflowX : 0;
+      const overflowY = Number.isFinite(safeOverflowY) ? safeOverflowY : 8192;
+      if (!embed.hasScrollDirective) {
+        return `<iframe class="revelation-web-iframe" src="${safeSrc}" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen ${iframeSandboxAttr}></iframe>`;
+      }
+      return `<div class="revelation-web-embed" style="--web-overflow-x:${overflowX}px;--web-overflow-y:${overflowY}px;"><iframe src="${safeSrc}" style="margin-left:-${safeScrollX}px;margin-top:-${safeScrollY}px;" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen ${iframeSandboxAttr}></iframe></div>`;
     };
   }
 
@@ -614,29 +634,8 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
 
-  const parseWebEmbedInlineParam = (value) => {
-    const raw = String(value || '').trim();
-    if (!raw) {
-      return null;
-    }
-
-    let optionsPart = '';
-    let srcPart = raw;
-
-    const startsLikeUrl = /^(https?:\/\/|\/)/i.test(raw);
-    if (!startsLikeUrl) {
-      const splitAt = raw.indexOf(':');
-      if (splitAt > 0) {
-        const candidateOptions = raw.slice(0, splitAt).trim();
-        const candidateSrc = raw.slice(splitAt + 1).trim();
-        if (candidateOptions.includes('=') && candidateSrc) {
-          optionsPart = candidateOptions;
-          srcPart = candidateSrc;
-        }
-      }
-    }
-
-    const resolvedSrc = resolveMediaAlias(srcPart).trim();
+  const parseWebEmbedSpec = (modifier, srcPart) => {
+    const resolvedSrc = resolveMediaAlias(String(srcPart || '').trim()).trim();
     if (!resolvedSrc || isDangerousURL(resolvedSrc)) {
       return null;
     }
@@ -648,6 +647,7 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
       overflowY: 8192,
       hasScrollDirective: false
     };
+    const optionsPart = String(modifier || '').trim();
     if (optionsPart) {
       for (const token of optionsPart.split(',')) {
         const [rawKey, rawVal] = token.split('=');
@@ -858,7 +858,7 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
       }
     }
 
-    const magicImageMatch = line.match(/^!\[([a-zA-Z0-9_-]+)(?::([a-zA-Z0-9_ -]+))?\]\((.+?)\)$/);
+    const magicImageMatch = line.match(/^!\[([a-zA-Z0-9_-]+)(?::([^\]]+))?\]\((.+?)\)$/);
     if (magicImageMatch) {
       const keyword = magicImageMatch[1].toLowerCase();
       const modifier = magicImageMatch[2]?.trim() || '';
@@ -949,31 +949,6 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
             continue;
           }
         }
-        if (key === 'web') {
-          const embed = parseWebEmbedInlineParam(paramString);
-          if (!embed) {
-            console.log('Markdown Web Inline Macro Not Found or Invalid URL: ' + paramString);
-            continue;
-          }
-          const safeSrc = escapeHtmlAttr(embed.src);
-          const safeScrollX = Number(embed.scrollX) || 0;
-          const safeScrollY = Number(embed.scrollY) || 0;
-          const safeOverflowX = Number(embed.overflowX);
-          const safeOverflowY = Number(embed.overflowY);
-          const overflowX = Number.isFinite(safeOverflowX) ? safeOverflowX : 0;
-          const overflowY = Number.isFinite(safeOverflowY) ? safeOverflowY : 8192;
-          if (!embed.hasScrollDirective) {
-            processedLines.push(
-              `<iframe class="revelation-web-iframe" src="${safeSrc}" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>`
-            );
-            continue;
-          }
-          processedLines.push(
-            `<div class="revelation-web-embed" style="--web-overflow-x:${overflowX}px;--web-overflow-y:${overflowY}px;"><iframe src="${safeSrc}" style="margin-left:-${safeScrollX}px;margin-top:-${safeScrollY}px;" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe></div>`
-          );
-          continue;
-        }
-
         const template = macros[key];
         if (template) {
           const expanded = template.replace(/\$(\d+)/g, (_, n) => resolveMediaAlias(params[+n - 1] ?? ''));
