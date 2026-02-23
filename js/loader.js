@@ -758,15 +758,21 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
   for (var line of lines) {
     index++;
 
-  const fenceMatch = line.match(/^(`{3,})(.*)$/);  // Matches ``` or more
+    const fenceMatch = line.match(/^\s{0,3}((`{3,}|~{3,}))[ \t]*(.*)$/); // Fenced code block start/end
 
     if (fenceMatch) {
       const fence = fenceMatch[1];
+      const fenceChar = fence[0];
+      const fenceLength = fence.length;
       
       if (!insideCodeBlock) {
         insideCodeBlock = true;
         currentFence = fence;
-      } else if (fence === currentFence) {
+      } else if (
+        currentFence &&
+        fenceChar === currentFence[0] &&
+        fenceLength >= currentFence.length
+      ) {
         insideCodeBlock = false;
         currentFence = '';
       }
@@ -776,7 +782,13 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
     }
 
     if (insideCodeBlock) {
-      processedLines.push(line);
+      // Reveal's markdown separator regex is line-based and can split inside fences.
+      // Add a trailing space to separator-only lines while inside fenced code blocks.
+      if (line === '---' || line === '***') {
+        processedLines.push(`${line} `);
+      } else {
+        processedLines.push(line);
+      }
       continue;  // 🛑 Skip transformation inside code blocks
     }
 
