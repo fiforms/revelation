@@ -9,9 +9,13 @@ thumbnail: icon.webp
 version: 0.2.7
 newSlideOnHeading: false
 config:
-  slideNumber: c
-  showSlideNumber: speaker
   hash: true
+  width: 1280
+  height: 840
+  maxScale: 4
+  slideNumber: true
+  showSlideNumber: speaker
+  hashOneBasedIndex: true
 ---
 <!-- DO NOT EDIT THIS presentation.md FILE DIRECTLY AS IT WILL BE OVERWRITTEN -->
 
