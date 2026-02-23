@@ -263,6 +263,25 @@ body.reveal-ready {
     padding: 0;
   }
 
+  section .revelation-web-embed {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    align-self: stretch;
+    overflow: hidden;
+  }
+
+  section .revelation-web-embed iframe {
+    display: block;
+    width: 100%;
+    height: calc(100% + 8192px);
+    max-width: none;
+    max-height: none;
+    margin-left: 0;
+    margin-top: 0;
+    border: 0;
+  }
+
   iframe.youtube-fit {
     position: absolute;
     inset: 0;

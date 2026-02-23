@@ -608,6 +608,62 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
     return `${basePath}${resolvedFile}`;
   };
 
+  const escapeHtmlAttr = (value) => String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+
+  const parseWebEmbedInlineParam = (value) => {
+    const raw = String(value || '').trim();
+    if (!raw) {
+      return null;
+    }
+
+    let optionsPart = '';
+    let srcPart = raw;
+
+    const startsLikeUrl = /^(https?:\/\/|\/)/i.test(raw);
+    if (!startsLikeUrl) {
+      const splitAt = raw.indexOf(':');
+      if (splitAt > 0) {
+        const candidateOptions = raw.slice(0, splitAt).trim();
+        const candidateSrc = raw.slice(splitAt + 1).trim();
+        if (candidateOptions.includes('=') && candidateSrc) {
+          optionsPart = candidateOptions;
+          srcPart = candidateSrc;
+        }
+      }
+    }
+
+    const resolvedSrc = resolveMediaAlias(srcPart).trim();
+    if (!resolvedSrc || isDangerousURL(resolvedSrc)) {
+      return null;
+    }
+
+    const options = { scrollX: 0, scrollY: 0 };
+    if (optionsPart) {
+      for (const token of optionsPart.split(',')) {
+        const [rawKey, rawVal] = token.split('=');
+        const key = String(rawKey || '').trim().toLowerCase();
+        const parsed = Number.parseFloat(String(rawVal || '').trim());
+        if (Number.isFinite(parsed) && parsed >= 0) {
+          if (key === 'scrollx') {
+            options.scrollX = Math.round(parsed);
+          } else if (key === 'scrolly') {
+            options.scrollY = Math.round(parsed);
+          }
+        }
+      }
+    }
+
+    return {
+      src: resolvedSrc,
+      scrollX: options.scrollX,
+      scrollY: options.scrollY
+    };
+  };
+
   const pad2 = (value) => String(Math.max(0, Number.parseInt(value, 10) || 0)).padStart(2, '0');
 
   const formatCountdownDisplay = (seconds) => {
@@ -877,6 +933,20 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
             processedLines.push(audioLine);
             continue;
           }
+        }
+        if (key === 'web') {
+          const embed = parseWebEmbedInlineParam(paramString);
+          if (!embed) {
+            console.log('Markdown Web Inline Macro Not Found or Invalid URL: ' + paramString);
+            continue;
+          }
+          const safeSrc = escapeHtmlAttr(embed.src);
+          const safeScrollX = Number(embed.scrollX) || 0;
+          const safeScrollY = Number(embed.scrollY) || 0;
+          processedLines.push(
+            `<div class="revelation-web-embed"><iframe src="${safeSrc}" style="margin-left:-${safeScrollX}px;margin-top:-${safeScrollY}px;" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe></div>`
+          );
+          continue;
         }
 
         const template = macros[key];
