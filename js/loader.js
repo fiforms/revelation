@@ -451,6 +451,7 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
   const attributions = [];
   const lastmacros = [];
   const thismacros = [];
+  const slideLocalSuppressions = new Set();
   let aiSymbolRequested = false;
 
   const defaultMacros = {
@@ -478,6 +479,33 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
 
   const macros = { ...defaultMacros, ...userMacros };
 
+  const getSuppressionGroupsForLine = (value) => {
+    const groups = [];
+    const text = String(value || '');
+    if (/\bdata-background-(image|video)\s*=/i.test(text)) {
+      groups.push('background');
+    }
+    if (/\bdata-shift(left|right)\b/i.test(text)) {
+      groups.push('shift');
+    }
+    if (/\bdata-(darkbg|lightbg)\b/i.test(text)) {
+      groups.push('bgmode');
+    }
+    if (/\bdata-tint-color\s*=/i.test(text)) {
+      groups.push('bgtint');
+    }
+    if (/\bdata-(lower-third|upper-third)\b/i.test(text)) {
+      groups.push('third');
+    }
+    return groups;
+  };
+
+  const rememberLocalSuppressions = (value) => {
+    for (const group of getSuppressionGroupsForLine(value)) {
+      slideLocalSuppressions.add(group);
+    }
+  };
+
   const magicImageHandlers = {}
   if (!forHandout) {
     magicImageHandlers.background = (src, modifier, attribution) => {
@@ -488,6 +516,7 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
       const tag = isVideo
         ? `<!-- .slide: data-background-video="${src}"${shouldLoop ? ' data-background-video-loop' : ''} -->`
         : `<!-- .slide: data-background-image="${src}" -->`;
+      slideLocalSuppressions.add('background');
       if(normalizedModifier === 'sticky') {
         thismacros.push(tag);
         if(attribution) {
@@ -775,6 +804,22 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
         ? [paramString ?? '']
         : (paramString ? paramString.split(':') : []);
       if (key !== 'attrib' && key !== 'ai' && !key.startsWith('column')) {
+        if (key === 'shiftnone') {
+          slideLocalSuppressions.add('shift');
+          continue;
+        }
+        if (key === 'nobg') {
+          slideLocalSuppressions.add('bgmode');
+          continue;
+        }
+        if (key === 'clearbg') {
+          slideLocalSuppressions.add('background');
+          continue;
+        }
+        if (key === 'nothird') {
+          slideLocalSuppressions.add('third');
+          continue;
+        }
         if (key === 'countdown') {
           const countdownMarkup = buildCountdownMarkup(params);
           if (countdownMarkup) {
@@ -823,6 +868,7 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
           const mlines = expanded.split('\n');
           for (const mline of mlines) {
             const normalizedLine = convertStackDirectiveLine(mline);
+            rememberLocalSuppressions(normalizedLine);
             const attribMatch = normalizedLine.match(/^\{\{attrib:(.*)}}\s*$/i);
             if (attribMatch) {
               attributions.push(attribMatch[1]);
@@ -909,6 +955,7 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
         for (const mline of mlines) {
           const normalizedLine = convertStackDirectiveLine(mline);
           thismacros.push(normalizedLine);
+          rememberLocalSuppressions(normalizedLine);
           const attribMatch = normalizedLine.match(/^\{\{attrib:(.*)}}\s*$/i);
           if (attribMatch) {
             attributions.push(attribMatch[1]);
@@ -985,12 +1032,25 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
         lastmacros.push(...thismacros);
       }
       else {
+        let skipNextStickyAttrib = false;
         for (const val of lastmacros) {
+          const suppressedGroups = getSuppressionGroupsForLine(val);
+          if (suppressedGroups.some((group) => slideLocalSuppressions.has(group))) {
+            if (suppressedGroups.includes('background')) {
+              skipNextStickyAttrib = true;
+            }
+            continue;
+          }
           const attribMatch = val.match(/^\{\{attrib:(.*)}}\s*$/i);
           if (attribMatch) {
+            if (skipNextStickyAttrib) {
+              skipNextStickyAttrib = false;
+              continue;
+            }
             attributions.push(attribMatch[1]);
             continue;
           }
+          skipNextStickyAttrib = false;
           const aiStickyMatch = val.match(/^{{ai}}\s*$/i);
           if (aiStickyMatch) {
             if (!forHandout) {
@@ -1007,6 +1067,7 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
         processedLines.push('');
       }
       thismacros.length = 0;
+      slideLocalSuppressions.clear();
 
       if (attributions.length > 0) {
 
@@ -1053,6 +1114,7 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
       continue;
     }
 
+    rememberLocalSuppressions(line);
     if (line.endsWith('++')) {
       processedLines.push(
         line.replace(/\s*\+\+$/, '') + ' <!-- .element: class="fragment" -->'

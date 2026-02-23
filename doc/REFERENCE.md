@@ -265,6 +265,8 @@ Sticky means the macro state is reapplied on following slides until reset with `
 | `darktext` | ✅ sticky | ✅ non-sticky | `<!-- .slide: data-darktext -->` |
 | `lighttext` | ✅ sticky | ✅ non-sticky | `<!-- .slide: data-lighttext -->` |
 | `bgtint:$1` | ✅ sticky | ✅ non-sticky | `<!-- .slide: data-tint-color="$1" -->` |
+| `nobg` | ❌ inline-only | ✅ one-shot override | suppress inherited `darkbg`/`lightbg` for current slide only |
+| `clearbg` | ❌ inline-only | ✅ one-shot override | suppress inherited background image/video for current slide only |
 | `info` | ✅ sticky | ✅ non-sticky | info slide helper markup |
 | `infofull` | ✅ sticky | ✅ non-sticky | full-width info slide helper markup |
 | `attrib:text` | ✅ sticky (`{{attrib:...}}`) | ✅ non-sticky (`:ATTRIB:...`) | slide attribution text |
@@ -278,8 +280,10 @@ Sticky means the macro state is reapplied on following slides until reset with `
 | --- | --- | --- | --- |
 | `shiftleft` | ✅ sticky | ✅ non-sticky | `<!-- .slide: data-shiftleft -->` |
 | `shiftright` | ✅ sticky | ✅ non-sticky | `<!-- .slide: data-shiftright -->` |
+| `shiftnone` | ❌ inline-only | ✅ one-shot override | suppress inherited `shiftleft`/`shiftright` for current slide only |
 | `upperthird` | ✅ sticky | ✅ non-sticky | `<!-- .slide: data-upper-third -->` |
 | `lowerthird` | ✅ sticky | ✅ non-sticky | `<!-- .slide: data-lower-third -->` |
+| `nothird` | ❌ inline-only | ✅ one-shot override | suppress inherited `upperthird`/`lowerthird` for current slide only |
 
 ---
 
@@ -321,6 +325,7 @@ Notes:
 * User `macros:` override built-ins when names collide.
 * `:countdown:` is inline-only (no `{{countdown...}}` form).
 * For `bgtint`, everything after the first `:` is treated as one parameter, so gradients/colors work.
+* One-shot override commands (`nobg`, `clearbg`, `shiftnone`, `nothird`) affect only the current slide and do not clear sticky macro state globally.
 
 ---
 
@@ -359,6 +364,38 @@ When a parameter value is `media:alias`, REVELation resolves it to the `_media/`
 
 # Slide C (reset)
 ```
+
+---
+
+#### 🪄 One-Slide Overrides
+
+Use these to suppress inherited sticky state for a single slide, without using `{{}}`:
+
+```markdown
+![background:sticky](mainbg.jpg)
+{{shiftleft}}
+{{lowerthird}}
+{{darkbg}}
+
+# Slide A (inherits all)
+
+***
+
+:clearbg:
+:shiftnone:
+:nothird:
+:nobg:
+
+# Slide B (single-slide overrides)
+
+***
+
+# Slide C (inherits sticky settings again)
+```
+
+Notes:
+* `:nobg:` suppresses inherited `darkbg` and `lightbg` only.
+* `bgtint` is separate. To neutralize tint on one slide, set `:bgtint:transparent:`.
 
 ***
 
@@ -1293,6 +1330,7 @@ REVELation includes some handy npm scripts:
 ### ⚠ Gotchas & Notes
 
 - **Macros stick**: Macros like `{{darkbg}}` persist until cleared with `{{}}`.
+- **One-slide suppressors**: `nobg`, `clearbg`, `shiftnone`, and `nothird` override inherited sticky macros for the current slide only.
 - **Media aliases**: If `media:fog` doesn't resolve, check `_media/` folder and YAML.
 - **Relative paths**: When linking images or videos directly, use paths relative to the `.md` file.
 - **Quotes**: Smart quotes are auto-converted unless disabled (`convertSmartQuotes: false` in YAML).
