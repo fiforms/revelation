@@ -8,6 +8,8 @@ const url_prefix = `/presentations_${url_key}`;
 const container = document.getElementById('presentation-list');
 let selectedCardElement = null;
 let selectedPresentationKey = '';
+let selectedPresentationBase = null;
+let selectedSidebarMdFile = '';
 const detailsCache = new Map();
 const isStandaloneMode = !window.electronAPI;
 
@@ -268,6 +270,14 @@ function getPresentationKey(pres) {
   return `${pres.slug}::${pres.md}`;
 }
 
+function getCurrentSelectionKey() {
+  if (!selectedPresentationBase) return '';
+  return getPresentationKey({
+    slug: selectedPresentationBase.slug,
+    md: selectedSidebarMdFile || selectedPresentationBase.md
+  });
+}
+
 function openPrimaryPresentation(pres) {
   if (window.electronAPI?.openPresentation) {
     window.electronAPI.openPresentation(pres.slug, pres.md, true);
@@ -304,9 +314,35 @@ async function loadPresentationDetails(pres) {
   if (detailsCache.has(key)) return detailsCache.get(key);
 
   const details = {
+    selectedMdFile: pres.md,
+    slug: pres.slug,
+    title: pres.title,
+    description: pres.description,
+    thumbnail: pres.thumbnail,
     author: '',
-    variants: []
+    variants: [],
+    languageVariants: [],
+    additionalPresentations: []
   };
+
+  if (window.electronAPI?.getPresentationFileContext) {
+    try {
+      const context = await window.electronAPI.getPresentationFileContext({ slug: pres.slug, mdFile: pres.md });
+      const selected = context?.selected || null;
+      details.selectedMdFile = selected?.mdFile || context?.selectedMdFile || pres.md;
+      details.title = selected?.title || pres.title;
+      details.description = selected?.description ?? pres.description;
+      details.thumbnail = selected?.thumbnail || pres.thumbnail;
+      details.author = selected?.author || '';
+      details.variants = Array.isArray(context?.entries) ? context.entries : [];
+      details.languageVariants = Array.isArray(context?.languageVariants) ? context.languageVariants : [];
+      details.additionalPresentations = Array.isArray(context?.additionalPresentations) ? context.additionalPresentations : [];
+      detailsCache.set(key, details);
+      return details;
+    } catch (err) {
+      console.warn('Failed to load presentation file context:', err);
+    }
+  }
 
   try {
     const response = await fetch(`${url_prefix}/${pres.slug}/${pres.md}`);
@@ -314,6 +350,9 @@ async function loadPresentationDetails(pres) {
       const markdown = await response.text();
       const metadata = extractFrontMatter(markdown);
       details.author = readAuthorName(metadata);
+      details.title = String(metadata.title || details.title || '').trim() || details.title;
+      details.description = String(metadata.description || details.description || '').trim();
+      details.thumbnail = String(metadata.thumbnail || details.thumbnail || '').trim() || details.thumbnail;
       if (metadata.alternatives && typeof metadata.alternatives === 'object' && !Array.isArray(metadata.alternatives)) {
         details.variants = Object.entries(metadata.alternatives).map(([mdFile, language]) => ({
           mdFile,
@@ -332,6 +371,18 @@ async function loadPresentationDetails(pres) {
       const variantState = await window.electronAPI.getPresentationVariants({ slug: pres.slug, mdFile: pres.md });
       if (Array.isArray(variantState?.entries)) {
         details.variants = variantState.entries;
+        details.languageVariants = variantState.entries.map((entry) => ({
+          mdFile: entry.mdFile,
+          title: entry.mdFile,
+          description: '',
+          thumbnail: details.thumbnail,
+          author: '',
+          language: entry.language,
+          hidden: !!entry.hidden,
+          inLanguageVariants: true,
+          isMaster: !!entry.isMaster,
+          isCurrent: !!entry.isCurrent
+        }));
       }
     } catch (err) {
       console.warn('Failed to load presentation variants:', err);
@@ -342,26 +393,15 @@ async function loadPresentationDetails(pres) {
   return details;
 }
 
-function formatVariantDetails(variants = []) {
-  if (!Array.isArray(variants) || !variants.length) {
-    return tr('Default only');
-  }
-  return variants
-    .map((entry) => {
-      const language = String(entry.language || '').trim() || tr('default');
-      const masterSuffix = entry.isMaster ? ` (${tr('master')})` : '';
-      return `${language}${masterSuffix}`;
-    })
-    .join(', ') || tr('Default only');
-}
-
 function getLanguageFromMdFile(mdFile = '') {
   const match = String(mdFile || '').trim().toLowerCase().match(/_([a-z]{2,8}(?:-[a-z0-9]{2,8})?)\.md$/);
   return match ? match[1] : '';
 }
 
 function getLanguageVariantOptions(pres, details = null) {
-  const entries = Array.isArray(details?.variants) ? details.variants : [];
+  const entries = Array.isArray(details?.languageVariants) && details.languageVariants.length
+    ? details.languageVariants
+    : (Array.isArray(details?.variants) ? details.variants : []);
   const seenMdFiles = new Set();
   const options = [];
   const addOption = (mdFile, language, isMaster = false) => {
@@ -432,6 +472,7 @@ async function openSlideshowOptionsLightbox(pres, details = null) {
   const defaultLanguage = String(appConfig?.preferredPresentationLanguage || appConfig?.language || 'en').trim().toLowerCase();
   const defaultVariant = String(appConfig?.screenTypeVariant || '').trim().toLowerCase();
   const defaultOption = languageOptions.find((entry) => entry.language === defaultLanguage)
+    || languageOptions.find((entry) => entry.mdFile === variantDetails?.selectedMdFile)
     || languageOptions.find((entry) => entry.mdFile === pres.md)
     || languageOptions[0];
 
@@ -495,7 +536,7 @@ async function openSlideshowOptionsLightbox(pres, details = null) {
 
   cancelBtn.addEventListener('click', closeOverlay);
   openBtn.addEventListener('click', async () => {
-    const selectedMd = String(languageSelect.value || pres.md);
+    const selectedMd = String(languageSelect.value || variantDetails?.selectedMdFile || pres.md);
     const selectedLanguage = languageSelect.selectedOptions?.[0]?.dataset?.language || '';
     const selectedVariant = String(screenVariantSelect.value || '');
     const selectedMode = String(openInSelect.value || 'window');
@@ -586,27 +627,90 @@ function getSelectedPanelHost() {
   return host;
 }
 
+function makeEffectivePresentation(basePres, details = null) {
+  const selectedMd = String(details?.selectedMdFile || selectedSidebarMdFile || basePres.md || '').trim() || basePres.md;
+  return {
+    ...basePres,
+    md: selectedMd,
+    title: details?.title || basePres.title,
+    description: details?.description ?? basePres.description,
+    thumbnail: details?.thumbnail || basePres.thumbnail
+  };
+}
+
+function buildFileLineLabel(entry) {
+  const mdFile = String(entry?.mdFile || '').trim();
+  const language = String(entry?.language || '').trim().toLowerCase();
+  const flags = [];
+  if (language) flags.push(language);
+  if (entry?.isMaster) flags.push(tr('master'));
+  if (entry?.hidden) flags.push(tr('hidden'));
+  if (!flags.length) return mdFile;
+  return `${mdFile} (${flags.join(', ')})`;
+}
+
 function renderSelectedPresentationPanel(pres, details = null) {
   const host = getSelectedPanelHost();
   if (!host) return;
 
-  const actions = getPresentationActions(pres, details);
+  const effectivePres = makeEffectivePresentation(pres, details);
+  const actions = getPresentationActions(effectivePres, details);
   const detailsLoaded = !!details;
   const author = detailsLoaded ? (details.author || tr('Unknown')) : tr('Loading...');
-  const variants = detailsLoaded ? formatVariantDetails(details.variants) : tr('Loading...');
+  const languageVariants = detailsLoaded ? (details.languageVariants || []) : [];
+  const additionalPresentations = detailsLoaded ? (details.additionalPresentations || []) : [];
+  const selectedMd = String(effectivePres.md || '').trim();
 
   host.innerHTML = `
     <section id="selected-presentation-panel" class="selected-presentation-panel">
       <div class="selected-presentation-header">${tr('Selected Presentation')}</div>
-      <img class="selected-presentation-thumb" src="${url_prefix}/${pres.slug}/${pres.thumbnail}" alt="${pres.title}">
-      <div class="selected-presentation-title">${pres.title}</div>
-      <div class="selected-presentation-meta">${pres.description || ''}</div>
+      <img class="selected-presentation-thumb" src="${url_prefix}/${effectivePres.slug}/${effectivePres.thumbnail}" alt="${effectivePres.title}">
+      <div class="selected-presentation-title">${effectivePres.title}</div>
+      <div class="selected-presentation-meta">${effectivePres.description || ''}</div>
+      <div class="selected-presentation-meta"><strong>${tr('Slug')}:</strong> ${effectivePres.slug}</div>
+      <div class="selected-presentation-meta"><strong>${tr('File')}:</strong> ${selectedMd}</div>
       <div class="selected-presentation-meta"><strong>${tr('Author')}:</strong> ${author}</div>
-      <div class="selected-presentation-meta"><strong>${tr('Language variants')}:</strong> ${variants}</div>
+      <div class="selected-presentation-meta"><strong>${tr('Language variants')}:</strong></div>
+      <div class="selected-presentation-file-list selected-presentation-variant-list">
+        ${
+          detailsLoaded
+            ? (languageVariants.length
+              ? languageVariants.map((entry) => {
+                const mdFile = String(entry?.mdFile || '').trim();
+                const isCurrent = mdFile === selectedMd;
+                return `<button type="button" class="selected-presentation-file-link${isCurrent ? ' is-current' : ''}" data-file-md="${mdFile}" data-file-group="variant">${buildFileLineLabel(entry)}</button>`;
+              }).join('')
+              : `<div class="selected-presentation-meta">${tr('Default only')}</div>`)
+            : `<div class="selected-presentation-meta">${tr('Loading...')}</div>`
+        }
+      </div>
+      <div class="selected-presentation-meta"><strong>${tr('Additional Presentations')}:</strong></div>
+      <div class="selected-presentation-file-list selected-presentation-additional-list">
+        ${
+          detailsLoaded
+            ? (additionalPresentations.length
+              ? additionalPresentations.map((entry) => {
+                const mdFile = String(entry?.mdFile || '').trim();
+                const isCurrent = mdFile === selectedMd;
+                return `<button type="button" class="selected-presentation-file-link${isCurrent ? ' is-current' : ''}" data-file-md="${mdFile}" data-file-group="additional">${buildFileLineLabel(entry)}</button>`;
+              }).join('')
+              : `<div class="selected-presentation-meta">${tr('None')}</div>`)
+            : `<div class="selected-presentation-meta">${tr('Loading...')}</div>`
+        }
+      </div>
       <div class="selected-presentation-help">${tr('Double-click any tile to open immediately.')}</div>
       <div class="selected-presentation-actions"></div>
     </section>
   `;
+
+  host.querySelectorAll('.selected-presentation-file-link[data-file-md]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const mdFile = String(button.dataset.fileMd || '').trim();
+      if (!mdFile || !selectedPresentationBase) return;
+      if (mdFile === selectedSidebarMdFile) return;
+      selectPresentationFile(mdFile);
+    });
+  });
 
   const actionsContainer = host.querySelector('.selected-presentation-actions');
   for (const opt of actions) {
@@ -625,6 +729,8 @@ function renderSelectedPresentationPanel(pres, details = null) {
 
 function clearSelection() {
   selectedPresentationKey = '';
+  selectedPresentationBase = null;
+  selectedSidebarMdFile = '';
   if (selectedCardElement) {
     selectedCardElement.classList.remove('card-selected');
     selectedCardElement = null;
@@ -638,8 +744,26 @@ function clearSelection() {
   }
 }
 
+async function selectPresentationFile(mdFile) {
+  if (!selectedPresentationBase) return;
+  const nextMdFile = String(mdFile || '').trim();
+  if (!nextMdFile) return;
+  selectedSidebarMdFile = nextMdFile;
+  selectedPresentationKey = getCurrentSelectionKey();
+  const selection = {
+    ...selectedPresentationBase,
+    md: nextMdFile
+  };
+  renderSelectedPresentationPanel(selectedPresentationBase);
+  const details = await loadPresentationDetails(selection);
+  if (selectedPresentationKey !== getCurrentSelectionKey()) return;
+  renderSelectedPresentationPanel(selectedPresentationBase, details);
+}
+
 async function selectPresentation(pres, cardElement) {
-  selectedPresentationKey = getPresentationKey(pres);
+  selectedPresentationBase = { ...pres };
+  selectedSidebarMdFile = pres.md;
+  selectedPresentationKey = getCurrentSelectionKey();
   if (selectedCardElement) {
     selectedCardElement.classList.remove('card-selected');
   }
@@ -647,9 +771,9 @@ async function selectPresentation(pres, cardElement) {
   selectedCardElement.classList.add('card-selected');
 
   renderSelectedPresentationPanel(pres);
-  const details = await loadPresentationDetails(pres);
-  if (selectedPresentationKey !== getPresentationKey(pres)) return;
-  renderSelectedPresentationPanel(pres, details);
+  const details = await loadPresentationDetails({ ...pres, md: selectedSidebarMdFile });
+  if (selectedPresentationKey !== getCurrentSelectionKey()) return;
+  renderSelectedPresentationPanel(selectedPresentationBase, details);
 }
 
 function getPresentationActions(pres, details = null) {
