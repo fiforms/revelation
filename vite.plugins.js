@@ -62,26 +62,30 @@ function getLocalIp() {
 }
 
 function generatePresentationIndex() {
-  // Refresh README presentation first, if needed:
-  ensureReadmeTemplate();
-  
-  if (fs.existsSync(readmeYamlPath) && fs.existsSync(projectReadmePath)) {
-    const shouldGenerate =
-      !fs.existsSync(readmePresentationPath) ||
-      fs.statSync(readmePresentationPath).mtime < fs.statSync(projectReadmePath).mtime;
+  // In GUI mode the wrapper owns docs/readme deck generation.
+  const isGui = /^(1|true)$/i.test(process.env.REVELATION_GUI || '');
+  if (!isGui) {
+    // Refresh README presentation first, if needed:
+    ensureReadmeTemplate();
+    
+    if (fs.existsSync(readmeYamlPath) && fs.existsSync(projectReadmePath)) {
+      const shouldGenerate =
+        !fs.existsSync(readmePresentationPath) ||
+        fs.statSync(readmePresentationPath).mtime < fs.statSync(projectReadmePath).mtime;
 
-    if (shouldGenerate) {
-      const header = fs.readFileSync(readmeYamlPath, 'utf-8');
-      const body = fs.readFileSync(projectReadmePath, 'utf-8');
-  
-      let combined = `${header}\n\n${body}`;
-      if (fs.existsSync(referencePath)) {
-        const reference = fs.readFileSync(referencePath, 'utf-8');
-        combined += `\n\n***\n\n${reference}`;
+      if (shouldGenerate) {
+        const header = fs.readFileSync(readmeYamlPath, 'utf-8');
+        const body = fs.readFileSync(projectReadmePath, 'utf-8');
+    
+        let combined = `${header}\n\n${body}`;
+        if (fs.existsSync(referencePath)) {
+          const reference = fs.readFileSync(referencePath, 'utf-8');
+          combined += `\n\n***\n\n${reference}`;
+        }
+        
+        fs.writeFileSync(readmePresentationPath, combined, 'utf-8');
+        console.log(`📝 Regenerated ${readmePresentationPath}`);
       }
-      
-      fs.writeFileSync(readmePresentationPath, combined, 'utf-8');
-      console.log(`📝 Regenerated ${readmePresentationPath}`);
     }
   }
 
