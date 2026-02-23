@@ -15,6 +15,7 @@
 * [Attributions](#authoring-attributions)
 * [Magic Images](#authoring-magic-images)
 * [Media in Markdown](#authoring-media-markdown)
+* [Inter-Presentation Links](#authoring-inter-presentation-links)
 ---
 
 
@@ -308,3 +309,26 @@ media:
 If an alias cannot be resolved, the placeholder remains and a warning is logged.
 
 Plugin-specific authoring blocks (for example `:chart:` and `:table:`) are documented in plugin READMEs such as [plugins/revealchart/README.md](../../plugins/revealchart/README.md).
+
+---
+
+<a id="authoring-inter-presentation-links"></a>
+
+## Inter-Presentation Links
+
+Use normal markdown links for presentation-to-presentation navigation:
+
+```markdown
+[Next presentation](something.md)
+[Open section](something.md#section-anchor)
+[Jump to section in this file](#section-anchor)
+```
+
+Convention:
+- `.md` links are treated as internal presentation links.
+- Authoring should stay implementation-agnostic (do not hardcode app query URLs).
+- Parent-directory traversal links are not part of the convention and should not be used (for example `../other.md`).
+
+Generator/runtime planning notes:
+- The documentation presentation generator will flatten generated markdown files into one presentation folder.
+- Link resolution will target those flattened `.md` filenames.

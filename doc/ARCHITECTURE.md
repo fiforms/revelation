@@ -8,6 +8,7 @@
 * [System Overview](#architecture-system-overview)
 * [Reveal.js Runtime Integration](#architecture-reveal-runtime)
 * [Default Plugin Stack](#architecture-default-plugins)
+* [Inter-Presentation Link Resolution](#architecture-inter-presentation-links)
 * [Builder Plugin Hooks](#architecture-builder-hooks)
 * [Offline Export Plugin Hooks](#architecture-offline-hooks)
 * [Core CLI Workflows](#architecture-cli)
@@ -57,6 +58,20 @@ The runtime enables Reveal.js plugins including:
 - Zoom
 - Search
 - Remote (when network mode is enabled)
+
+---
+
+<a id="architecture-inter-presentation-links"></a>
+
+## Inter-Presentation Link Resolution
+
+Author-facing markdown uses plain relative `.md` links (for example `[Next](something.md)`), not implementation-specific query URLs.
+
+Planned resolution model:
+- Treat links ending in `.md` (optionally with `#anchor`) as internal presentation navigation.
+- Preserve markdown portability by mapping these links at runtime/generation time.
+- Reject parent-directory traversal targets (for example `../other.md`) for safety.
+- Support flattened generated docs where linked `.md` targets live in the same presentation directory.
 
 ---
 

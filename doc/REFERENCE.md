@@ -19,6 +19,7 @@
 
 Markdown syntax extensions and writing patterns:
 - [revelation/doc/AUTHORING_REFERENCE.md](AUTHORING_REFERENCE.md)
+- Inter-presentation link convention: [revelation/doc/AUTHORING_REFERENCE.md#authoring-inter-presentation-links](AUTHORING_REFERENCE.md#authoring-inter-presentation-links)
 
 ---
 
