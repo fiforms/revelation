@@ -9,6 +9,12 @@
 <body>
   <h1 data-translate>REVELation Snapshot Presenter</h1>
   <div class="grid" id="presentation-list"></div>
+  <div id="sort-menu" style="position:fixed;top:1rem;left:1rem;z-index:1000;">
+    <button id="sort-button" style="background:#222;color:#fff;border:1px solid #555;border-radius:6px;padding:.4rem .7rem;cursor:pointer;" title="Sort">⇅</button>
+    <div id="sort-dropdown" style="display:none;position:absolute;left:0;top:2.5rem;background:#111;border:1px solid #555;border-radius:8px;padding:.55rem;min-width:220px;box-shadow:0 4px 12px rgba(0,0,0,0.4);">
+      <div id="sort-options-list"></div>
+    </div>
+  </div>
   <div id="options-menu" style="position:fixed;top:1rem;right:1rem;z-index:1000;">
     <button id="options-button" style="background:#222;color:#fff;border:1px solid #555;border-radius:6px;padding:.4rem .8rem;cursor:pointer;" data-translate>Info ⓘ</button>
     <div id="options-dropdown" style="display:none;position:absolute;right:0;top:2.5rem;background:#111;border:1px solid #555;border-radius:8px;padding:.8rem;min-width:220px;box-shadow:0 4px 12px rgba(0,0,0,0.4);">

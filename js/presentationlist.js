@@ -41,65 +41,244 @@ if(window.electronAPI) {
 
 pluginLoader('presentationlist',`/plugins_${url_key}`);
 
+const sortBtn = document.getElementById('sort-button');
+const sortDropdown = document.getElementById('sort-dropdown');
+const sortOptionsList = document.getElementById('sort-options-list');
+const sortMenu = document.getElementById('sort-menu');
+
+const SORT_STORAGE_KEY = 'revelation.presentationSortMode';
+const SORT_MODES = [
+  { value: 'slug', label: 'Slug' },
+  { value: 'title', label: 'Title' },
+  { value: 'modified_desc', label: 'Last Modified' },
+  { value: 'modified_asc', label: 'First Modified' },
+  { value: 'created_desc', label: 'Last Created' },
+  { value: 'created_asc', label: 'First Created' }
+];
+
+let presentationItems = [];
+let currentSortMode = getStoredSortMode();
+let sortMenuOffsetObserver = null;
+
+function updateSortMenuOffset() {
+  if (!sortMenu) return;
+  const sidebar = document.querySelector('nav.sidebar');
+  if (sidebar) {
+    const rect = sidebar.getBoundingClientRect();
+    const safeLeft = Math.max(16, Math.round(rect.right + 16));
+    sortMenu.style.left = `${safeLeft}px`;
+    return;
+  }
+  sortMenu.style.left = '1rem';
+}
+
+function initSortMenuOffsetTracking() {
+  updateSortMenuOffset();
+  window.addEventListener('resize', updateSortMenuOffset);
+
+  if (sortMenuOffsetObserver) {
+    sortMenuOffsetObserver.disconnect();
+  }
+  sortMenuOffsetObserver = new MutationObserver(() => {
+    updateSortMenuOffset();
+  });
+  sortMenuOffsetObserver.observe(document.body, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: ['style', 'class']
+  });
+}
+
+function getStoredSortMode() {
+  try {
+    const saved = String(window.localStorage?.getItem(SORT_STORAGE_KEY) || '').trim();
+    if (SORT_MODES.some((entry) => entry.value === saved)) {
+      return saved;
+    }
+  } catch (err) {
+    console.warn('Failed to read sort mode from localStorage:', err);
+  }
+  return 'title';
+}
+
+function setStoredSortMode(value) {
+  try {
+    window.localStorage?.setItem(SORT_STORAGE_KEY, value);
+  } catch (err) {
+    console.warn('Failed to persist sort mode:', err);
+  }
+}
+
+function compareText(a, b) {
+  return String(a || '').toLowerCase().localeCompare(String(b || '').toLowerCase());
+}
+
+function getModifiedTimestamp(item) {
+  const direct = Number(item?.modifiedTimestamp);
+  if (Number.isFinite(direct)) return direct;
+  const parsed = Date.parse(String(item?.modified || ''));
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function getCreatedTimestamp(item) {
+  const direct = Number(item?.createdTimestamp);
+  if (Number.isFinite(direct)) return direct;
+  const parsed = Date.parse(String(item?.created || ''));
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function sortPresentations(items, mode) {
+  const sorted = [...items];
+  sorted.sort((a, b) => {
+    if (mode === 'slug') {
+      const bySlug = compareText(a.slug, b.slug);
+      return bySlug || compareText(a.title, b.title);
+    }
+    if (mode === 'title') {
+      const byTitle = compareText(a.title, b.title);
+      return byTitle || compareText(a.slug, b.slug);
+    }
+    if (mode === 'modified_desc') {
+      const aValue = getModifiedTimestamp(a);
+      const bValue = getModifiedTimestamp(b);
+      const aRank = aValue == null ? Number.NEGATIVE_INFINITY : aValue;
+      const bRank = bValue == null ? Number.NEGATIVE_INFINITY : bValue;
+      if (aRank !== bRank) return bRank - aRank;
+      return compareText(a.title, b.title);
+    }
+    if (mode === 'modified_asc') {
+      const aValue = getModifiedTimestamp(a);
+      const bValue = getModifiedTimestamp(b);
+      const aRank = aValue == null ? Number.POSITIVE_INFINITY : aValue;
+      const bRank = bValue == null ? Number.POSITIVE_INFINITY : bValue;
+      if (aRank !== bRank) return aRank - bRank;
+      return compareText(a.title, b.title);
+    }
+    if (mode === 'created_desc') {
+      const aValue = getCreatedTimestamp(a);
+      const bValue = getCreatedTimestamp(b);
+      const aRank = aValue == null ? Number.NEGATIVE_INFINITY : aValue;
+      const bRank = bValue == null ? Number.NEGATIVE_INFINITY : bValue;
+      if (aRank !== bRank) return bRank - aRank;
+      return compareText(a.title, b.title);
+    }
+    if (mode === 'created_asc') {
+      const aValue = getCreatedTimestamp(a);
+      const bValue = getCreatedTimestamp(b);
+      const aRank = aValue == null ? Number.POSITIVE_INFINITY : aValue;
+      const bRank = bValue == null ? Number.POSITIVE_INFINITY : bValue;
+      if (aRank !== bRank) return aRank - bRank;
+      return compareText(a.title, b.title);
+    }
+    return compareText(a.title, b.title);
+  });
+  return sorted;
+}
+
+function renderSortMenu() {
+  if (!sortOptionsList) return;
+  sortOptionsList.innerHTML = SORT_MODES.map((mode) => {
+    const isCurrent = mode.value === currentSortMode;
+    return `<button type="button" class="sort-option-btn${isCurrent ? ' is-current' : ''}" data-sort-mode="${mode.value}" style="display:block;width:100%;text-align:left;background:${isCurrent ? '#1f3b53' : '#1a1a1a'};color:#f0f0f0;border:1px solid #444;border-radius:6px;padding:.4rem .55rem;cursor:pointer;margin:.2rem 0;">${isCurrent ? '✓ ' : ''}${mode.label}</button>`;
+  }).join('');
+  sortOptionsList.querySelectorAll('[data-sort-mode]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const mode = String(button.dataset.sortMode || '').trim();
+      if (!mode) return;
+      applySortMode(mode, { persist: true, closeMenu: true });
+    });
+  });
+}
+
+function renderPresentationCards() {
+  if (!container) return;
+
+  if (!presentationItems.length) {
+    container.innerHTML = '<p>' + tr('No presentations available.') + '</p>';
+    return;
+  }
+
+  const sorted = sortPresentations(presentationItems, currentSortMode);
+  container.innerHTML = '';
+  selectedCardElement = null;
+
+  sorted.forEach((pres) => {
+    const card = document.createElement('a');
+    card.href = `${url_prefix}/${pres.slug}/?p=${pres.md}`;
+    card.target = '_blank';
+    card.className = 'card';
+    if (selectedPresentationBase && selectedPresentationBase.slug === pres.slug && selectedPresentationBase.md === pres.md) {
+      card.classList.add('card-selected');
+      selectedCardElement = card;
+    }
+    card.innerHTML = `
+      <img src="${url_prefix}/${pres.slug}/${pres.thumbnail}" alt="${pres.title}">
+      <div class="card-content">
+        <div class="card-title">${pres.title}</div>
+        <div class="card-desc">${pres.description}</div>
+      </div>
+    `;
+
+    card.addEventListener('click', (e) => {
+      e.preventDefault();
+      selectPresentation(pres, card);
+    });
+
+    card.addEventListener('dblclick', (e) => {
+      e.preventDefault();
+      openPrimaryPresentation(pres);
+    });
+
+    card.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      showCustomContextMenu(e.pageX, e.pageY, pres);
+    });
+
+    container.appendChild(card);
+  });
+}
+
+function applySortMode(mode, { persist = false, closeMenu = false } = {}) {
+  if (!SORT_MODES.some((entry) => entry.value === mode)) return;
+  currentSortMode = mode;
+  if (persist) {
+    setStoredSortMode(mode);
+  }
+  renderSortMenu();
+  renderPresentationCards();
+  if (closeMenu && sortDropdown) {
+    sortDropdown.style.display = 'none';
+  }
+}
+
+renderSortMenu();
+initSortMenuOffsetTracking();
+
 fetch(`${url_prefix}/index.json`)
-      .then(res => {
-        if (!res.ok) {
-          if (res.status === 403) {
-            throw new Error(tr('Access denied. This presentation list is restricted.'));
-          } else {
-            throw new Error(tr("Failed to load presentations") + `: ${res.status} ${res.statusText}`);
-          }
-        }
-        return res.json();
-      })
-      .then(presentations => {
-
-        if (!presentations.length) {
-          container.innerHTML = '<p>' + tr('No presentations available.') + '</p>';
-          return;
-        }
-
-        presentations.forEach(pres => {
-          const card = document.createElement('a');
-          card.href = `${url_prefix}/${pres.slug}/?p=${pres.md}`;
-          card.target = '_blank';
-          card.className = 'card';
-          card.innerHTML = `
-            <img src="${url_prefix}/${pres.slug}/${pres.thumbnail}" alt="${pres.title}">
-            <div class="card-content">
-              <div class="card-title">${pres.title}</div>
-              <div class="card-desc">${pres.description}</div>
-            </div>
-          `;
-
-          card.addEventListener('click', (e) => {
-            e.preventDefault();
-            selectPresentation(pres, card);
-          });
-
-          card.addEventListener('dblclick', (e) => {
-            e.preventDefault();
-            openPrimaryPresentation(pres);
-          });
-
- 	  card.addEventListener('contextmenu', (e) => {
-            e.preventDefault();
-            showCustomContextMenu(e.pageX, e.pageY, pres);
-          });
-
-          container.appendChild(card);
-        });
-
-	})
-        .catch(err => {
-          container.innerHTML = `
-            <div style="color: red; font-weight: bold; padding: 1rem;">
-              ❌ ${err.message}
-            </div>
-          `;
-          console.error('[Presentation Load Error]', err);
-
-});
+  .then((res) => {
+    if (!res.ok) {
+      if (res.status === 403) {
+        throw new Error(tr('Access denied. This presentation list is restricted.'));
+      } else {
+        throw new Error(tr("Failed to load presentations") + `: ${res.status} ${res.statusText}`);
+      }
+    }
+    return res.json();
+  })
+  .then((presentations) => {
+    presentationItems = Array.isArray(presentations) ? presentations : [];
+    renderSortMenu();
+    renderPresentationCards();
+  })
+  .catch((err) => {
+    container.innerHTML = `
+      <div style="color: red; font-weight: bold; padding: 1rem;">
+        ❌ ${err.message}
+      </div>
+    `;
+    console.error('[Presentation Load Error]', err);
+  });
 
 // Replace hostname indicator logic with dropdown setup
 const optionsBtn = document.getElementById('options-button');
@@ -180,6 +359,9 @@ if (optionsBtn) {
 if (optionsBtn && optionsDropdown) {
   optionsBtn.addEventListener('click', (e) => {
     e.stopPropagation();
+    if (sortDropdown) {
+      sortDropdown.style.display = 'none';
+    }
     const isVisible = optionsDropdown.style.display === 'block';
     optionsDropdown.style.display = isVisible ? 'none' : 'block';
   });
@@ -187,6 +369,23 @@ if (optionsBtn && optionsDropdown) {
   document.addEventListener('click', (e) => {
     if (!optionsDropdown.contains(e.target) && e.target !== optionsBtn) {
       optionsDropdown.style.display = 'none';
+    }
+  });
+}
+
+if (sortBtn && sortDropdown) {
+  sortBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (optionsDropdown) {
+      optionsDropdown.style.display = 'none';
+    }
+    const isVisible = sortDropdown.style.display === 'block';
+    sortDropdown.style.display = isVisible ? 'none' : 'block';
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!sortDropdown.contains(e.target) && e.target !== sortBtn) {
+      sortDropdown.style.display = 'none';
     }
   });
 }

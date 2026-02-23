@@ -61,6 +61,28 @@ function getLocalIp() {
   return 'localhost';
 }
 
+function normalizeCreatedField(value) {
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return value.toISOString();
+  }
+  if (typeof value === 'string') {
+    return value.trim();
+  }
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    const parsed = new Date(value);
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed.toISOString();
+    }
+  }
+  return '';
+}
+
+function toTimestamp(value) {
+  const parsed = Date.parse(String(value || ''));
+  if (!Number.isFinite(parsed)) return null;
+  return parsed;
+}
+
 function generatePresentationIndex() {
   // In GUI mode the wrapper owns docs/readme deck generation.
   const isGui = /^(1|true)$/i.test(process.env.REVELATION_GUI || '');
@@ -103,6 +125,7 @@ function generatePresentationIndex() {
       files.forEach((mdFile) => {
         const mdPath = path.join(folderPath, mdFile);
         const fileContent = fs.readFileSync(mdPath, 'utf-8');
+        const stats = fs.statSync(mdPath);
 
         let data;
         try {
@@ -125,12 +148,18 @@ function generatePresentationIndex() {
           return;
         }
 
+        const created = normalizeCreatedField(data.created);
+
         indexData.push({
           slug: dir,
           md: mdFile,
           title: data.title || `${dir}/${mdFile}`,
           description: data.description || "",
           thumbnail: data.thumbnail || "preview.jpg",
+          created,
+          createdTimestamp: toTimestamp(created),
+          modified: stats.mtime.toISOString(),
+          modifiedTimestamp: Number.isFinite(stats.mtimeMs) ? Math.round(stats.mtimeMs) : null,
           theme: data.theme || "",
           _malformed: data._malformed || false
         });
