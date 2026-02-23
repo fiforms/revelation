@@ -1,10 +1,6 @@
----
-
 # REVELation Reference Index
 
----
-
-## Table of Contents
+### Table of Contents
 * [Authoring Reference](#reference-authoring)
 * [Metadata Reference](#reference-metadata)
 * [Architecture Reference](#reference-architecture)
