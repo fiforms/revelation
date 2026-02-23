@@ -8,6 +8,69 @@ import { marked } from 'marked';
 
 const urlParams = new URLSearchParams(window.location.search);
 const mdFile = urlParams.get('p');
+const SAFE_MD_LINK_RE = /^(?:\.\/)?[a-zA-Z0-9_.-]+\.md$/;
+
+function resolveHandoutMarkdownTarget(href) {
+  if (!href) return null;
+  const trimmed = String(href).trim();
+  if (!trimmed || trimmed.startsWith('#')) return null;
+  if (/^(https?:|mailto:|tel:|javascript:|data:)/i.test(trimmed)) return null;
+  if (trimmed.includes('../')) {
+    console.warn(`Blocked parent-directory markdown link in handout: ${trimmed}`);
+    return null;
+  }
+
+  try {
+    const parsed = new URL(trimmed, window.location.href);
+    if (
+      (parsed.protocol === 'http:' || parsed.protocol === 'https:') &&
+      parsed.host !== window.location.host
+    ) {
+      return null;
+    }
+
+    const rawPath = decodeURIComponent(parsed.pathname.split('/').pop() || '');
+    const isIndexPath = /^index\.html?$/i.test(rawPath);
+    const isHandoutPath = /^handout(?:\.html)?$/i.test(rawPath);
+    if ((isIndexPath || isHandoutPath) && parsed.searchParams.has('p')) {
+      const p = parsed.searchParams.get('p') || '';
+      if (!SAFE_MD_LINK_RE.test(p)) return null;
+      return { mdFile: p, hash: parsed.hash || '' };
+    }
+
+    const local = trimmed.startsWith('./') ? trimmed.slice(2) : trimmed;
+    const [candidatePath, hashPart = ''] = local.split('#', 2);
+    if (!SAFE_MD_LINK_RE.test(candidatePath)) return null;
+    return { mdFile: candidatePath, hash: hashPart ? `#${hashPart}` : '' };
+  } catch {
+    return null;
+  }
+}
+
+function navigateHandoutInPlace(target) {
+  const nextUrl = new URL(window.location.href);
+  nextUrl.searchParams.set('p', target.mdFile);
+  nextUrl.hash = target.hash || '';
+  window.location.href = nextUrl.toString();
+}
+
+function setupInterPresentationHandoutLinks() {
+  document.addEventListener('click', (event) => {
+    if (event.defaultPrevented) return;
+    if (event.button !== 0) return;
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+
+    const anchor = event.target?.closest?.('a[href]');
+    if (!anchor) return;
+    if (anchor.hasAttribute('data-handout-skip-intercept')) return;
+
+    const target = resolveHandoutMarkdownTarget(anchor.getAttribute('href'));
+    if (!target) return;
+
+    event.preventDefault();
+    navigateHandoutInPlace(target);
+  }, true);
+}
 
 function splitSlides(markdown) {
   const lines = markdown.split('\n');
@@ -83,6 +146,7 @@ const container = document.getElementById('handout-content');
 if (!mdFile) {
   container.innerHTML = '<p>No markdown file specified.</p>';
 } else {
+  setupInterPresentationHandoutLinks();
   fetch(`${mdFile}`)
     .then(res => res.text())
     .then(async (rawMarkdown) => {
@@ -153,7 +217,7 @@ if (!mdFile) {
 	  const slideno = incremental ? slideCount : `${hIndex}.${vIndex}` ;
 
           output.push('<section class="slide">');
-	  output.push(`<div class="slide-number slide-number-link" style="display: none"><a href="index.html?p=${mdFile}#${hIndex}/${vIndex}" target="_blank">${slideno}</a></div>`);
+	  output.push(`<div class="slide-number slide-number-link" style="display: none"><a data-handout-skip-intercept=\"1\" href=\"index.html?p=${encodeURIComponent(mdFile)}#${hIndex}/${vIndex}\" target=\"_blank\">${slideno}</a></div>`);
 	  output.push(`<div class="slide-number slide-number-nolink">${slideno}</div>`);
           output.push(slideHTML);
 	  if(cleanedNote) {
