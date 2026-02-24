@@ -154,6 +154,11 @@ scrollspeed: 2.1
 
 ---
 
+For translation workflow and synchronized multi-language show setup, see:
+- [VARIANTS_REFERENCE.md](VARIANTS_REFERENCE.md)
+
+---
+
 <a id="metadata-media-aliases"></a>
 
 ## Media Aliases

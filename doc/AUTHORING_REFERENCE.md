@@ -11,6 +11,7 @@ This guide explains how to write REVELation presentations based on the current l
 3. [Notes (Bottom Section)](#3-notes-bottom-section)
 4. [Slide Markdown (Middle Section)](#4-slide-markdown-middle-section)
    - [Full Markdown Reference](MARKDOWN_REFERENCE.md)
+   - [Language Variants Reference](VARIANTS_REFERENCE.md)
 
 5. [Top Matter (Top Section)](#5-top-matter-top-section)
 6. Other
@@ -167,6 +168,10 @@ Regular paragraph text.
 ### 4.2 Per-Slide Authoring Extensions
 
 REVELation extends normal markdown with slide-focused syntax.
+
+---
+
+For multi-language presentation workflows, see [Language Variants Reference](VARIANTS_REFERENCE.md).
 
 ---
 
@@ -378,4 +383,3 @@ If `newSlideOnHeading` is omitted in YAML front matter, heading-based splitting 
 Recommended practice:
 - Prefer explicit `***` and `---` separators.
 - Use heading-based implied breaks only when needed for interoperability with other Markdown tooling.
-

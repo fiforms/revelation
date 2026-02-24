@@ -3,6 +3,7 @@
 ### Table of Contents
 * [Markdown Reference](#reference-markdown)
 * [Authoring Reference](#reference-authoring)
+* [Variants Reference](#reference-variants)
 * [Metadata Reference](#reference-metadata)
 * [Architecture Reference](#reference-architecture)
 * [Plugin References](#reference-plugins)
@@ -26,6 +27,15 @@ Core markdown syntax, HTML-in-markdown behavior, and Reveal.js markdown comment 
 Markdown syntax extensions and writing patterns:
 - [revelation/doc/AUTHORING_REFERENCE.md](AUTHORING_REFERENCE.md)
 - Inter-presentation link convention: [revelation/doc/AUTHORING_REFERENCE.md#authoring-inter-presentation-links](AUTHORING_REFERENCE.md#authoring-inter-presentation-links)
+
+---
+
+<a id="reference-variants"></a>
+
+## Variants Reference
+
+Multi-language presentation variants, translation workflow, and peer/virtual-peer synchronized output:
+- [revelation/doc/VARIANTS_REFERENCE.md](VARIANTS_REFERENCE.md)
 
 ---
 
