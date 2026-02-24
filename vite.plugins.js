@@ -16,6 +16,11 @@ let peerCommandIo = null;
 const PIN_FAILURE_LIMIT = 3;
 const PIN_BLOCK_MS = 60_000;
 const peerPinFailures = new Map();
+const PEER_EVENT_LIMIT = 200;
+let peerEventSeq = 0;
+const peerEventLog = [];
+const peerActiveFollowers = new Map();
+const peerSeenFollowers = new Map();
 
 let presentationsWebPath = '';
 let presentationsDir = '';
@@ -325,6 +330,18 @@ function presentationIndexPlugin() {
         const parsedUrl = new URL(req.url, 'http://localhost');
         const remoteAddress = normalizeRemoteAddress(req.socket?.remoteAddress);
 
+        if (req.method === 'GET' && parsedUrl.pathname === '/peer/status') {
+          if (!isLoopbackAddress(req.socket?.remoteAddress)) {
+            res.writeHead(403, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Forbidden' }));
+            return;
+          }
+          const status = getPeerStatus(parsedUrl.searchParams.get('since'));
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify(status));
+          return;
+        }
+
         if (req.method === 'GET' && req.url === '/peer/public-key') {
           const publicKey = config.rsaPublicKey;
           const payload = {
@@ -358,6 +375,10 @@ function presentationIndexPlugin() {
             const next = registerPinFailure(remoteAddress);
             if (next.blockedUntil && next.blockedUntil > Date.now()) {
               const block = pinBlockedResponse(next);
+              recordPeerEvent('pin-lockout', {
+                remoteAddress,
+                retryAfterSec: block.retryAfterSec
+              });
               res.writeHead(429, { 'Content-Type': 'application/json' });
               res.end(JSON.stringify({ error: 'Too many invalid pairing PIN attempts', retryAfterSec: block.retryAfterSec }));
             } else {
@@ -448,6 +469,10 @@ function presentationIndexPlugin() {
               const next = registerPinFailure(remoteAddress);
               if (next.blockedUntil && next.blockedUntil > Date.now()) {
                 const block = pinBlockedResponse(next);
+                recordPeerEvent('pin-lockout', {
+                  remoteAddress,
+                  retryAfterSec: block.retryAfterSec
+                });
                 res.writeHead(429, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({ error: 'Too many invalid pairing PIN attempts', retryAfterSec: block.retryAfterSec }));
               } else {
@@ -575,6 +600,65 @@ function normalizeRemoteAddress(address) {
   return address.startsWith('::ffff:') ? address.replace('::ffff:', '') : address;
 }
 
+function normalizePeerInstanceId(value) {
+  const id = String(value || '').trim();
+  return id || 'unknown';
+}
+
+function recordPeerEvent(type, payload = {}) {
+  peerEventSeq += 1;
+  peerEventLog.push({
+    id: peerEventSeq,
+    type,
+    at: new Date().toISOString(),
+    ...payload
+  });
+  if (peerEventLog.length > PEER_EVENT_LIMIT) {
+    peerEventLog.splice(0, peerEventLog.length - PEER_EVENT_LIMIT);
+  }
+  return peerEventSeq;
+}
+
+function upsertSeenFollower(instanceId, remoteAddress) {
+  const key = instanceId !== 'unknown' ? `instance:${instanceId}` : `ip:${remoteAddress}`;
+  const now = new Date().toISOString();
+  const existing = peerSeenFollowers.get(key);
+  if (existing) {
+    existing.lastSeen = now;
+    existing.remoteAddress = remoteAddress;
+    existing.connectionCount += 1;
+    return existing;
+  }
+  const created = {
+    key,
+    instanceId,
+    remoteAddress,
+    firstSeen: now,
+    lastSeen: now,
+    connectionCount: 1
+  };
+  peerSeenFollowers.set(key, created);
+  return created;
+}
+
+function getPeerStatus(sinceId = 0) {
+  const parsedSince = Number.parseInt(sinceId, 10);
+  const safeSince = Number.isFinite(parsedSince) && parsedSince > 0 ? parsedSince : 0;
+  const events = safeSince
+    ? peerEventLog.filter((entry) => entry.id > safeSince)
+    : [];
+  const activeFollowers = Array.from(peerActiveFollowers.values())
+    .sort((a, b) => String(a.connectedAt).localeCompare(String(b.connectedAt)));
+  const seenFollowers = Array.from(peerSeenFollowers.values())
+    .sort((a, b) => String(b.lastSeen).localeCompare(String(a.lastSeen)));
+  return {
+    activeFollowers,
+    seenFollowers,
+    events,
+    lastEventId: peerEventSeq
+  };
+}
+
 function getPinFailureState(remoteAddress) {
   const now = Date.now();
   const current = peerPinFailures.get(remoteAddress);
@@ -642,6 +726,25 @@ function ensurePeerCommandServer(server, configPath) {
       return next(new Error('Invalid peer signature'));
     }
     return next();
+  });
+
+  peerCommandIo.on('connection', (socket) => {
+    const auth = socket.handshake.auth || {};
+    const instanceId = normalizePeerInstanceId(auth.instanceId);
+    const remoteAddress = normalizeRemoteAddress(socket.handshake.address || socket.request?.socket?.remoteAddress);
+    const connectedAt = new Date().toISOString();
+    peerActiveFollowers.set(socket.id, {
+      socketId: socket.id,
+      instanceId,
+      remoteAddress,
+      connectedAt
+    });
+    upsertSeenFollower(instanceId, remoteAddress);
+    recordPeerEvent('follower-connected', { instanceId, remoteAddress });
+
+    socket.on('disconnect', () => {
+      peerActiveFollowers.delete(socket.id);
+    });
   });
 }
 

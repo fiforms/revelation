@@ -289,14 +289,24 @@ const pairingPinRow = document.getElementById('pairing-pin-row');
 const pairingPinDisplay = document.getElementById('pairing-pin-display');
 const selectedLanguageDisplay = document.getElementById('selected-language-display');
 const selectedVariantDisplay = document.getElementById('selected-variant-display');
+const PEER_STATUS_ENDPOINT = '/peer/status';
+const PEER_STATUS_POLL_MS = 4000;
 
 let appConfig = null;
+let peerStatusPollingTimer = null;
+let peerStatusLastEventId = 0;
+let peerStatusActiveFollowers = [];
+let peerStatusSeenFollowers = [];
 if (window.electronAPI?.getAppConfig) {
   try {
     appConfig = await window.electronAPI.getAppConfig();
   } catch (err) {
     console.warn('Failed to load app config:', err);
   }
+}
+
+function isMasterModeEnabled() {
+  return !!appConfig?.mdnsPublish;
 }
 
 
@@ -312,12 +322,142 @@ if (lanIpRow && lanIpDisplay) {
 }
 
 if (pairingPinRow && pairingPinDisplay) {
-  if (window.electronAPI && appConfig?.mdnsPairingPin) {
+  if (window.electronAPI && isMasterModeEnabled() && appConfig?.mdnsPairingPin) {
     pairingPinRow.style.display = 'block';
     pairingPinDisplay.textContent = appConfig.mdnsPairingPin;
   } else {
     pairingPinRow.style.display = 'none';
   }
+}
+
+function buildFollowerLabel(entry) {
+  const id = String(entry?.instanceId || '').trim();
+  const ip = String(entry?.remoteAddress || '').trim();
+  const idPart = id && id !== 'unknown' ? id : 'unknown';
+  return ip ? `${idPart} @ ${ip}` : idPart;
+}
+
+function ensurePeerStatusRows() {
+  if (!optionsDropdown || !isMasterModeEnabled()) return {};
+  let activeRow = document.getElementById('peer-followers-active-row');
+  if (!activeRow) {
+    activeRow = document.createElement('div');
+    activeRow.id = 'peer-followers-active-row';
+    activeRow.style.marginBottom = '.5rem';
+    activeRow.innerHTML = `<strong>Active Followers:</strong> <span id="peer-followers-active-count">0</span><div id="peer-followers-active-list" style="font-size:.9rem;color:#cfcfcf;margin-top:.2rem;"></div>`;
+    const hr = optionsDropdown.querySelector('hr');
+    optionsDropdown.insertBefore(activeRow, hr || null);
+  }
+
+  let seenRow = document.getElementById('peer-followers-seen-row');
+  if (!seenRow) {
+    seenRow = document.createElement('div');
+    seenRow.id = 'peer-followers-seen-row';
+    seenRow.style.marginBottom = '.5rem';
+    seenRow.innerHTML = `<strong>Followers Since Start:</strong> <span id="peer-followers-seen-count">0</span><div id="peer-followers-seen-list" style="font-size:.9rem;color:#cfcfcf;margin-top:.2rem;max-height:160px;overflow:auto;"></div>`;
+    const hr = optionsDropdown.querySelector('hr');
+    optionsDropdown.insertBefore(seenRow, hr || null);
+  }
+
+  return {
+    activeCountEl: document.getElementById('peer-followers-active-count'),
+    activeListEl: document.getElementById('peer-followers-active-list'),
+    seenCountEl: document.getElementById('peer-followers-seen-count'),
+    seenListEl: document.getElementById('peer-followers-seen-list')
+  };
+}
+
+function renderPeerStatusRows() {
+  if (!isMasterModeEnabled()) {
+    const activeRow = document.getElementById('peer-followers-active-row');
+    const seenRow = document.getElementById('peer-followers-seen-row');
+    if (activeRow) activeRow.style.display = 'none';
+    if (seenRow) seenRow.style.display = 'none';
+    return;
+  }
+  const { activeCountEl, activeListEl, seenCountEl, seenListEl } = ensurePeerStatusRows();
+  const activeRow = document.getElementById('peer-followers-active-row');
+  const seenRow = document.getElementById('peer-followers-seen-row');
+  if (activeRow) activeRow.style.display = 'block';
+  if (seenRow) seenRow.style.display = 'block';
+  if (activeCountEl) activeCountEl.textContent = String(peerStatusActiveFollowers.length);
+  if (seenCountEl) seenCountEl.textContent = String(peerStatusSeenFollowers.length);
+
+  if (activeListEl) {
+    if (!peerStatusActiveFollowers.length) {
+      activeListEl.textContent = 'None';
+    } else {
+      activeListEl.innerHTML = peerStatusActiveFollowers
+        .slice(0, 8)
+        .map((entry) => `<div>${buildFollowerLabel(entry)}</div>`)
+        .join('');
+    }
+  }
+
+  if (seenListEl) {
+    if (!peerStatusSeenFollowers.length) {
+      seenListEl.textContent = 'None';
+    } else {
+      seenListEl.innerHTML = peerStatusSeenFollowers
+        .slice(0, 12)
+        .map((entry) => `<div>${buildFollowerLabel(entry)}</div>`)
+        .join('');
+    }
+  }
+}
+
+function processPeerStatusEvents(events = []) {
+  events.forEach((event) => {
+    if (!event || typeof event !== 'object') return;
+    if (event.type === 'follower-connected') {
+      const label = buildFollowerLabel(event);
+      showToast(`Follower connected: ${label}`);
+      return;
+    }
+    if (event.type === 'pin-lockout') {
+      const ip = String(event.remoteAddress || 'unknown');
+      const retryAfterSec = Number.parseInt(event.retryAfterSec, 10);
+      const retryText = Number.isFinite(retryAfterSec) && retryAfterSec > 0
+        ? ` (${retryAfterSec}s)`
+        : '';
+      showToast(`Peer PIN lockout from ${ip}${retryText}`);
+    }
+  });
+}
+
+async function pollPeerStatus() {
+  if (!window.electronAPI || !isMasterModeEnabled()) return;
+  const query = peerStatusLastEventId > 0 ? `?since=${peerStatusLastEventId}` : '';
+  const response = await fetch(`${PEER_STATUS_ENDPOINT}${query}`);
+  if (response.status === 403 || response.status === 404) {
+    peerStatusActiveFollowers = [];
+    peerStatusSeenFollowers = [];
+    renderPeerStatusRows();
+    return;
+  }
+  if (!response.ok) {
+    throw new Error(`Peer status request failed (${response.status})`);
+  }
+  const data = await response.json();
+  peerStatusActiveFollowers = Array.isArray(data.activeFollowers) ? data.activeFollowers : [];
+  peerStatusSeenFollowers = Array.isArray(data.seenFollowers) ? data.seenFollowers : [];
+  processPeerStatusEvents(Array.isArray(data.events) ? data.events : []);
+  if (Number.isFinite(data.lastEventId)) {
+    peerStatusLastEventId = data.lastEventId;
+  }
+  renderPeerStatusRows();
+}
+
+function startPeerStatusPolling() {
+  if (!window.electronAPI || !isMasterModeEnabled() || peerStatusPollingTimer) return;
+  pollPeerStatus().catch((err) => {
+    console.warn('Peer status poll failed:', err.message || err);
+  });
+  peerStatusPollingTimer = window.setInterval(() => {
+    pollPeerStatus().catch((err) => {
+      console.warn('Peer status poll failed:', err.message || err);
+    });
+  }, PEER_STATUS_POLL_MS);
 }
 
 function formatVariantName(variant) {
@@ -364,6 +504,11 @@ if (optionsBtn && optionsDropdown) {
     }
     const isVisible = optionsDropdown.style.display === 'block';
     optionsDropdown.style.display = isVisible ? 'none' : 'block';
+    if (!isVisible && isMasterModeEnabled()) {
+      pollPeerStatus().catch((err) => {
+        console.warn('Peer status poll failed:', err.message || err);
+      });
+    }
   });
 
   document.addEventListener('click', (e) => {
@@ -372,6 +517,8 @@ if (optionsBtn && optionsDropdown) {
     }
   });
 }
+
+startPeerStatusPolling();
 
 if (sortBtn && sortDropdown) {
   sortBtn.addEventListener('click', (e) => {
