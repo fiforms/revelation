@@ -60,11 +60,31 @@ export async function initMediaLibrary(container, {
 
   // Adjust search bar for Electron sidebar
   const mediaControls = container.querySelector('#media-controls');
-  if (window.electronAPI && mode === 'standalone') {
-    // Scoot over by sidebar width (tweak 260px if your sidebar is different)
-    mediaControls.style.left = '260px';
-  } else {
+  function getStandaloneLeftOffset() {
+    const sidebar = document.querySelector('nav.sidebar');
+    if (sidebar) {
+      return Math.max(0, Math.round(sidebar.getBoundingClientRect().right));
+    }
+    const bodyPaddingLeft = parseFloat(window.getComputedStyle(document.body).paddingLeft || '0');
+    return Math.max(0, Math.round(bodyPaddingLeft));
+  }
+  function updateMediaControlsOffset() {
+    if (window.electronAPI && mode === 'standalone') {
+      mediaControls.style.left = `${getStandaloneLeftOffset()}px`;
+      return;
+    }
     mediaControls.style.left = '0';
+  }
+  updateMediaControlsOffset();
+  if (window.electronAPI && mode === 'standalone') {
+    window.addEventListener('resize', updateMediaControlsOffset);
+    const controlsOffsetObserver = new MutationObserver(updateMediaControlsOffset);
+    controlsOffsetObserver.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['style', 'class']
+    });
   }
 
   const searchBox = container.querySelector('#media-search');
