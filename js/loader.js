@@ -784,7 +784,13 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
     if (insideCodeBlock) {
       // Reveal's markdown separator regex is line-based and can split inside fences.
       // Add a trailing space to separator-only lines while inside fenced code blocks.
-      if (line === '---' || line === '***') {
+      const trimmedLine = line.trim();
+      if (
+        trimmedLine === '---' ||
+        trimmedLine === '***' ||
+        trimmedLine === NOTE_SEPARATOR_CURRENT ||
+        trimmedLine.toLowerCase() === NOTE_SEPARATOR_LEGACY.toLowerCase()
+      ) {
         processedLines.push(`${line} `);
       } else {
         processedLines.push(line);
