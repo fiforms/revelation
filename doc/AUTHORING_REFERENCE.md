@@ -37,11 +37,9 @@ Example:
 
 ```markdown
 # Slide 1
-```
 
-`***`
+***
 
-```markdown
 # Slide 2 (new horizontal stack)
 
 ---
