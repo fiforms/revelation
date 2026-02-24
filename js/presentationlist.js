@@ -296,7 +296,6 @@ let appConfig = null;
 let peerStatusPollingTimer = null;
 let peerStatusLastEventId = 0;
 let peerStatusActiveFollowers = [];
-let peerStatusSeenFollowers = [];
 if (window.electronAPI?.getAppConfig) {
   try {
     appConfig = await window.electronAPI.getAppConfig();
@@ -331,10 +330,12 @@ if (pairingPinRow && pairingPinDisplay) {
 }
 
 function buildFollowerLabel(entry) {
+  const hostname = String(entry?.hostname || '').trim();
+  const name = String(entry?.instanceName || '').trim();
   const id = String(entry?.instanceId || '').trim();
   const ip = String(entry?.remoteAddress || '').trim();
-  const idPart = id && id !== 'unknown' ? id : 'unknown';
-  return ip ? `${idPart} @ ${ip}` : idPart;
+  const preferred = hostname || name || (id && id !== 'unknown' ? id : 'unknown');
+  return ip ? `${preferred} @ ${ip}` : preferred;
 }
 
 function ensurePeerStatusRows() {
@@ -344,44 +345,25 @@ function ensurePeerStatusRows() {
     activeRow = document.createElement('div');
     activeRow.id = 'peer-followers-active-row';
     activeRow.style.marginBottom = '.5rem';
-    activeRow.innerHTML = `<strong>Active Followers:</strong> <span id="peer-followers-active-count">0</span><div id="peer-followers-active-list" style="font-size:.9rem;color:#cfcfcf;margin-top:.2rem;"></div>`;
+    activeRow.innerHTML = `<strong>Active Followers:</strong><div id="peer-followers-active-list" style="font-size:.9rem;color:#cfcfcf;margin-top:.2rem;"></div>`;
     const hr = optionsDropdown.querySelector('hr');
     optionsDropdown.insertBefore(activeRow, hr || null);
   }
 
-  let seenRow = document.getElementById('peer-followers-seen-row');
-  if (!seenRow) {
-    seenRow = document.createElement('div');
-    seenRow.id = 'peer-followers-seen-row';
-    seenRow.style.marginBottom = '.5rem';
-    seenRow.innerHTML = `<strong>Followers Since Start:</strong> <span id="peer-followers-seen-count">0</span><div id="peer-followers-seen-list" style="font-size:.9rem;color:#cfcfcf;margin-top:.2rem;max-height:160px;overflow:auto;"></div>`;
-    const hr = optionsDropdown.querySelector('hr');
-    optionsDropdown.insertBefore(seenRow, hr || null);
-  }
-
   return {
-    activeCountEl: document.getElementById('peer-followers-active-count'),
-    activeListEl: document.getElementById('peer-followers-active-list'),
-    seenCountEl: document.getElementById('peer-followers-seen-count'),
-    seenListEl: document.getElementById('peer-followers-seen-list')
+    activeListEl: document.getElementById('peer-followers-active-list')
   };
 }
 
 function renderPeerStatusRows() {
   if (!isMasterModeEnabled()) {
     const activeRow = document.getElementById('peer-followers-active-row');
-    const seenRow = document.getElementById('peer-followers-seen-row');
     if (activeRow) activeRow.style.display = 'none';
-    if (seenRow) seenRow.style.display = 'none';
     return;
   }
-  const { activeCountEl, activeListEl, seenCountEl, seenListEl } = ensurePeerStatusRows();
+  const { activeListEl } = ensurePeerStatusRows();
   const activeRow = document.getElementById('peer-followers-active-row');
-  const seenRow = document.getElementById('peer-followers-seen-row');
   if (activeRow) activeRow.style.display = 'block';
-  if (seenRow) seenRow.style.display = 'block';
-  if (activeCountEl) activeCountEl.textContent = String(peerStatusActiveFollowers.length);
-  if (seenCountEl) seenCountEl.textContent = String(peerStatusSeenFollowers.length);
 
   if (activeListEl) {
     if (!peerStatusActiveFollowers.length) {
@@ -389,17 +371,6 @@ function renderPeerStatusRows() {
     } else {
       activeListEl.innerHTML = peerStatusActiveFollowers
         .slice(0, 8)
-        .map((entry) => `<div>${buildFollowerLabel(entry)}</div>`)
-        .join('');
-    }
-  }
-
-  if (seenListEl) {
-    if (!peerStatusSeenFollowers.length) {
-      seenListEl.textContent = 'None';
-    } else {
-      seenListEl.innerHTML = peerStatusSeenFollowers
-        .slice(0, 12)
         .map((entry) => `<div>${buildFollowerLabel(entry)}</div>`)
         .join('');
     }
@@ -431,7 +402,6 @@ async function pollPeerStatus() {
   const response = await fetch(`${PEER_STATUS_ENDPOINT}${query}`);
   if (response.status === 403 || response.status === 404) {
     peerStatusActiveFollowers = [];
-    peerStatusSeenFollowers = [];
     renderPeerStatusRows();
     return;
   }
@@ -440,7 +410,6 @@ async function pollPeerStatus() {
   }
   const data = await response.json();
   peerStatusActiveFollowers = Array.isArray(data.activeFollowers) ? data.activeFollowers : [];
-  peerStatusSeenFollowers = Array.isArray(data.seenFollowers) ? data.seenFollowers : [];
   processPeerStatusEvents(Array.isArray(data.events) ? data.events : []);
   if (Number.isFinite(data.lastEventId)) {
     peerStatusLastEventId = data.lastEventId;

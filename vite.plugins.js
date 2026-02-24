@@ -605,6 +605,11 @@ function normalizePeerInstanceId(value) {
   return id || 'unknown';
 }
 
+function normalizePeerLabel(value) {
+  const label = String(value || '').trim();
+  return label || '';
+}
+
 function recordPeerEvent(type, payload = {}) {
   peerEventSeq += 1;
   peerEventLog.push({
@@ -731,16 +736,20 @@ function ensurePeerCommandServer(server, configPath) {
   peerCommandIo.on('connection', (socket) => {
     const auth = socket.handshake.auth || {};
     const instanceId = normalizePeerInstanceId(auth.instanceId);
+    const instanceName = normalizePeerLabel(auth.instanceName);
+    const hostname = normalizePeerLabel(auth.hostname);
     const remoteAddress = normalizeRemoteAddress(socket.handshake.address || socket.request?.socket?.remoteAddress);
     const connectedAt = new Date().toISOString();
     peerActiveFollowers.set(socket.id, {
       socketId: socket.id,
       instanceId,
+      instanceName,
+      hostname,
       remoteAddress,
       connectedAt
     });
     upsertSeenFollower(instanceId, remoteAddress);
-    recordPeerEvent('follower-connected', { instanceId, remoteAddress });
+    recordPeerEvent('follower-connected', { instanceId, instanceName, hostname, remoteAddress });
 
     socket.on('disconnect', () => {
       peerActiveFollowers.delete(socket.id);
