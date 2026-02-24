@@ -1,11 +1,21 @@
 # REVELation Reference Index
 
 ### Table of Contents
+* [Markdown Reference](#reference-markdown)
 * [Authoring Reference](#reference-authoring)
 * [Metadata Reference](#reference-metadata)
 * [Architecture Reference](#reference-architecture)
 * [Plugin References](#reference-plugins)
 * [Wrapper Documentation](#reference-wrapper-docs)
+
+---
+
+<a id="reference-markdown"></a>
+
+## Markdown Reference
+
+Core markdown syntax, HTML-in-markdown behavior, and Reveal.js markdown comment directives:
+- [revelation/doc/MARKDOWN_REFERENCE.md](MARKDOWN_REFERENCE.md)
 
 ---
 
