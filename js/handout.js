@@ -162,7 +162,37 @@ function isCommentOnlyMarkdown(markdown) {
 
 function splitSlideContentAndNotes(rawSlide, noteSeparator) {
   const lines = String(rawSlide || '').split(/\r?\n/);
-  const noteIndex = lines.findIndex((line) => line.trim() === noteSeparator);
+  let insideCodeBlock = false;
+  let currentFence = '';
+  let noteIndex = -1;
+
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i];
+    const fenceMatch = line.match(/^\s{0,3}((`{3,}|~{3,}))[ \t]*(.*)$/);
+    if (fenceMatch) {
+      const fence = fenceMatch[1];
+      const fenceChar = fence[0];
+      const fenceLength = fence.length;
+      if (!insideCodeBlock) {
+        insideCodeBlock = true;
+        currentFence = fence;
+      } else if (
+        currentFence &&
+        fenceChar === currentFence[0] &&
+        fenceLength >= currentFence.length
+      ) {
+        insideCodeBlock = false;
+        currentFence = '';
+      }
+      continue;
+    }
+
+    if (!insideCodeBlock && line.trim() === noteSeparator) {
+      noteIndex = i;
+      break;
+    }
+  }
+
   if (noteIndex < 0) {
     return { content: String(rawSlide || ''), notes: '' };
   }
@@ -170,6 +200,42 @@ function splitSlideContentAndNotes(rawSlide, noteSeparator) {
     content: lines.slice(0, noteIndex).join('\n'),
     notes: lines.slice(noteIndex + 1).join('\n')
   };
+}
+
+function stripSlideSeparatorsOutsideCodeBlocks(markdown) {
+  const lines = String(markdown || '').split(/\r?\n/);
+  const kept = [];
+  let insideCodeBlock = false;
+  let currentFence = '';
+
+  for (const line of lines) {
+    const fenceMatch = line.match(/^\s{0,3}((`{3,}|~{3,}))[ \t]*(.*)$/);
+    if (fenceMatch) {
+      const fence = fenceMatch[1];
+      const fenceChar = fence[0];
+      const fenceLength = fence.length;
+      if (!insideCodeBlock) {
+        insideCodeBlock = true;
+        currentFence = fence;
+      } else if (
+        currentFence &&
+        fenceChar === currentFence[0] &&
+        fenceLength >= currentFence.length
+      ) {
+        insideCodeBlock = false;
+        currentFence = '';
+      }
+      kept.push(line);
+      continue;
+    }
+
+    if (!insideCodeBlock && /^\s*(\*\*\*|---)\s*$/.test(line)) {
+      continue;
+    }
+    kept.push(line);
+  }
+
+  return kept.join('\n');
 }
 
 // VITE Hot Reloading Hook
@@ -245,9 +311,11 @@ if (!mdFile) {
 
           const rawSlide = slide.content;
           const parsedSlide = splitSlideContentAndNotes(rawSlide.trim(), noteSeparator);
-          const cleanedMarkdown = parsedSlide.content.replace(/^\s*(\*\*\*|---)\s*$/gm, '').trim();
+          const cleanedMarkdown = stripSlideSeparatorsOutsideCodeBlocks(parsedSlide.content).trim();
           const slideHTML = sanitizeRenderedHTML(marked.parse(cleanedMarkdown));
-          const cleanedNote = parsedSlide.notes ? parsedSlide.notes.replace(/^\s*(\*\*\*|---)\s*$/gm, '').trim() : '';
+          const cleanedNote = parsedSlide.notes
+            ? stripSlideSeparatorsOutsideCodeBlocks(parsedSlide.notes).trim()
+            : '';
           const noteHTML = sanitizeRenderedHTML(marked.parse(cleanedNote));
 
 	  if((!cleanedMarkdown || 
