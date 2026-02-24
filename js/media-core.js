@@ -142,11 +142,15 @@ export async function initMediaLibrary(container, {
   });
   lightbox.innerHTML = `
     <button type="button" id="mlightbox-close" aria-label="Close preview">×</button>
+    <button type="button" id="mlightbox-prev" aria-label="Previous media">‹</button>
+    <button type="button" id="mlightbox-next" aria-label="Next media">›</button>
     <div id="mlightbox-content"></div>
   `;
   document.body.appendChild(lightbox);
   const lbContent = lightbox.querySelector('#mlightbox-content');
   const lbClose = lightbox.querySelector('#mlightbox-close');
+  const lbPrev = lightbox.querySelector('#mlightbox-prev');
+  const lbNext = lightbox.querySelector('#mlightbox-next');
   Object.assign(lbClose.style, {
     position: 'fixed',
     top: '16px',
@@ -163,27 +167,71 @@ export async function initMediaLibrary(container, {
     cursor: 'pointer',
     zIndex: '10000'
   });
-  lightbox.addEventListener('click', () => { lightbox.style.display = 'none'; lbContent.innerHTML=''; });
-  lbClose.addEventListener('click', (e) => {
-    e.stopPropagation();
+  const navBtnBaseStyle = {
+    position: 'fixed',
+    top: '50%',
+    transform: 'translateY(-50%)',
+    width: '40px',
+    height: '40px',
+    borderRadius: '50%',
+    border: '1px solid rgba(255,255,255,0.25)',
+    background: 'rgba(120,120,120,0.22)',
+    color: '#eee',
+    fontSize: '22px',
+    lineHeight: '36px',
+    textAlign: 'center',
+    cursor: 'pointer',
+    zIndex: '10000',
+    display: 'none'
+  };
+  Object.assign(lbPrev.style, navBtnBaseStyle, { left: '16px' });
+  Object.assign(lbNext.style, navBtnBaseStyle, { right: '16px' });
+
+  const movePreview = (delta) => {
+    if (lightbox.style.display !== 'flex') return;
+    if (!mediaList.length) return;
+    currentIndex = (currentIndex + delta + mediaList.length) % mediaList.length;
+    openPreview(mediaList[currentIndex], currentIndex);
+  };
+
+  const closeLightbox = () => {
     lightbox.style.display = 'none';
     lbContent.innerHTML = '';
+    lbPrev.style.display = 'none';
+    lbNext.style.display = 'none';
+  };
+  lightbox.addEventListener('click', (e) => {
+    if (e.target !== lightbox) return;
+    closeLightbox();
+  });
+  lbClose.addEventListener('click', (e) => {
+    e.stopPropagation();
+    closeLightbox();
+  });
+  lbPrev.addEventListener('click', (e) => {
+    e.stopPropagation();
+    movePreview(-1);
+  });
+  lbNext.addEventListener('click', (e) => {
+    e.stopPropagation();
+    movePreview(1);
   });
 
     document.addEventListener('keydown', (e) => {
         if (lightbox.style.display !== 'flex') return;
+        if (!mediaList.length) return;
 
         if (e.key === 'Escape') {
-            lightbox.style.display = 'none';
-            lbContent.innerHTML = '';
+            closeLightbox();
+            return;
         }
         if (e.key === 'ArrowRight') {
-            currentIndex = (currentIndex + 1) % mediaList.length;
-            openPreview(mediaList[currentIndex], currentIndex);
+            e.preventDefault();
+            movePreview(1);
         }
         if (e.key === 'ArrowLeft') {
-            currentIndex = (currentIndex - 1 + mediaList.length) % mediaList.length;
-            openPreview(mediaList[currentIndex], currentIndex);
+            e.preventDefault();
+            movePreview(-1);
         }
     });
 
@@ -252,7 +300,7 @@ export async function initMediaLibrary(container, {
       thumb.addEventListener('click', (e) => {
         if (mode === 'picker') return;
         e.stopPropagation();
-        openPreview(item, list.indexOf(item));
+        openPreview(item, list.indexOf(item), list);
       });
 
       const thumbWrap = document.createElement('div');
@@ -285,7 +333,7 @@ export async function initMediaLibrary(container, {
           showContextMenu(e.pageX, e.pageY, item);
         });
         if (mode === 'standalone') {
-          card.addEventListener('click', () => openPreview(item, list.indexOf(item)));
+          card.addEventListener('click', () => openPreview(item, list.indexOf(item), list));
         }
       }
 
@@ -299,8 +347,25 @@ export async function initMediaLibrary(container, {
     }
   }
 
-function openPreview(item, index = null) {
-  if (index !== null) currentIndex = index;
+function openPreview(item, index = null, sourceList = null) {
+  if (Array.isArray(sourceList) && sourceList.length) {
+    mediaList.length = 0;
+    mediaList.push(...sourceList);
+  } else if (!mediaList.length) {
+    mediaList.push(item);
+  }
+
+  if (index !== null && index >= 0 && index < mediaList.length) {
+    currentIndex = index;
+  } else {
+    const foundIndex = mediaList.indexOf(item);
+    currentIndex = foundIndex >= 0 ? foundIndex : 0;
+  }
+
+  item = mediaList[currentIndex] || item;
+  const showNav = mediaList.length > 1;
+  lbPrev.style.display = showNav ? '' : 'none';
+  lbNext.style.display = showNav ? '' : 'none';
   lbContent.innerHTML = '';
 
   const figure = document.createElement('figure');
@@ -585,7 +650,7 @@ caption.innerHTML = `
 
     if (mode === 'picker') {
       options = [
-        { label: '🔍 ' + tr('Preview'), action: () => openPreview(item, viewList.indexOf(item)) },
+        { label: '🔍 ' + tr('Preview'), action: () => openPreview(item, viewList.indexOf(item), viewList) },
         { label: '➕ ' + tr('Add media to selected presentation'), action: () => pickItem(item) },
       ];
     } else {
