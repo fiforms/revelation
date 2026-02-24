@@ -1,334 +1,383 @@
----
+# REVELation Authoring Guide
 
-# REVELation Authoring Reference
+This guide explains how to write REVELation presentations based on the current loader and presentation builder behavior.
 
 ---
 
 ## Table of Contents
-* [Slide Structure](#authoring-slide-structure)
-* [Speaker Notes](#authoring-speaker-notes)
-* [Reveal.js Data Attributes](#authoring-reveal-attributes)
-* [Background and Positioning Helpers](#authoring-background-positioning)
-* [Website Embed](#authoring-website-embed)
-* [Background Audio](#authoring-background-audio)
-* [Fragments](#authoring-fragments)
-* [Attributions](#authoring-attributions)
-* [Magic Images](#authoring-magic-images)
-* [Media in Markdown](#authoring-media-markdown)
-* [Inter-Presentation Links](#authoring-inter-presentation-links)
----
 
+1. [Core Concept](#1-core-concept)
+2. [Slide Anatomy](#2-slide-anatomy)
+3. [Notes (Bottom Section)](#3-notes-bottom-section)
+4. [Slide Markdown (Middle Section)](#4-slide-markdown-middle-section)
+   - [Full Markdown Reference](MARKDOWN_REFERENCE.md)
 
-<a id="authoring-slide-structure"></a>
-
-## Slide Structure
-
-Slides can be created by headings or explicit separators.
+5. [Top Matter (Top Section)](#5-top-matter-top-section)
+6. Other
+   - [Heading-Based Slide Breaks](#6-footnote-heading-based-slide-breaks)
 
 ---
 
-### Heading-based slides
+<a id="1-core-concept"></a>
 
-Top-level headings (`#`, `##`, `###`) can start new slides.
+## 1. Core Concept
+
+A presentation is a single Markdown file.
+
+Slides are separated with marker lines:
+
+| Marker | Meaning |
+| --- | --- |
+| `***` | Horizontal break (next column/stack) |
+| `---` | Vertical break (next slide in same column/stack) |
+
+---
+
+Example:
 
 ```markdown
-# Welcome
-This is the opening slide.
-
-## Our Mission
-We aim to make authoring delightful.
+# Slide 1
 ```
 
-Set `newSlideOnHeading: false` in front matter to disable this behavior.
-
----
-
-### Explicit separators
-
-| Separator | Slide Type |
-| --------- | ---------- |
-| `***`     | Horizontal |
-| `---`     | Vertical |
+`***`
 
 ```markdown
-# First Slide
-Some content here.
-
-***
-
-# Second Slide
-Another topic
+# Slide 2 (new horizontal stack)
 
 ---
 
-## Nested Slide
-This is a vertical child of the second slide
+# Slide 2.1 (vertical child slide)
+
+---
 ```
 
 ---
 
-<a id="authoring-speaker-notes"></a>
+<a id="2-slide-anatomy"></a>
 
-## Speaker Notes
+## 2. Slide Anatomy
 
-Use `:note:` on its own line to start speaker notes for the current slide.
+Each slide can have up to three optional sections:
+
+1. Top Matter
+2. Slide Markdown
+3. Notes
+
+All three are optional.
+
+---
+
+Practical convention:
+- Top Matter is usually placed at the top of a slide.
+- Slide Markdown follows it.
+- Notes come after a `:note:` separator.
+
+---
+
+Important behavior notes:
+- There is no hard parser boundary between "top matter" and "slide content" in raw markdown. This is mostly a writing convention.
+- Builder UI recognizes top matter by known macro/background patterns near the start of the slide.
+- Top matter items like sticky macros/backgrounds can persist across subsequent slides until changed or reset by another top matter section.
+
+---
+
+Template shape:
 
 ```markdown
-# Intro Slide
-Welcome to the session.
+[optional top matter lines]
+
+[optional slide markdown body]
 
 :note:
 
-Use this moment to greet the audience and adjust your mic.
+[optional speaker notes]
 ```
 
 ---
 
-<a id="authoring-reveal-attributes"></a>
+<a id="3-notes-bottom-section"></a>
 
-## Reveal.js Data Attributes
+## 3. Notes (Bottom Section)
 
----
-
-### Slide-level attributes
-
-Use `<!-- .slide: ... -->` before slide content.
+Use a delimiter line before speaker notes:
 
 ```markdown
-<!-- .slide: data-background-color="#123456" data-transition="fade" -->
-
-# Title Slide
-Custom background color and fade transition
-```
-
-Common slide attributes:
-
-| Attribute               | Description |
-| ----------------------- | ----------- |
-| `data-background-image` | Set a background image |
-| `data-background-video` | Set a looping background video |
-| `data-background-color` | Set a solid background color |
-| `data-transition`       | Per-slide transition |
-| `data-auto-animate`     | Enable auto-animate |
-| `data-visibility`       | Hide/show slides based on logic |
-
----
-
-### Element-level attributes
-
-Use `<!-- .element: ... -->` after a line.
-
-```markdown
-- First point <!-- .element: class="fragment" -->
-- Second point <!-- .element: class="fragment" -->
+:note:
 ```
 
 ---
 
-<a id="authoring-background-positioning"></a>
-
-## Background and Positioning Helpers
-
-These macro commands are available in authoring flow; full macro behavior and sticky rules are in [revelation/doc/METADATA_REFERENCE.md](METADATA_REFERENCE.md).
-
----
-
-### Background helpers
+Example:
 
 ```markdown
-{{darkbg}}
-{{lightbg}}
+# Main slide content
+
+:note:
+
+Say this quietly to the presenter audience only.
 ```
 
----
-
-### Positioning
-
-```markdown
-{{upperthird}}
-{{lowerthird}}
-```
+Notes are not rendered as regular slide content. They appear in 
+notes/speaker views.
 
 ---
 
-### Tint overlays
+<a id="4-slide-markdown-middle-section"></a>
 
-```markdown
-{{bgtint:rgba(127,127,255,0.5)}}
-{{bgtint:linear-gradient(90deg, rgba(42,123,155,1) 0%, rgba(87,199,133,1) 50%, rgba(237,221,83,1) 100%)}}
-{{bgtint:image:/url/to/image.png}}
-```
+## 4. Slide Markdown (Middle Section)
 
 ---
 
-### Two-column blocks
+### 4.1 Quick Markdown Primer
+
+Markdown is a plain-text format used widely for docs, READMEs, wikis, and presentations.
+
+---
+
+#### Markdown Headings and Lists
 
 ```markdown
-||
-Left side content here
+# Heading 1
+## Heading 2
+### Heading 3
 
-||
-Right side content here
+Regular paragraph text.
 
-||
+- Bullet item
+- Another item
+
+1. Numbered item
+2. Next item
 ```
 
 ---
 
-<a id="authoring-website-embed"></a>
-
-## Website Embed
-
-Use `embed` image syntax to insert iframe embeds.
+#### Markdown Formatting and Links
 
 ```markdown
-![embed](https://example.com)
+
+*Italic*
+**Bold**
+<u>Underline (HTML)</u>
+
+[Link text](https://example.com)
 ```
-
-Animated panning across slides:
-
-```markdown
-![embed](https://revealjs.com/math/)
-:animate:
+**See the [Full Markdown Reference](MARKDOWN_REFERENCE.md)**
 
 ---
 
-![embed:scrollY=500](https://revealjs.com/math/)
-:animate:
-```
+### 4.2 Per-Slide Authoring Extensions
 
-`scrollX` and `scrollY` are pixel values.
+REVELation extends normal markdown with slide-focused syntax.
 
 ---
 
-<a id="authoring-background-audio"></a>
+#### Fragments
 
-## Background Audio
+Append `++` at the end of a line to reveal it incrementally:
 
 ```markdown
-{{audio:play:my_audio_file.mp3}}
-{{audio:playloop:crickets.mp3}}
-{{audio:stop}}
-{{audio:play:media:my_audio}}
+- First point ++
+- Second point ++
 ```
 
 ---
 
-<a id="authoring-fragments"></a>
+#### Attributions
 
-## Fragments
-
-End a line with `++` to mark it as a fragment.
+Per-slide attribution:
 
 ```markdown
-- First idea ++
-- Second idea ++
-- Final thought ++
+:ATTRIB:Photo by Jane Smith
 ```
-
-Advanced manual form:
-
-```markdown
-- Step one <!-- .element: class="fragment fade-in" data-fragment-index="1" -->
-- Step two <!-- .element: class="fragment fade-in" data-fragment-index="2" -->
-```
-
 ---
 
-<a id="authoring-attributions"></a>
+#### Magic images
 
-## Attributions
-
-Non-sticky attribution for the current slide:
-
-```markdown
-:ATTRIB:Photo by Alice Johnson, used with permission
-```
-
-Sticky attribution via macro syntax:
-
-```markdown
-{{attrib:Photo by Alice Johnson}}
-```
-
-Sticky attribution can also be embedded in macros.
-
----
-
-<a id="authoring-magic-images"></a>
-
-## Magic Images
-
-Format:
+Syntax:
 
 ```markdown
 ![keyword[:modifier]](source)
 ```
 
-Supported keywords:
-
-| Keyword             | Behavior |
-| ------------------- | -------- |
-| `background`        | Background image or video |
-| `background:noloop` | Video background without loop |
-| `background:sticky` | Resets macros and continues background |
-| `fit`               | Styled fit image |
-| `caption`           | Figure + figcaption |
-| `youtube`           | Autoplaying, looped YouTube embed |
-| `youtube:fit`       | Fullscreen YouTube embed |
 ---
 
-
-Examples:
+Common forms:
 
 ```markdown
-![background](morning.jpg)
+![background](sunrise.jpg)
+![background:noloop](loop.mp4)
+![background:sticky](stage.mp4)
 ![fit](chart.png)
-![caption:This is a little duck](duck.jpg)
-![youtube](https://youtu.be/dQw4w9WgXcQ)
+![caption:Quarterly trend](chart.png)
+![youtube](https://youtu.be/VIDEO_ID)
+![youtube:fit](https://youtu.be/VIDEO_ID)
+![web](https://example.com)
+![web:scrollY=500](https://example.com)
 ```
-
 ---
 
-<a id="authoring-media-markdown"></a>
+#### Media aliases
 
-## Media in Markdown
-
-Define aliases in front matter and reference them in markdown:
+Define media once in front matter, reference with `media:<alias>`:
 
 ```yaml
 media:
-  fog:
-    filename: fog_loop.mp4
+  opener:
+    filename: intro.mp4
 ```
 
 ```markdown
-![background](media:fog)
+![background](media:opener)
 ```
-
-If an alias cannot be resolved, the placeholder remains and a warning is logged.
-
-Plugin-specific authoring blocks (for example `:chart:` and `:table:`) are documented in plugin READMEs such as [plugins/revealchart/README.md](../../plugins/revealchart/README.md).
 
 ---
 
-<a id="authoring-inter-presentation-links"></a>
+#### Inter-presentation links
 
-## Inter-Presentation Links
-
-Use normal markdown links for presentation-to-presentation navigation:
+Use standard markdown links:
 
 ```markdown
-[Next presentation](something.md)
-[Open section](something.md#section-anchor)
-[Jump to section in this file](#section-anchor)
+[Next presentation](next.md)
+[Jump in this deck](#section-anchor)
 ```
 
-Convention:
-- `.md` links are treated as internal presentation links.
-- Authoring should stay implementation-agnostic (do not hardcode app query URLs).
-- Parent-directory traversal links are not part of the convention and should not be used (for example `../other.md`).
+---
 
-Generator/runtime planning notes:
-- The documentation presentation generator will flatten generated markdown files into one presentation folder.
-- Link resolution will target those flattened `.md` filenames.
+#### Background audio
+
+Use audio commands:
+
+```markdown
+:audio:play:intro.mp3:
+:audio:playloop:bed.mp3:
+:audio:stop:
+```
+
+---
+
+### 4.3 `:commands:` Reference
+
+Line-based commands/macros commonly used while authoring:
+
+---
+
+| Command | Purpose |
+| --- | --- |
+| `:note:` | Start notes section for the current slide |
+| `:ATTRIB:<text>` | Add attribution for current slide |
+| `:AI:` | Mark current slide with AI symbol |
+| `:audio:play:<src>:` | Start background audio |
+| `:audio:playloop:<src>:` | Start looping background audio |
+| `:audio:stop:` | Stop background audio |
+| `:animate:` | Enable auto-animate on current slide |
+| `:animate:restart:` | Restart auto-animate matching |
+
+---
+
+| Command | Purpose |
+| --- | --- |
+| `:transition:<name>:` | Set slide transition |
+| `:autoslide:<ms>:` | Set per-slide auto-advance delay |
+| `:bgtint:<css-color-or-gradient>:` | Set background tint overlay |
+| `:clearbg:` | Suppress persisted background for this slide |
+| `:nobg:` | Suppress persisted dark/light background mode |
+| `:shiftnone:` | Suppress persisted left/right shift |
+| `:nothird:` | Suppress persisted upper/lower-third layout |
+
+---
+
+| Command | Purpose |
+| --- | --- |
+| `:countdown:from:mm:ss:` | Countdown timer from mm:ss |
+| `:countdown:from:hh:mm:ss:` | Countdown timer from hh:mm:ss |
+| `:countdown:to:hh:mm:` | Countdown timer to clock time |
+
+---
+
+<a id="5-top-matter-top-section"></a>
+
+## 5. Top Matter (Top Section)
+
+Top matter is where you usually place sticky macros and sticky backgrounds intended to shape this slide and following slides.
+
+---
+
+### 5.1 Macros and stickiness
+
+Macro calls use `{{...}}` and can be persisted slide-to-slide.
+
+Common examples:
+
+```markdown
+{{darkbg}}
+{{lighttext}}
+{{upperthird}}
+{{bgtint:rgba(0,0,0,0.35)}}
+{{transition:fade}}
+{{animate}}
+{{autoslide:15000}}
+```
+
+---
+
+Sticky metadata helpers:
+
+```markdown
+{{attrib:Photo by Jane Smith}}
+{{ai}}
+```
+
+---
+
+Reset persisted top-matter macro state:
+
+```markdown
+{{}}
+```
+
+---
+
+### 5.2 Sticky backgrounds
+
+Use a sticky background image/video when you want it to carry forward:
+
+```markdown
+![background:sticky](stage-loop.mp4)
+```
+
+---
+
+Behavior detail:
+- Sticky background participates in top-matter persistence.
+- Applying a sticky background resets previous persisted macros, then establishes the new sticky baseline.
+
+---
+
+### 5.3 No hard boundary rule
+
+Top matter is a convention, not a strict language block.
+
+In practice:
+- Keep top matter grouped at the top of each slide for readability.
+- Put main content below it.
+- Use `:note:` to begin notes.
+
+This keeps files predictable in both the markdown source and builder UI.
+
+---
+
+<a id="6-footnote-heading-based-slide-breaks"></a>
+
+## 6. Footnote: Heading-Based Slide Breaks
+
+REVELation can also infer slide breaks from headings when the setting is enabled.
+
+If `newSlideOnHeading` is omitted in YAML front matter, heading-based splitting may apply automatically (for compatibility workflows).
+
+---
+
+Recommended practice:
+- Prefer explicit `***` and `---` separators.
+- Use heading-based implied breaks only when needed for interoperability with other Markdown tooling.
+
