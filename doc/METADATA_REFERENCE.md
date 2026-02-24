@@ -1,5 +1,3 @@
----
-
 # REVELation Metadata Reference
 
 ---
@@ -19,7 +17,13 @@
 
 ## YAML Front Matter
 
-Each presentation begins with a YAML front matter block enclosed by `---`.
+Each presentation begins with a YAML front matter block enclosed by `---`
+
+The easiest way to edit this is by using the "Presentation Properties" feature in the Revelation (Electron) Presentation Builder
+
+---
+
+Below is a basic example of metadata at the top of a presentation file
 
 ```yaml
 ---
@@ -29,7 +33,7 @@ author:
   name: Jane Smith
   email: jane@example.com
 theme: softblood.css
-thumbnail: preview.webp
+thumbnail: thumbnail.jpg
 created: 2026-02-19
 newSlideOnHeading: false
 version: 0.2.7
@@ -98,6 +102,8 @@ macros:
 scrollspeed: 2.1
 ---
 ```
+
+---
 
 | Field          | Type     | Description |
 | -------------- | -------- | ----------- |
