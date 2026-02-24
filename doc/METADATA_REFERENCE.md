@@ -2,14 +2,51 @@
 
 ---
 
+<a id="metadata-new-presentation-quick-guide"></a>
+
+## New Presentation Quick Guide (Plain Language)
+
+If you are on the **New Presentation** screen, these are the most important options:
+
+| Field | What it means in simple terms |
+| --- | --- |
+| `Presentation Title` | The main name of your presentation. This is what you will see in presentation lists. |
+| `Slug` | The folder/URL-safe name for this presentation, which must be unique. This won't show in your slide content. |
+| `Description` | A short subtitle or summary to help identify the deck later. |
+| `Author` | Who created the presentation (name, ministry, team, etc.). |
+| `Theme` | The visual style (colors/fonts/layout feel). You can change this later. |
+| `Show Advanced Options` | Reveals extra technical settings. Safe to leave off unless you know you need them. |
+| `Create a Title Slide` | Automatically creates a first slide with title details so you can start faster. |
+
+When **Advanced Options** are shown, common fields include:
+
+| Advanced Field | Simple explanation |
+| --- | --- |
+| `Thumbnail` | Image used as the preview card for this presentation. |
+| `Creation Date` | Date metadata for sorting and record-keeping. |
+| `Custom Stylesheet` | Extra CSS file for custom visual tweaks. |
+| `Automatically start new slide on H1/H2/H3` | Splits slides by headings automatically (usually keep off when using Builder). |
+
+Recommended starting setup for most users:
+
+1. Set `Presentation Title`.
+2. Pick a `Theme`.
+3. Leave advanced settings at defaults.
+4. Keep `Create a Title Slide` enabled.
+
+`Slug` is the name of the folder that your presentation is in. It is not stored as a normal YAML metadata field in front matter.
+
+***
+
 ## Table of Contents
+* [New Presentation Quick Guide (Plain Language)](#metadata-new-presentation-quick-guide)
 * [YAML Front Matter](#metadata-yaml-front-matter)
 * [Basic Metadata Fields](#metadata-basic-fields)
 * [Advanced Configuration](#metadata-advanced-configuration)
+  * Reveal.js Deck Configuration: https://revealjs.com/config/
 * [Media Aliases](#metadata-media-aliases)
 * [Macros](#metadata-macros)
-* [Built-in Macro Commands](#metadata-built-in-macros)
-* [Sticky State and Overrides](#metadata-sticky-state)
+* [Authoring Commands and Macro Behavior](#metadata-authoring-reference)
 
 ---
 
@@ -55,9 +92,10 @@ version: 0.2.7
 | `thumbnail`   | `string`             | Preview image filename. |
 | `created`     | `string`             | Date string (for example `2025-07-24`). |
 | `version`     | `string`             | Version that last wrote the file. |
-| `newSlideOnHeading` | `boolean`       | Controls automatic slide splitting on headings. |
+| `newSlideOnHeading` | `boolean`       | (default *true*, normally should be *false*.)<br>Controls automatic slide splitting on headings. |
 ---
 
+---
 
 `theme` should match a CSS file in the framework theme assets, and `thumbnail` is expected near your presentation files.
 
@@ -107,7 +145,7 @@ scrollspeed: 2.1
 
 | Field          | Type     | Description |
 | -------------- | -------- | ----------- |
-| `config`       | `object` | Reveal.js configuration values. |
+| `config`       | `object` | Reveal.js configuration values. See https://revealjs.com/config/ |
 | `stylesheet`   | `string` | Custom CSS file relative to the presentation folder. |
 | `alternatives` | `object` | Alternate markdown files keyed by filename with language code (or `hidden`). |
 | `media`        | `object` | Named media aliases used by markdown and macros. |
@@ -131,6 +169,8 @@ media:
     copyright: Video by John Doe
 ```
 
+---
+
 | Key           | Required | Description |
 | ------------- | -------- | ----------- |
 | `filename`    | Yes      | File inside `_media/`. |
@@ -144,7 +184,7 @@ media:
 
 ## Macros
 
-Define macros in front matter and invoke them in markdown.
+Define reusable macros in front matter:
 
 ```yaml
 macros:
@@ -153,15 +193,13 @@ macros:
     {{attrib:$2}}
 ```
 
-Invocation forms:
+---
 
-| Syntax | Behavior | Sticky |
-| --- | --- | --- |
-| `{{name}}` | Expand macro or built-in command | Yes |
-| `{{name:param1:param2}}` | Expand with params | Yes |
-| `:name:` | One-slide expansion | No |
-| `:name:param1:param2:` | One-slide expansion with params | No |
-| `{{}}` | Clear inherited sticky macro state | N/A |
+Macro invocation forms, built-in command catalog, and sticky behavior are part of slide authoring behavior and are documented in the Authoring Guide.
+
+See:
+- [Authoring Guide](AUTHORING_REFERENCE.md)
+- [Macros and stickiness section](AUTHORING_REFERENCE.md#51-macros-and-stickiness)
 
 Parameters support `$1`, `$2`, etc.
 
@@ -169,129 +207,11 @@ Parameters support `$1`, `$2`, etc.
 
 ---
 
-<a id="metadata-built-in-macros"></a>
+<a id="metadata-authoring-reference"></a>
 
-## Built-in Macro Commands
+## Authoring Commands and Macro Behavior
 
----
+This reference focuses on metadata structure.
 
-### Color and overlays
-
-| Name | `{{...}}` | `:...:` | Description |
-| --- | --- | --- | --- |
-| `darkbg` | Yes | Yes | `<!-- .slide: data-darkbg -->` |
-| `lightbg` | Yes | Yes | `<!-- .slide: data-lightbg -->` |
-| `darktext` | Yes | Yes | `<!-- .slide: data-darktext -->` |
-| `lighttext` | Yes | Yes | `<!-- .slide: data-lighttext -->` |
-| `bgtint:$1` | Yes | Yes | `<!-- .slide: data-tint-color="$1" -->` |
-| `nobg` | No | Yes | One-slide suppression of inherited `darkbg`/`lightbg`. |
-| `clearbg` | No | Yes | One-slide suppression of inherited background image/video. |
-| `info` | Yes | Yes | Info slide helper markup. |
----
-
-| `infofull` | Yes | Yes | Full-width info slide helper markup. |
-| `attrib:text` | Yes | Yes | Attribution text. |
-| `ai` | Yes | Yes | AI symbol badge. |
-
----
-
-### Positioning
-
-| Name | `{{...}}` | `:...:` | Description |
-| --- | --- | --- | --- |
-| `shiftleft` | Yes | Yes | `<!-- .slide: data-shiftleft -->` |
-| `shiftright` | Yes | Yes | `<!-- .slide: data-shiftright -->` |
-| `shiftnone` | No | Yes | One-slide suppression of inherited shift. |
-| `upperthird` | Yes | Yes | `<!-- .slide: data-upper-third -->` |
-| `lowerthird` | Yes | Yes | `<!-- .slide: data-lower-third -->` |
-| `nothird` | No | Yes | One-slide suppression of inherited third placement. |
-
----
-
-### Transitions
-
-| Name | `{{...}}` | `:...:` | Description |
-| --- | --- | --- | --- |
-| `transition:$1` | Yes | Yes | `<!-- .slide: data-transition="$1" -->` |
-| `animate` | Yes | Yes | `<!-- .slide: data-auto-animate -->` |
-| `animate:restart` | Yes | Yes | `<!-- .slide: data-auto-animate-restart -->` |
-| `autoslide:$1` | Yes | Yes | `<!-- .slide: data-autoslide="$1" -->` |
-
----
-
-### Audio
-
-| Name | `{{...}}` | `:...:` | Description |
-| --- | --- | --- | --- |
-| `audio:play:$1` | Yes | Yes | Start background audio once. |
-| `audio:playloop:$1` / `audio:loop:$1` | Yes | Yes | Start looping background audio. |
-| `audio:stop` | No | Yes | Stop background audio (one-shot). |
-| `audiostart:$1` | Yes | Yes | Set `data-background-audio-start`. |
-| `audioloop:$1` | Yes | Yes | Set `data-background-audio-loop`. |
-| `audiostop` | Yes | Yes | Set `data-background-audio-stop`. |
-
----
-
-### Countdown
-
-| Name | `{{...}}` | `:...:` | Description |
-| --- | --- | --- | --- |
-| `countdown:from:mm:ss` | No | Yes | Countdown from duration. |
-| `countdown:from:hh:mm:ss` | No | Yes | Countdown from duration. |
-| `countdown:to:hh:mm` | No | Yes | Countdown to local clock time. |
-
-Notes:
-- User-defined `macros:` override built-ins on name collision.
-- `:countdown:` is inline-only.
-- For `bgtint`, everything after the first `:` is treated as one parameter.
-
----
-
-<a id="metadata-sticky-state"></a>
-
-## Sticky State and Overrides
-
-Sticky macros persist until reset with `{{}}`.
-
-```markdown
-{{darkbg}}
-{{transition:fade}}
-
-# Slide A
-
-***
-
-# Slide B (inherits both)
-
-***
-
-{{}}
-
-# Slide C (reset)
-```
-
-Use one-slide override commands to suppress inherited sticky state without resetting globally:
-
-```markdown
-![background:sticky](mainbg.jpg)
-{{shiftleft}}
-{{lowerthird}}
-{{darkbg}}
-
-# Slide A
-
-***
-
-:clearbg:
-:shiftnone:
-:nothird:
-:nobg:
-
-# Slide B (single-slide overrides)
-
-***
-
-# Slide C (inherits sticky settings again)
-```
-
-To neutralize tint on one slide, set `:bgtint:transparent:`.
+For command usage, built-in macro lists, sticky behavior, and per-slide authoring syntax, use:
+- [AUTHORING_REFERENCE.md](AUTHORING_REFERENCE.md)
