@@ -296,6 +296,7 @@ let appConfig = null;
 let peerStatusPollingTimer = null;
 let peerStatusLastEventId = 0;
 let peerStatusActiveFollowers = [];
+let activeMasters = [];
 if (window.electronAPI?.getAppConfig) {
   try {
     appConfig = await window.electronAPI.getAppConfig();
@@ -306,6 +307,10 @@ if (window.electronAPI?.getAppConfig) {
 
 function isMasterModeEnabled() {
   return !!appConfig?.mdnsPublish;
+}
+
+function isFollowerModeEnabled() {
+  return !!appConfig?.mdnsBrowse;
 }
 
 
@@ -338,6 +343,17 @@ function buildFollowerLabel(entry) {
   return ip ? `${preferred} @ ${ip}` : preferred;
 }
 
+function buildMasterLabel(entry) {
+  const name = String(entry?.name || '').trim();
+  const id = String(entry?.instanceId || '').trim();
+  const host = String(entry?.host || entry?.hostHint || '').trim();
+  const port = String(entry?.pairingPort || entry?.pairingPortHint || '').trim();
+  const preferred = name || (id && id !== 'unknown' ? id : 'unknown');
+  if (host && port) return `${preferred} @ ${host}:${port}`;
+  if (host) return `${preferred} @ ${host}`;
+  return preferred;
+}
+
 function ensurePeerStatusRows() {
   if (!optionsDropdown || !isMasterModeEnabled()) return {};
   let activeRow = document.getElementById('peer-followers-active-row');
@@ -352,6 +368,23 @@ function ensurePeerStatusRows() {
 
   return {
     activeListEl: document.getElementById('peer-followers-active-list')
+  };
+}
+
+function ensureMasterStatusRow() {
+  if (!optionsDropdown || !isFollowerModeEnabled()) return {};
+  let masterRow = document.getElementById('peer-masters-active-row');
+  if (!masterRow) {
+    masterRow = document.createElement('div');
+    masterRow.id = 'peer-masters-active-row';
+    masterRow.style.marginBottom = '.5rem';
+    masterRow.innerHTML = `<strong>Active Masters:</strong><div id="peer-masters-active-list" style="font-size:.9rem;color:#cfcfcf;margin-top:.2rem;"></div>`;
+    const hr = optionsDropdown.querySelector('hr');
+    optionsDropdown.insertBefore(masterRow, hr || null);
+  }
+  return {
+    masterRow,
+    masterListEl: document.getElementById('peer-masters-active-list')
   };
 }
 
@@ -375,6 +408,28 @@ function renderPeerStatusRows() {
         .join('');
     }
   }
+}
+
+function renderMasterStatusRow() {
+  if (!isFollowerModeEnabled()) {
+    const masterRow = document.getElementById('peer-masters-active-row');
+    if (masterRow) masterRow.style.display = 'none';
+    return;
+  }
+
+  const { masterRow, masterListEl } = ensureMasterStatusRow();
+  if (masterRow) masterRow.style.display = 'block';
+  if (!masterListEl) return;
+
+  if (!activeMasters.length) {
+    masterListEl.textContent = 'None';
+    return;
+  }
+
+  masterListEl.innerHTML = activeMasters
+    .slice(0, 8)
+    .map((entry) => `<div>${buildMasterLabel(entry)}</div>`)
+    .join('');
 }
 
 function processPeerStatusEvents(events = []) {
@@ -417,14 +472,28 @@ async function pollPeerStatus() {
   renderPeerStatusRows();
 }
 
+async function pollMasterStatus() {
+  if (!window.electronAPI || !isFollowerModeEnabled()) return;
+  const statuses = await window.electronAPI.getPeerMasterStatuses();
+  const list = Array.isArray(statuses) ? statuses : [];
+  activeMasters = list.filter((entry) => entry?.connected === true);
+  renderMasterStatusRow();
+}
+
 function startPeerStatusPolling() {
-  if (!window.electronAPI || !isMasterModeEnabled() || peerStatusPollingTimer) return;
+  if (!window.electronAPI || peerStatusPollingTimer) return;
   pollPeerStatus().catch((err) => {
     console.warn('Peer status poll failed:', err.message || err);
+  });
+  pollMasterStatus().catch((err) => {
+    console.warn('Master status poll failed:', err.message || err);
   });
   peerStatusPollingTimer = window.setInterval(() => {
     pollPeerStatus().catch((err) => {
       console.warn('Peer status poll failed:', err.message || err);
+    });
+    pollMasterStatus().catch((err) => {
+      console.warn('Master status poll failed:', err.message || err);
     });
   }, PEER_STATUS_POLL_MS);
 }
@@ -476,6 +545,11 @@ if (optionsBtn && optionsDropdown) {
     if (!isVisible && isMasterModeEnabled()) {
       pollPeerStatus().catch((err) => {
         console.warn('Peer status poll failed:', err.message || err);
+      });
+    }
+    if (!isVisible && isFollowerModeEnabled()) {
+      pollMasterStatus().catch((err) => {
+        console.warn('Master status poll failed:', err.message || err);
       });
     }
   });
