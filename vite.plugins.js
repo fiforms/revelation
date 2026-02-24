@@ -13,6 +13,9 @@ const baseDir = __dirname;
 const prefix = 'presentations_';
 const PEER_SOCKET_PATH = '/peer-commands';
 let peerCommandIo = null;
+const PIN_FAILURE_LIMIT = 3;
+const PIN_BLOCK_MS = 60_000;
+const peerPinFailures = new Map();
 
 let presentationsWebPath = '';
 let presentationsDir = '';
@@ -313,8 +316,14 @@ function presentationIndexPlugin() {
           res.end(JSON.stringify({ error: 'Peer config unavailable' }));
           return;
         }
+        if (config.mdnsPublish !== true) {
+          res.writeHead(403, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Peer endpoints disabled (mDNS publishing off)' }));
+          return;
+        }
 
         const parsedUrl = new URL(req.url, 'http://localhost');
+        const remoteAddress = normalizeRemoteAddress(req.socket?.remoteAddress);
 
         if (req.method === 'GET' && req.url === '/peer/public-key') {
           const publicKey = config.rsaPublicKey;
@@ -336,13 +345,29 @@ function presentationIndexPlugin() {
             res.end(JSON.stringify({ error: 'Peer private key unavailable' }));
             return;
           }
+          const state = getPinFailureState(remoteAddress);
+          if (state.blockedUntil && state.blockedUntil > Date.now()) {
+            const block = pinBlockedResponse(state);
+            res.writeHead(429, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Too many invalid pairing PIN attempts', retryAfterSec: block.retryAfterSec }));
+            return;
+          }
           const expectedPin = config.mdnsPairingPin;
           const providedPin = parsedUrl.searchParams.get('pin');
           if (expectedPin && providedPin !== expectedPin) {
-            res.writeHead(403, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: 'Invalid pairing PIN' }));
+            const next = registerPinFailure(remoteAddress);
+            if (next.blockedUntil && next.blockedUntil > Date.now()) {
+              const block = pinBlockedResponse(next);
+              res.writeHead(429, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ error: 'Too many invalid pairing PIN attempts', retryAfterSec: block.retryAfterSec }));
+            } else {
+              const remainingAttempts = Math.max(0, PIN_FAILURE_LIMIT - next.failures);
+              res.writeHead(403, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ error: 'Invalid pairing PIN', remainingAttempts }));
+            }
             return;
           }
+          clearPinFailures(remoteAddress);
           const token = crypto.randomBytes(16).toString('hex');
           const expiresAt = Date.now() + 60_000;
           const socketPath = PEER_SOCKET_PATH;
@@ -410,13 +435,29 @@ function presentationIndexPlugin() {
               return;
             }
             const challenge = data.challenge;
+            const state = getPinFailureState(remoteAddress);
+            if (state.blockedUntil && state.blockedUntil > Date.now()) {
+              const block = pinBlockedResponse(state);
+              res.writeHead(429, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ error: 'Too many invalid pairing PIN attempts', retryAfterSec: block.retryAfterSec }));
+              return;
+            }
             const expectedPin = config.mdnsPairingPin;
             const providedPin = data.pin;
             if (expectedPin && providedPin !== expectedPin) {
-              res.writeHead(403, { 'Content-Type': 'application/json' });
-              res.end(JSON.stringify({ error: 'Invalid pairing PIN' }));
+              const next = registerPinFailure(remoteAddress);
+              if (next.blockedUntil && next.blockedUntil > Date.now()) {
+                const block = pinBlockedResponse(next);
+                res.writeHead(429, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'Too many invalid pairing PIN attempts', retryAfterSec: block.retryAfterSec }));
+              } else {
+                const remainingAttempts = Math.max(0, PIN_FAILURE_LIMIT - next.failures);
+                res.writeHead(403, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'Invalid pairing PIN', remainingAttempts }));
+              }
               return;
             }
+            clearPinFailures(remoteAddress);
             if (!challenge || !config.rsaPrivateKey) {
               res.writeHead(400, { 'Content-Type': 'application/json' });
               res.end(JSON.stringify({ error: 'Missing challenge or private key' }));
@@ -529,9 +570,51 @@ function loadPeerConfig(configPath) {
   }
 }
 
+function normalizeRemoteAddress(address) {
+  if (!address) return 'unknown';
+  return address.startsWith('::ffff:') ? address.replace('::ffff:', '') : address;
+}
+
+function getPinFailureState(remoteAddress) {
+  const now = Date.now();
+  const current = peerPinFailures.get(remoteAddress);
+  if (!current) {
+    return { failures: 0, blockedUntil: 0 };
+  }
+  if (current.blockedUntil && current.blockedUntil <= now) {
+    peerPinFailures.delete(remoteAddress);
+    return { failures: 0, blockedUntil: 0 };
+  }
+  return current;
+}
+
+function registerPinFailure(remoteAddress) {
+  const current = getPinFailureState(remoteAddress);
+  const failures = (current.failures || 0) + 1;
+  if (failures >= PIN_FAILURE_LIMIT) {
+    const blockedUntil = Date.now() + PIN_BLOCK_MS;
+    const next = { failures: 0, blockedUntil };
+    peerPinFailures.set(remoteAddress, next);
+    return next;
+  }
+  const next = { failures, blockedUntil: 0 };
+  peerPinFailures.set(remoteAddress, next);
+  return next;
+}
+
+function clearPinFailures(remoteAddress) {
+  if (!remoteAddress) return;
+  peerPinFailures.delete(remoteAddress);
+}
+
+function pinBlockedResponse(state) {
+  const retryAfterSec = Math.max(1, Math.ceil((state.blockedUntil - Date.now()) / 1000));
+  return { retryAfterSec };
+}
+
 function isLoopbackAddress(address) {
   if (!address) return false;
-  const normalized = address.startsWith('::ffff:') ? address.replace('::ffff:', '') : address;
+  const normalized = normalizeRemoteAddress(address);
   return normalized === '127.0.0.1' || normalized === '::1';
 }
 
