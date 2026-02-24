@@ -365,13 +365,15 @@ pluginLoader('presentations',`/plugins_${key}`).then(async function() {
 
   deck.on('ready', () => {
     updateNotesPaneVisibility();
-    const indices = deck.getIndices();
 
     // Let browser layout settle first
     window.setTimeout(() => {
       // Remote followers should not force local slide state after join.
       // The remote plugin will sync to the master's current indices.
-      if (!isRemoteFollower) {
+      // Builder preview receives explicit slide commands from the editor bridge.
+      // Forcing a delayed local slide here can race and snap back selection.
+      if (!isRemoteFollower && !builderPreviewMode) {
+        const indices = deck.getIndices();
         deck.slide(indices.h, indices.v);  // Force refresh of current slide
       }
       document.body.classList.remove('hidden');
