@@ -58,6 +58,8 @@
         "Show Reveal.js Help (?)": "Mostrar Ayuda de Reveal.js (?)",
         "Show Speaker Notes (s)": "Mostrar Notas del Orador (s)",
         "Toggle Fullscreen": "Alternar Pantalla Completa",
+        "Copy URL": "Copiar URL",
+        "Copy Peer Share URL": "Copiar URL de Comparticion con Pares",
         "Toggle Remote Follower Link (a)": "Alternar Enlace de Seguidor Remoto (a)",
         "Toggle Remote Control Link (r)": "Alternar Enlace de Control Remoto (r)",
         "Send Presentation to Peers (z)": "Enviar Presentación a Pares (z)",

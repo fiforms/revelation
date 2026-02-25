@@ -39,10 +39,8 @@ export function contextMenu(deck) {
         { label: tr('Show Reveal.js Help (?)'), action: () => deck.toggleHelp() },
         { label: tr('Show Speaker Notes (s)'), action: () => deck.getPlugins().notes.open() },
         { label: tr('Toggle Fullscreen'), action: () => toggleFullscreen() },
-        ...(isElectron ? [
-          { label: tr('Copy Presentation URL'), action: () => copyPresentationUrl() },
-          ...(hasBackHistory ? [{ label: tr('Back'), action: () => goBack() }] : [])
-        ] : []),
+        { label: tr('Copy Peer Share URL'), action: () => copyPeerShareUrl() },
+        ...(isElectron && hasBackHistory ? [{ label: tr('Back'), action: () => goBack() }] : []),
         ...(!isLocal ? [
           { label: tr('Toggle Remote Follower Link (a)'), action: () => fireRevealKey('a') },
           { label: tr('Toggle Remote Control Link (r)'), action: () => fireRevealKey('r') }
@@ -244,8 +242,9 @@ function closePresentation() {
   }
 }
 
-function copyPresentationUrl() {
-  fallbackCopyText(window.location.href);
+function copyPeerShareUrl() {
+  const peerUrl = getPeerShareUrl();
+  fallbackCopyText(peerUrl || window.location.href);
 }
 
 function goBack() {
