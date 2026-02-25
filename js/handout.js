@@ -267,7 +267,9 @@ if (!mdFile) {
           // Keep rendering handout even if config cannot be loaded.
         }
       }
-      const { metadata, content } = extractFrontMatter(rawMarkdown);
+      // Normalize line endings up front so markdown parsing is consistent on Windows/Linux/macOS.
+      const normalizedMarkdown = String(rawMarkdown ?? '').replace(/\r\n?/g, '\n');
+      const { metadata, content } = extractFrontMatter(normalizedMarkdown);
       document.title = metadata.title || "Presentation Handout";
 
       const processed = preprocessMarkdown(
