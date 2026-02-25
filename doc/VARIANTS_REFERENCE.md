@@ -128,6 +128,19 @@ alternatives: hidden
 
 `alternatives: hidden` means this file is treated as a linked variant, not a separate presentation listing.
 
+Master files can also be hidden while still declaring variants:
+
+```yaml
+---
+title: Welcome (Master)
+alternatives:
+  self: hidden
+  i18n/es/welcome.md: es
+---
+```
+
+`self: hidden` hides the current file from listing while keeping linked variants available.
+
 ---
 
 ### 5.3 Language selection at runtime

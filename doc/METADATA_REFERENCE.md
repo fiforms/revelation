@@ -147,7 +147,7 @@ scrollspeed: 2.1
 | -------------- | -------- | ----------- |
 | `config`       | `object` | Reveal.js configuration values. See https://revealjs.com/config/ |
 | `stylesheet`   | `string` | Custom CSS file relative to the presentation folder. |
-| `alternatives` | `object` | Alternate markdown files keyed by filename with language code (or `hidden`). |
+| `alternatives` | `object` | Alternate markdown files keyed by filename/path with language code; supports `self: hidden` to hide the current file from listing. |
 | `media`        | `object` | Named media aliases used by markdown and macros. |
 | `macros`       | `object` | Named reusable macro blocks. |
 | `scrollspeed`  | `number` | Optional notes variant auto-scroll speed. |

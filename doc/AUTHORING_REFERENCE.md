@@ -245,6 +245,11 @@ Use standard markdown links:
 [Jump in this deck](#section-anchor)
 ```
 
+Path base rule:
+- Markdown path targets are resolved from the presentation root directory (the folder containing `index.html`), not relative to the current markdown file path.
+- This applies even when opening nested markdown files (for example `?p=nest1/nest2/deep.md`).
+- Parent-directory traversal targets such as `../other.md` are blocked for safety.
+
 ---
 
 #### Background audio

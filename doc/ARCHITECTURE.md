@@ -73,6 +73,11 @@ Planned resolution model:
 - Reject parent-directory traversal targets (for example `../other.md`) for safety.
 - Support flattened generated docs where linked `.md` targets live in the same presentation directory.
 
+Current runtime path base behavior:
+- Markdown file loading (`?p=...`) resolves from the presentation root directory (the folder containing `index.html`), even when `p` points to nested paths like `nest1/nest2/deep.md`.
+- Markdown links inside slides are interpreted relative to that same presentation root for navigation (`?p=...`), not relative to the current markdown file's own folder.
+- Media alias resolution (`media:` and `_media` fetch paths), theme stylesheet paths, and related runtime asset references also use the presentation root model.
+
 ---
 
 <a id="architecture-builder-hooks"></a>
