@@ -919,6 +919,15 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
       }
     }
 
+    const trimmedLine = line.trim();
+    const isNoteSeparatorLine =
+      trimmedLine.toLowerCase() === NOTE_SEPARATOR_CURRENT ||
+      trimmedLine.toLowerCase() === NOTE_SEPARATOR_LEGACY.toLowerCase();
+    if (isNoteSeparatorLine) {
+      processedLines.push(line);
+      continue;
+    }
+
     const inlineMacroMatch = line.match(/^:([A-Za-z0-9_]+)(?::(.*))?:\s*$/);
     if (inlineMacroMatch) {
       const key = inlineMacroMatch[1].trim().toLowerCase();
