@@ -195,7 +195,9 @@ export async function loadAndPreprocessMarkdown(deck,selectedFile = null) {
 
       const macros = {};
 
-      const { metadata, content } = extractFrontMatter(rawMarkdown);
+      // Normalize line endings up front so markdown parsing is consistent on Windows/Linux/macOS.
+      const normalizedMarkdown = String(rawMarkdown ?? '').replace(/\r\n?/g, '\n');
+      const { metadata, content } = extractFrontMatter(normalizedMarkdown);
       const contentWithBlankSlide = `${content}\n\n---\n\n`;
       const forceControls = urlParams.get('forceControls') === '1';
       const yamlScrollSpeed = Number.parseFloat(metadata.scrollspeed);
