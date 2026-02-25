@@ -91,6 +91,41 @@ function toTimestamp(value) {
   return parsed;
 }
 
+function toPosixPath(value) {
+  return String(value || '').replace(/\\/g, '/');
+}
+
+function isHiddenAlternativeMetadata(data) {
+  if (!data) return false;
+  if (String(data.alternatives || '').trim().toLowerCase() === 'hidden') return true;
+  if (data.alternatives && typeof data.alternatives === 'object' && !Array.isArray(data.alternatives)) {
+    return String(data.alternatives.self || '').trim().toLowerCase() === 'hidden';
+  }
+  return false;
+}
+
+function collectMarkdownFilesRecursive(rootDir) {
+  const files = [];
+  const walk = (dirPath, relDir = '') => {
+    const entries = fs.readdirSync(dirPath, { withFileTypes: true });
+    for (const entry of entries) {
+      const absPath = path.join(dirPath, entry.name);
+      const relPath = relDir ? path.posix.join(relDir, entry.name) : entry.name;
+      if (entry.isDirectory()) {
+        walk(absPath, relPath);
+        continue;
+      }
+      if (!entry.isFile()) continue;
+      if (!entry.name.toLowerCase().endsWith('.md')) continue;
+      if (entry.name === '__builder_temp.md') continue;
+      files.push(relPath);
+    }
+  };
+  walk(rootDir);
+  files.sort((a, b) => a.localeCompare(b));
+  return files;
+}
+
 function generatePresentationIndex() {
   // In GUI mode the wrapper owns docs/readme deck generation.
   const isGui = /^(1|true)$/i.test(process.env.REVELATION_GUI || '');
@@ -128,7 +163,7 @@ function generatePresentationIndex() {
 
     dirs.forEach((dir) => {
       const folderPath = path.join(presentationsDir, dir);
-      const files = fs.readdirSync(folderPath).filter((file) => file.endsWith('.md') && file !== '__builder_temp.md');
+      const files = collectMarkdownFilesRecursive(folderPath);
       
       files.forEach((mdFile) => {
         const mdPath = path.join(folderPath, mdFile);
@@ -152,7 +187,7 @@ function generatePresentationIndex() {
         }
 
         // Skip hidden alternatives
-        if (data.alternatives === "hidden") {
+        if (isHiddenAlternativeMetadata(data)) {
           return;
         }
 
@@ -160,7 +195,7 @@ function generatePresentationIndex() {
 
         indexData.push({
           slug: dir,
-          md: mdFile,
+          md: toPosixPath(mdFile),
           title: data.title || `${dir}/${mdFile}`,
           description: data.description || "",
           thumbnail: data.thumbnail || "preview.jpg",
@@ -235,8 +270,10 @@ function presentationIndexPlugin() {
       if (filePath.endsWith('.md') && filePath.includes(presentationsDir)) {
         console.log(`📦 ${event.toUpperCase()}:`, filePath);
         generatePresentationIndex();
-        mdFile = path.basename(filePath);
-        slug = path.basename(path.dirname(filePath));
+        const relative = toPosixPath(path.relative(presentationsDir, filePath));
+        const [slug, ...rest] = relative.split('/');
+        if (!slug || !rest.length) return;
+        const mdFile = rest.join('/');
 
         console.log(`Triggering reload-presentations for slug: ${slug}, md: ${mdFile}`);
         server.ws.send({

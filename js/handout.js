@@ -8,7 +8,7 @@ import { marked } from 'marked';
 
 const urlParams = new URLSearchParams(window.location.search);
 const mdFile = urlParams.get('p');
-const SAFE_MD_LINK_RE = /^(?:\.\/)?[a-zA-Z0-9_.-]+\.md$/;
+const SAFE_MD_LINK_RE = /^(?:\.\/)?(?:[a-zA-Z0-9_.-]+\/)*[a-zA-Z0-9_.-]+\.md$/;
 const optionsToggleButton = document.getElementById('handout-options-toggle');
 const optionsPanel = document.getElementById('handout-options');
 

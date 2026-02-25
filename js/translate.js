@@ -81,6 +81,8 @@ function translatePage(language) {
     });
 }
 
+window.translatePage = translatePage;
+
 window.addEventListener('DOMContentLoaded', async () => {
     const userLanguage = navigator.language.slice(0,2); 
 

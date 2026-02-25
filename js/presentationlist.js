@@ -690,6 +690,12 @@ function extractFrontMatter(raw = '') {
   }
 }
 
+function isValidMarkdownPath(mdFile = '') {
+  const candidate = String(mdFile || '').trim();
+  if (!candidate) return false;
+  return /^(?:[a-zA-Z0-9_.-]+\/)*[a-zA-Z0-9_.-]+\.md$/.test(candidate);
+}
+
 function readAuthorName(metadata = {}) {
   if (typeof metadata.author === 'string') return metadata.author;
   if (metadata.author && typeof metadata.author === 'object') {
@@ -743,12 +749,15 @@ async function loadPresentationDetails(pres) {
       details.description = String(metadata.description || details.description || '').trim();
       details.thumbnail = String(metadata.thumbnail || details.thumbnail || '').trim() || details.thumbnail;
       if (metadata.alternatives && typeof metadata.alternatives === 'object' && !Array.isArray(metadata.alternatives)) {
-        details.variants = Object.entries(metadata.alternatives).map(([mdFile, language]) => ({
-          mdFile,
-          language: String(language || '').trim().toLowerCase(),
-          isCurrent: mdFile === pres.md,
-          isMaster: mdFile === pres.md
-        }));
+        details.variants = Object.entries(metadata.alternatives)
+          .filter(([mdFile]) => String(mdFile || '').trim().toLowerCase() !== 'self')
+          .filter(([mdFile]) => isValidMarkdownPath(mdFile))
+          .map(([mdFile, language]) => ({
+            mdFile,
+            language: String(language || '').trim().toLowerCase(),
+            isCurrent: mdFile === pres.md,
+            isMaster: mdFile === pres.md
+          }));
       }
     }
   } catch (err) {

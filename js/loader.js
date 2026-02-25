@@ -182,9 +182,10 @@ export async function loadAndPreprocessMarkdown(deck,selectedFile = null) {
         rawMarkdown = window.offlineMarkdown;
 	style_path = "_resources/css/";
       } else {
+        const sanitizedSelected = sanitizeMarkdownFilename(selectedFile);
         const customFile = sanitizeMarkdownFilename(urlParams.get('p'));
 
-        const markdownFile = selectedFile || customFile || defaultFile;
+        const markdownFile = sanitizedSelected || customFile || defaultFile;
         let response = await fetch(markdownFile);
         if (!response.ok) {
           console.warn(`Could not load ${markdownFile}, falling back to ${defaultFile}`);
@@ -210,19 +211,29 @@ export async function loadAndPreprocessMarkdown(deck,selectedFile = null) {
 
       // check for alternative versions, create a selector drop-down
       if (!selectedFile && metadata.alternatives && typeof metadata.alternatives === 'object') {
+         const alternativeEntries = Object.entries(metadata.alternatives)
+           .map(([candidateFile, langCode]) => ({
+             file: sanitizeMarkdownFilename(candidateFile),
+             langCode: String(langCode || '').trim().toLowerCase(),
+             rawKey: String(candidateFile || '').trim().toLowerCase()
+           }))
+           .filter((entry) => entry.file && entry.rawKey !== 'self' && entry.langCode !== 'hidden');
          const selectedLang = (urlParams.get('lang') || '').trim().toLowerCase();
          const matchedAlternative = selectedLang
-           ? Object.entries(metadata.alternatives).find(([, langCode]) =>
-               String(langCode || '').trim().toLowerCase() === selectedLang
-             )
+           ? alternativeEntries.find((entry) => entry.langCode === selectedLang)
            : null;
-         const matchedFile = matchedAlternative ? sanitizeMarkdownFilename(matchedAlternative[0]) : null;
+         const matchedFile = matchedAlternative ? matchedAlternative.file : null;
          if (matchedFile) {
            return loadAndPreprocessMarkdown(deck, matchedFile);
          }
-         createAlternativeSelector(deck, metadata.alternatives);
-         document.title = "Waiting for Selection";
-         return 1;
+         if (!selectedLang && alternativeEntries.length) {
+           createAlternativeSelector(
+             deck,
+             Object.fromEntries(alternativeEntries.map((entry) => [entry.file, entry.langCode]))
+           );
+           document.title = "Waiting for Selection";
+           return 1;
+         }
       }
 
       // Update document title and theme
@@ -375,13 +386,17 @@ function createAlternativeSelector(deck, alternatives) {
     selector.innerHTML = `<strong style="display:block;margin-bottom:0.5rem;">Select Version:</strong>`;
 
     for (const [file, label] of Object.entries(alternatives)) {
+      const sanitizedFile = sanitizeMarkdownFilename(file);
+      if (!sanitizedFile) continue;
+      if (String(file || '').trim().toLowerCase() === 'self') continue;
+      if (String(label || '').trim().toLowerCase() === 'hidden') continue;
       const btn = document.createElement('button');
       btn.textContent = label;
       btn.style = 'display: block; width: 100%; margin: 0.25rem 0; background: #444; color: white; border: none; padding: 0.5rem; border-radius: 4px; cursor: pointer;';
       btn.onclick = async () => {
           document.body.classList.add('hidden');
           selector.remove();
-          loadAndPreprocessMarkdown(deck, file);
+          loadAndPreprocessMarkdown(deck, sanitizedFile);
       }
       selector.appendChild(btn);
     }
@@ -1264,12 +1279,30 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
 }
 
 function sanitizeMarkdownFilename(filename) {
-  const mdPattern = /^[a-zA-Z0-9_.-]+\.md$/;
+  const raw = String(filename || '').trim();
+  if (!raw) return null;
 
-  if (!filename || !mdPattern.test(filename)) {
+  const pathOnly = raw.split('?')[0].split('#')[0].replace(/\\/g, '/');
+  const normalized = pathOnly.startsWith('./') ? pathOnly.slice(2) : pathOnly;
+  if (!normalized || normalized.startsWith('/')) {
     console.warn(`Blocked invalid markdown filename: ${filename}`);
     return null;
   }
 
-  return filename;
+  const segments = normalized.split('/');
+  const validSegment = /^[a-zA-Z0-9_.-]+$/;
+  if (
+    segments.some((segment) => !segment || segment === '.' || segment === '..' || !validSegment.test(segment))
+  ) {
+    console.warn(`Blocked invalid markdown filename: ${filename}`);
+    return null;
+  }
+
+  const leaf = segments[segments.length - 1] || '';
+  if (!/\.md$/i.test(leaf)) {
+    console.warn(`Blocked invalid markdown filename: ${filename}`);
+    return null;
+  }
+
+  return segments.join('/');
 }

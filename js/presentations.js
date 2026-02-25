@@ -22,7 +22,7 @@ const isRemote = window.location.protocol !== 'file:' &&
                  !['localhost', '127.0.0.1'].includes(window.location.hostname);
 const builderPreviewMode = urlParams.get('builderPreview') === '1';
 const PREVIEW_BRIDGE = 'revelation-builder-preview-bridge';
-const SAFE_MD_LINK_RE = /^(?:\.\/)?[a-zA-Z0-9_.-]+\.md$/;
+const SAFE_MD_LINK_RE = /^(?:\.\/)?(?:[a-zA-Z0-9_.-]+\/)*[a-zA-Z0-9_.-]+\.md$/;
 
 function setupBuilderPreviewBridge(deck) {
   if (!builderPreviewMode) return;
@@ -507,6 +507,11 @@ pluginLoader('presentations',`/plugins_${key}`).then(async function() {
   deck.on('ready', () => {
     notesViewportMode = getNotesViewportMode();
     updateNotesPaneVisibility();
+
+    if (typeof window.translatePage === 'function') {
+      const userLanguage = String(navigator.language || 'en').slice(0, 2);
+      window.translatePage(userLanguage);
+    }
 
     // Let browser layout settle first
     window.setTimeout(() => {
