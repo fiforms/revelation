@@ -73,8 +73,14 @@
         "Close Presentation": "Cerrar Presentación",
         "Remote share link not ready yet.": "El enlace de compartición remota aún no está listo.",
         "Please close this tab manually.": "Por favor, cierre esta pestaña manualmente.",
+        "Import Presentation": "Importar Presentación",
+        "Install Plugin from ZIP…": "Instalar plugin desde ZIP…",
+        "Regenerate Documentation": "Regenerar documentación",
+        "Generate Theme Thumbnails...": "Generar miniaturas de temas...",
         "Presentations": "Presentaciones",
         "REVELation: Presentations": "REVELation: Presentaciones",
-        "REVELation: Media Library": "REVELation: Biblioteca de Medios"
+        "REVELation: Media Library": "REVELation: Biblioteca de Medios",
+        "Documentation Hub": "Centro de Documentación",
+        "Back to Documentation Hub": "Volver al Centro de Documentación"
     }
 }
