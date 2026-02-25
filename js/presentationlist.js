@@ -361,9 +361,13 @@ function ensurePeerStatusRows() {
     activeRow = document.createElement('div');
     activeRow.id = 'peer-followers-active-row';
     activeRow.style.marginBottom = '.5rem';
-    activeRow.innerHTML = `<strong>Active Followers:</strong><div id="peer-followers-active-list" style="font-size:.9rem;color:#cfcfcf;margin-top:.2rem;"></div>`;
+    activeRow.innerHTML = `<strong>${tr('Active Followers:')}</strong><div id="peer-followers-active-list" style="font-size:.9rem;color:#cfcfcf;margin-top:.2rem;"></div>`;
     const hr = optionsDropdown.querySelector('hr');
     optionsDropdown.insertBefore(activeRow, hr || null);
+  }
+  const activeHeading = activeRow.querySelector('strong');
+  if (activeHeading) {
+    activeHeading.textContent = tr('Active Followers:');
   }
 
   return {
@@ -378,9 +382,13 @@ function ensureMasterStatusRow() {
     masterRow = document.createElement('div');
     masterRow.id = 'peer-masters-active-row';
     masterRow.style.marginBottom = '.5rem';
-    masterRow.innerHTML = `<strong>Active Masters:</strong><div id="peer-masters-active-list" style="font-size:.9rem;color:#cfcfcf;margin-top:.2rem;"></div>`;
+    masterRow.innerHTML = `<strong>${tr('Active Masters:')}</strong><div id="peer-masters-active-list" style="font-size:.9rem;color:#cfcfcf;margin-top:.2rem;"></div>`;
     const hr = optionsDropdown.querySelector('hr');
     optionsDropdown.insertBefore(masterRow, hr || null);
+  }
+  const masterHeading = masterRow.querySelector('strong');
+  if (masterHeading) {
+    masterHeading.textContent = tr('Active Masters:');
   }
   return {
     masterRow,
@@ -400,7 +408,7 @@ function renderPeerStatusRows() {
 
   if (activeListEl) {
     if (!peerStatusActiveFollowers.length) {
-      activeListEl.textContent = 'None';
+      activeListEl.textContent = tr('None');
     } else {
       activeListEl.innerHTML = peerStatusActiveFollowers
         .slice(0, 8)
@@ -422,7 +430,7 @@ function renderMasterStatusRow() {
   if (!masterListEl) return;
 
   if (!activeMasters.length) {
-    masterListEl.textContent = 'None';
+    masterListEl.textContent = tr('None');
     return;
   }
 
