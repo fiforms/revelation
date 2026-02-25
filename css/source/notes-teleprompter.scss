@@ -6,6 +6,8 @@
 :root {
   --notes-main-width: 40%;
   --notes-pane-ratio-to-main: 150%;
+  --notes-mobile-pane-height: 45vh;
+  --notes-mobile-pane-height: 45dvh;
 }
 
 .reveal.show-notes {
@@ -60,11 +62,29 @@ body.notes-pane-hidden .reveal.show-notes .speaker-notes {
 @media screen and (max-width: 1024px) {
   .reveal.show-notes {
     max-width: none !important;
+    max-height: calc(100vh - var(--notes-mobile-pane-height)) !important;
+    max-height: calc(100dvh - var(--notes-mobile-pane-height)) !important;
+    margin-top: var(--notes-mobile-pane-height);
+    transition: margin-top 260ms ease, max-height 260ms ease;
   }
 
   .reveal.show-notes .speaker-notes {
+    top: calc(-1 * var(--notes-mobile-pane-height));
     width: 100% !important;
     left: 0;
+    height: var(--notes-mobile-pane-height);
     border-left: 1px solid rgba(255, 255, 255, 0.16);
+    z-index: 2;
+    transform: translateY(0);
+    transition: transform 260ms ease, opacity 220ms ease;
+  }
+
+  body.notes-pane-hidden .reveal.show-notes {
+    max-height: none !important;
+    margin-top: 0;
+  }
+
+  body.notes-pane-hidden .reveal.show-notes .speaker-notes {
+    transform: translateY(-100%);
   }
 }

@@ -184,10 +184,22 @@ pluginLoader('presentations',`/plugins_${key}`).then(async function() {
   const NOTES_SCROLL_SPEED_VH_PERCENT_PER_SEC_DEFAULT = 2;
   const NOTES_SCROLL_READY_RETRIES = 16;
   const NOTES_SCROLL_READY_RETRY_MS = 250;
+  const NOTES_SCROLL_USER_RESUME_IDLE_MS = 1400;
+  const NOTES_LAYOUT_BREAKPOINT_PX = 1024;
   let notesScrollStartTimer = null;
   let notesScrollReadyTimer = null;
   let notesScrollRaf = null;
   let notesScrollContextKey = '';
+  let notesScrollDetachInteractionListeners = null;
+  let notesViewportMode = null;
+  let notesResizeDebounceTimer = null;
+
+  function clearNotesInteractionListeners() {
+    if (typeof notesScrollDetachInteractionListeners === 'function') {
+      notesScrollDetachInteractionListeners();
+      notesScrollDetachInteractionListeners = null;
+    }
+  }
 
   function cancelNotesAutoScroll() {
     if (notesScrollStartTimer) {
@@ -202,6 +214,7 @@ pluginLoader('presentations',`/plugins_${key}`).then(async function() {
       window.cancelAnimationFrame(notesScrollRaf);
       notesScrollRaf = null;
     }
+    clearNotesInteractionListeners();
   }
 
   function getNotesContextKey() {
@@ -238,7 +251,94 @@ pluginLoader('presentations',`/plugins_${key}`).then(async function() {
 
       const beginAnimation = (notesPane) => {
         let startTs = null;
+        let startScrollTop = 0;
+        let userHoldingScroll = false;
+        let userPauseUntilTs = 0;
+        const nowTs = () => (
+          window.performance && typeof window.performance.now === 'function'
+            ? window.performance.now()
+            : Date.now()
+        );
+        const rebaseToCurrentScroll = (tsOverride = null) => {
+          const stamp = Number.isFinite(tsOverride) ? tsOverride : nowTs();
+          startTs = stamp;
+          startScrollTop = notesPane.scrollTop;
+        };
+        const pauseForUserInteraction = (idleMs = NOTES_SCROLL_USER_RESUME_IDLE_MS) => {
+          rebaseToCurrentScroll();
+          userPauseUntilTs = Math.max(userPauseUntilTs, nowTs() + idleMs);
+        };
+        const restorePresentationFocus = () => {
+          window.setTimeout(() => {
+            deck.focus?.focus?.();
+            if (document.activeElement === notesPane) {
+              notesPane.blur();
+            }
+            document.body?.focus?.();
+          }, 0);
+        };
+        const startUserHold = () => {
+          userHoldingScroll = true;
+          rebaseToCurrentScroll();
+        };
+        const endUserHold = () => {
+          if (!userHoldingScroll) return;
+          userHoldingScroll = false;
+          pauseForUserInteraction();
+          restorePresentationFocus();
+        };
+        const isScrollKey = (key) => (
+          key === 'ArrowUp' ||
+          key === 'ArrowDown' ||
+          key === 'PageUp' ||
+          key === 'PageDown' ||
+          key === 'Home' ||
+          key === 'End' ||
+          key === ' ' ||
+          key === 'Spacebar'
+        );
+        const onWheel = () => pauseForUserInteraction();
+        const onPointerDown = () => startUserHold();
+        const onPointerUp = () => endUserHold();
+        const onTouchStart = () => startUserHold();
+        const onTouchMove = () => pauseForUserInteraction();
+        const onTouchEnd = () => endUserHold();
+        const onTouchCancel = () => endUserHold();
+        const onKeyDown = (event) => {
+          if (!event) return;
+          if (isScrollKey(event.key)) {
+            pauseForUserInteraction();
+          }
+          if (!event.metaKey && !event.ctrlKey && !event.altKey && Number.isFinite(event.keyCode)) {
+            deck.triggerKey?.(event.keyCode);
+            event.preventDefault();
+            event.stopPropagation();
+            restorePresentationFocus();
+          }
+        };
+
+        clearNotesInteractionListeners();
+        notesPane.addEventListener('wheel', onWheel, { passive: true });
+        notesPane.addEventListener('pointerdown', onPointerDown, { passive: true });
+        window.addEventListener('pointerup', onPointerUp, { passive: true });
+        notesPane.addEventListener('touchstart', onTouchStart, { passive: true });
+        notesPane.addEventListener('touchmove', onTouchMove, { passive: true });
+        notesPane.addEventListener('touchend', onTouchEnd, { passive: true });
+        notesPane.addEventListener('touchcancel', onTouchCancel, { passive: true });
+        notesPane.addEventListener('keydown', onKeyDown);
+        notesScrollDetachInteractionListeners = () => {
+          notesPane.removeEventListener('wheel', onWheel);
+          notesPane.removeEventListener('pointerdown', onPointerDown);
+          window.removeEventListener('pointerup', onPointerUp);
+          notesPane.removeEventListener('touchstart', onTouchStart);
+          notesPane.removeEventListener('touchmove', onTouchMove);
+          notesPane.removeEventListener('touchend', onTouchEnd);
+          notesPane.removeEventListener('touchcancel', onTouchCancel);
+          notesPane.removeEventListener('keydown', onKeyDown);
+        };
+
         notesPane.scrollTop = 0;
+        startScrollTop = 0;
         console.log('[notes-scroll] start', {
           scrollHeight: notesPane.scrollHeight,
           clientHeight: notesPane.clientHeight
@@ -252,6 +352,17 @@ pluginLoader('presentations',`/plugins_${key}`).then(async function() {
 
           if (startTs === null) {
             startTs = ts;
+            startScrollTop = notesPane.scrollTop;
+          }
+
+          if (userHoldingScroll) {
+            notesScrollRaf = window.requestAnimationFrame(step);
+            return;
+          }
+
+          if (userPauseUntilTs > ts) {
+            notesScrollRaf = window.requestAnimationFrame(step);
+            return;
           }
 
           const maxScroll = notesPane.scrollHeight - notesPane.clientHeight;
@@ -266,7 +377,7 @@ pluginLoader('presentations',`/plugins_${key}`).then(async function() {
           const viewportBase = Math.max(window.innerHeight || 0, notesPane.clientHeight || 0, 1);
           const speedPxPerSec = viewportBase * (speedPercent / 100);
           const elapsedSeconds = Math.max(0, (ts - startTs) / 1000);
-          const targetScrollTop = Math.min(maxScroll, speedPxPerSec * elapsedSeconds);
+          const targetScrollTop = Math.min(maxScroll, startScrollTop + (speedPxPerSec * elapsedSeconds));
           notesPane.scrollTop = targetScrollTop;
           if (targetScrollTop >= maxScroll - 0.5) {
             notesPane.scrollTop = maxScroll;
@@ -360,6 +471,30 @@ pluginLoader('presentations',`/plugins_${key}`).then(async function() {
     }
   }
 
+  function getNotesViewportMode() {
+    if (document.body.dataset.variant !== 'notes') return 'off';
+    const viewportWidth = window.innerWidth || document.documentElement?.clientWidth || 0;
+    return viewportWidth <= NOTES_LAYOUT_BREAKPOINT_PX ? 'narrow' : 'wide';
+  }
+
+  function refreshNotesLayoutAfterViewportChange() {
+    if (document.body.dataset.variant !== 'notes') return;
+    const nextMode = getNotesViewportMode();
+    const modeChanged = nextMode !== notesViewportMode;
+    notesViewportMode = nextMode;
+    notesScrollContextKey = '';
+    cancelNotesAutoScroll();
+    updateNotesPaneVisibility();
+    deck.layout?.();
+    if (modeChanged) {
+      // Let CSS transitions settle when crossing wide/narrow layout mode.
+      window.setTimeout(() => {
+        updateNotesPaneVisibility();
+        deck.layout?.();
+      }, 320);
+    }
+  }
+
   revealTweaks(deck);
   contextMenu(deck);
   deck.addKeyBinding({ keyCode: 90, key: 'Z', description: 'Send presentation to peers' }, () => {
@@ -370,6 +505,7 @@ pluginLoader('presentations',`/plugins_${key}`).then(async function() {
   });
 
   deck.on('ready', () => {
+    notesViewportMode = getNotesViewportMode();
     updateNotesPaneVisibility();
 
     // Let browser layout settle first
@@ -390,6 +526,19 @@ pluginLoader('presentations',`/plugins_${key}`).then(async function() {
   deck.on('slidechanged', updateNotesPaneVisibility);
   deck.on('fragmentshown', updateNotesPaneVisibility);
   deck.on('fragmenthidden', updateNotesPaneVisibility);
+
+  window.addEventListener('resize', () => {
+    if (notesResizeDebounceTimer) {
+      window.clearTimeout(notesResizeDebounceTimer);
+    }
+    notesResizeDebounceTimer = window.setTimeout(() => {
+      notesResizeDebounceTimer = null;
+      refreshNotesLayoutAfterViewportChange();
+    }, 140);
+  });
+  window.addEventListener('orientationchange', () => {
+    refreshNotesLayoutAfterViewportChange();
+  });
 });
 
 
