@@ -59,6 +59,7 @@ const SORT_MODES = [
 let presentationItems = [];
 let currentSortMode = getStoredSortMode();
 let sortMenuOffsetObserver = null;
+const TRANSLATE_PRESENTATION_TITLES = true;
 
 function updateSortMenuOffset() {
   if (!sortMenu) return;
@@ -112,6 +113,12 @@ function setStoredSortMode(value) {
 
 function compareText(a, b) {
   return String(a || '').toLowerCase().localeCompare(String(b || '').toLowerCase());
+}
+
+function translatePresentationTitle(title) {
+  const rawTitle = String(title || '').trim();
+  if (!rawTitle || !TRANSLATE_PRESENTATION_TITLES) return rawTitle;
+  return tr(rawTitle);
 }
 
 function getModifiedTimestamp(item) {
@@ -207,6 +214,7 @@ function renderPresentationCards() {
   selectedCardElement = null;
 
   sorted.forEach((pres) => {
+    const displayTitle = translatePresentationTitle(pres.title);
     const card = document.createElement('a');
     card.href = `${url_prefix}/${pres.slug}/?p=${pres.md}`;
     card.target = '_blank';
@@ -216,9 +224,9 @@ function renderPresentationCards() {
       selectedCardElement = card;
     }
     card.innerHTML = `
-      <img src="${url_prefix}/${pres.slug}/${pres.thumbnail}" alt="${pres.title}">
+      <img src="${url_prefix}/${pres.slug}/${pres.thumbnail}" alt="${displayTitle}">
       <div class="card-content">
-        <div class="card-title">${pres.title}</div>
+        <div class="card-title">${displayTitle}</div>
         <div class="card-desc">${pres.description}</div>
       </div>
     `;
@@ -1065,6 +1073,7 @@ function renderSelectedPresentationPanel(pres, details = null) {
   const effectivePres = makeEffectivePresentation(pres, details);
   const actions = getPresentationActions(effectivePres, details);
   const detailsLoaded = !!details;
+  const displayTitle = translatePresentationTitle(effectivePres.title);
   const author = detailsLoaded ? (details.author || tr('Unknown')) : tr('Loading...');
   const languageVariants = detailsLoaded ? (details.languageVariants || []) : [];
   const additionalPresentations = detailsLoaded ? (details.additionalPresentations || []) : [];
@@ -1073,8 +1082,8 @@ function renderSelectedPresentationPanel(pres, details = null) {
   host.innerHTML = `
     <section id="selected-presentation-panel" class="selected-presentation-panel">
       <div class="selected-presentation-header">${tr('Selected Presentation')}</div>
-      <img class="selected-presentation-thumb" src="${url_prefix}/${effectivePres.slug}/${effectivePres.thumbnail}" alt="${effectivePres.title}">
-      <div class="selected-presentation-title">${effectivePres.title}</div>
+      <img class="selected-presentation-thumb" src="${url_prefix}/${effectivePres.slug}/${effectivePres.thumbnail}" alt="${displayTitle}">
+      <div class="selected-presentation-title">${displayTitle}</div>
       <div class="selected-presentation-meta">${effectivePres.description || ''}</div>
       <div class="selected-presentation-meta"><strong>${tr('Slug')}:</strong> ${effectivePres.slug}</div>
       <div class="selected-presentation-meta"><strong>${tr('File')}:</strong> ${selectedMd}</div>
