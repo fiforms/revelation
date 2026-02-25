@@ -140,6 +140,7 @@ export async function loadAndPreprocessMarkdown(deck,selectedFile = null) {
       const defaultFile = 'presentation.md';
       const urlParams = new URLSearchParams(window.location.search);
       const variant = (urlParams.get('variant') || '').trim().toLowerCase();
+      const forceNoTransitions = variant === 'lowerthirds';
       const ccliFromUrl = (urlParams.get('ccli') || '').trim();
       const variantThemeMap = {
         lowerthirds: 'lowerthirds.css',
@@ -320,7 +321,12 @@ export async function loadAndPreprocessMarkdown(deck,selectedFile = null) {
         appConfig
       );
       const processedMarkdown = metadata.convertSmartQuotes === false ? partProcessedMarkdown : convertSmartQuotes(partProcessedMarkdown);
-      const sanitizedMarkdown = sanitizeMarkdownEmbeddedHTML(processedMarkdown);
+      const transitionSafeMarkdown = forceNoTransitions
+        ? processedMarkdown
+          .replace(/\sdata-transition="[^"]*"/gi, '')
+          .replace(/\sdata-transition-speed="[^"]*"/gi, '')
+        : processedMarkdown;
+      const sanitizedMarkdown = sanitizeMarkdownEmbeddedHTML(transitionSafeMarkdown);
 
       // Create a temporary element to convert markdown into HTML slides
       const section = document.getElementById('markdown-container');
@@ -352,6 +358,10 @@ export async function loadAndPreprocessMarkdown(deck,selectedFile = null) {
         config.showSlideNumber = 'all';
         config.autoSlide = false;
         config.autoSlideStoppable = false;
+      }
+      if (forceNoTransitions) {
+        config.transition = 'none';
+        config.backgroundTransition = 'none';
       }
       deck.initialize(config);
 }
