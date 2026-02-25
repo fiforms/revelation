@@ -8,6 +8,7 @@ import { marked } from 'marked';
 
 const urlParams = new URLSearchParams(window.location.search);
 const mdFile = urlParams.get('p');
+const selectedLang = String(urlParams.get('lang') || '').trim().toLowerCase();
 const SAFE_MD_LINK_RE = /^(?:\.\/)?(?:[a-zA-Z0-9_.-]+\/)*[a-zA-Z0-9_.-]+\.md$/;
 const optionsToggleButton = document.getElementById('handout-options-toggle');
 const optionsPanel = document.getElementById('handout-options');
@@ -105,6 +106,26 @@ function setupInterPresentationHandoutLinks() {
     event.preventDefault();
     navigateHandoutInPlace(target);
   }, true);
+}
+
+function findAlternativeMarkdownFile(metadata = {}, language = '') {
+  const alternatives = metadata?.alternatives;
+  if (!alternatives || typeof alternatives !== 'object' || Array.isArray(alternatives)) {
+    return null;
+  }
+  const requestedLang = String(language || '').trim().toLowerCase();
+  if (!requestedLang) return null;
+
+  for (const [candidate, langCode] of Object.entries(alternatives)) {
+    const key = String(candidate || '').trim();
+    const safe = key.startsWith('./') ? key.slice(2) : key;
+    if (!SAFE_MD_LINK_RE.test(safe)) continue;
+    if (String(key || '').trim().toLowerCase() === 'self') continue;
+    if (String(langCode || '').trim().toLowerCase() === requestedLang) {
+      return safe;
+    }
+  }
+  return null;
 }
 
 function splitSlides(markdown) {
@@ -268,8 +289,24 @@ if (!mdFile) {
         }
       }
       // Normalize line endings up front so markdown parsing is consistent on Windows/Linux/macOS.
-      const normalizedMarkdown = String(rawMarkdown ?? '').replace(/\r\n?/g, '\n');
-      const { metadata, content } = extractFrontMatter(normalizedMarkdown);
+      let normalizedMarkdown = String(rawMarkdown ?? '').replace(/\r\n?/g, '\n');
+      let { metadata, content } = extractFrontMatter(normalizedMarkdown);
+      let resolvedMdFile = mdFile;
+      const alternativeFile = findAlternativeMarkdownFile(metadata, selectedLang);
+      if (alternativeFile) {
+        try {
+          const altRes = await fetch(alternativeFile);
+          if (altRes.ok) {
+            resolvedMdFile = alternativeFile;
+            normalizedMarkdown = String(await altRes.text() ?? '').replace(/\r\n?/g, '\n');
+            const parsedAlt = extractFrontMatter(normalizedMarkdown);
+            metadata = parsedAlt.metadata;
+            content = parsedAlt.content;
+          }
+        } catch (err) {
+          console.warn(`Failed to load handout alternative markdown (${alternativeFile}):`, err?.message || err);
+        }
+      }
       document.title = metadata.title || "Presentation Handout";
 
       const processed = preprocessMarkdown(
@@ -329,7 +366,12 @@ if (!mdFile) {
 	  const slideno = incremental ? slideCount : `${hIndex}.${vIndex}` ;
 
           output.push('<section class="slide">');
-	  output.push(`<div class="slide-number slide-number-link"><a data-handout-skip-intercept=\"1\" href=\"index.html?p=${encodeURIComponent(mdFile)}#${hIndex}/${vIndex}\" target=\"_blank\">${slideno}</a></div>`);
+	  const presParams = new URLSearchParams();
+	  presParams.set('p', resolvedMdFile);
+	  if (selectedLang) {
+	    presParams.set('lang', selectedLang);
+	  }
+	  output.push(`<div class="slide-number slide-number-link"><a data-handout-skip-intercept=\"1\" href=\"index.html?${presParams.toString()}#${hIndex}/${vIndex}\" target=\"_blank\">${slideno}</a></div>`);
 	  output.push(`<div class="slide-number slide-number-nolink" style="display: none">${slideno}</div>`);
           output.push(slideHTML);
 	  if(cleanedNote) {

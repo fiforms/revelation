@@ -1350,8 +1350,14 @@ function handoutView(slug, mdFile) {
   if (window.electronAPI?.openHandoutView) {
     window.electronAPI.openHandoutView(slug, mdFile);
   } else {
-    window.open(`${url_prefix}/${slug}/handout?p=${mdFile}`, '_blank');
-  } 
+    const params = new URLSearchParams();
+    params.set('p', mdFile);
+    const lang = String(appConfig?.preferredPresentationLanguage || appConfig?.language || '').trim().toLowerCase();
+    if (lang) {
+      params.set('lang', lang);
+    }
+    window.open(`${url_prefix}/${slug}/handout?${params.toString()}`, '_blank');
+  }
 }
 
 
