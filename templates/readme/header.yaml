@@ -10,8 +10,8 @@ version: 0.2.7
 newSlideOnHeading: false
 config:
   hash: true
-  width: 1280
-  height: 840
+  width: 1600
+  height: 1000
   maxScale: 4
   slideNumber: true
   showSlideNumber: speaker
