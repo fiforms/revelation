@@ -237,7 +237,7 @@ pluginLoader('presentations',`/plugins_${key}`).then(async function() {
       notesScrollStartTimer = null;
 
       const beginAnimation = (notesPane) => {
-        let lastTs = null;
+        let startTs = null;
         notesPane.scrollTop = 0;
         console.log('[notes-scroll] start', {
           scrollHeight: notesPane.scrollHeight,
@@ -250,15 +250,12 @@ pluginLoader('presentations',`/plugins_${key}`).then(async function() {
             return;
           }
 
-          if (lastTs === null) {
-            lastTs = ts;
+          if (startTs === null) {
+            startTs = ts;
           }
 
-          const deltaSeconds = (ts - lastTs) / 1000;
-          lastTs = ts;
-
           const maxScroll = notesPane.scrollHeight - notesPane.clientHeight;
-          if (maxScroll <= 0 || notesPane.scrollTop >= maxScroll) {
+          if (maxScroll <= 0) {
             notesPane.scrollTop = Math.max(0, maxScroll);
             notesScrollRaf = null;
             console.log('[notes-scroll] complete');
@@ -266,8 +263,17 @@ pluginLoader('presentations',`/plugins_${key}`).then(async function() {
           }
 
           const speedPercent = getNotesScrollSpeedVhPercentPerSec();
-          const speedPxPerSec = (window.innerHeight || notesPane.clientHeight || 0) * (speedPercent / 100);
-          notesPane.scrollTop = Math.min(maxScroll, notesPane.scrollTop + (speedPxPerSec * deltaSeconds));
+          const viewportBase = Math.max(window.innerHeight || 0, notesPane.clientHeight || 0, 1);
+          const speedPxPerSec = viewportBase * (speedPercent / 100);
+          const elapsedSeconds = Math.max(0, (ts - startTs) / 1000);
+          const targetScrollTop = Math.min(maxScroll, speedPxPerSec * elapsedSeconds);
+          notesPane.scrollTop = targetScrollTop;
+          if (targetScrollTop >= maxScroll - 0.5) {
+            notesPane.scrollTop = maxScroll;
+            notesScrollRaf = null;
+            console.log('[notes-scroll] complete');
+            return;
+          }
           notesScrollRaf = window.requestAnimationFrame(step);
         };
 
