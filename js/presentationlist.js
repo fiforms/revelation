@@ -48,12 +48,12 @@ const sortMenu = document.getElementById('sort-menu');
 
 const SORT_STORAGE_KEY = 'revelation.presentationSortMode';
 const SORT_MODES = [
-  { value: 'slug', label: 'Slug' },
-  { value: 'title', label: 'Title' },
-  { value: 'modified_desc', label: 'Last Modified' },
-  { value: 'modified_asc', label: 'First Modified' },
-  { value: 'created_desc', label: 'Last Created' },
-  { value: 'created_asc', label: 'First Created' }
+  { value: 'slug', labelKey: 'Slug' },
+  { value: 'title', labelKey: 'Title' },
+  { value: 'modified_desc', labelKey: 'Last Modified' },
+  { value: 'modified_asc', labelKey: 'First Modified' },
+  { value: 'created_desc', labelKey: 'Last Created' },
+  { value: 'created_asc', labelKey: 'First Created' }
 ];
 
 let presentationItems = [];
@@ -178,9 +178,12 @@ function sortPresentations(items, mode) {
 
 function renderSortMenu() {
   if (!sortOptionsList) return;
+  if (sortBtn) {
+    sortBtn.title = tr('Sort');
+  }
   sortOptionsList.innerHTML = SORT_MODES.map((mode) => {
     const isCurrent = mode.value === currentSortMode;
-    return `<button type="button" class="sort-option-btn${isCurrent ? ' is-current' : ''}" data-sort-mode="${mode.value}" style="display:block;width:100%;text-align:left;background:${isCurrent ? '#1f3b53' : '#1a1a1a'};color:#f0f0f0;border:1px solid #444;border-radius:6px;padding:.4rem .55rem;cursor:pointer;margin:.2rem 0;">${isCurrent ? '✓ ' : ''}${mode.label}</button>`;
+    return `<button type="button" class="sort-option-btn${isCurrent ? ' is-current' : ''}" data-sort-mode="${mode.value}" style="display:block;width:100%;text-align:left;background:${isCurrent ? '#1f3b53' : '#1a1a1a'};color:#f0f0f0;border:1px solid #444;border-radius:6px;padding:.4rem .55rem;cursor:pointer;margin:.2rem 0;">${isCurrent ? '✓ ' : ''}${tr(mode.labelKey)}</button>`;
   }).join('');
   sortOptionsList.querySelectorAll('[data-sort-mode]').forEach((button) => {
     button.addEventListener('click', () => {

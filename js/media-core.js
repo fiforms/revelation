@@ -9,6 +9,8 @@ export async function initMediaLibrary(container, {
   onPick = null,                  // function(item) when mode === 'picker'
   enableContextMenu = true,       // keep plugin menu integration
 } = {}) {
+  const tt = (key) => (typeof window.tr === 'function' ? window.tr(key) : key);
+
   if (!key) {
     container.innerHTML = '<p style="color:#f66">Missing ?key=…</p>';
     return;
@@ -37,16 +39,16 @@ export async function initMediaLibrary(container, {
           style="flex:1;padding:.35rem .5rem;border-radius:4px;border:1px solid #555;background:#222;color:#eee;">
         <select id="media-type" 
           style="padding:.35rem .5rem;border-radius:4px;border:1px solid #555;background:#222;color:#eee;">
-          <option value="all">All</option>
-          <option value="image">Images</option>
-          <option value="video">Videos</option>
+          <option value="all">${tt('All')}</option>
+          <option value="image">${tt('Images')}</option>
+          <option value="video">${tt('Videos')}</option>
         </select>
         <select id="media-sort"
           style="padding:.35rem .5rem;border-radius:4px;border:1px solid #555;background:#222;color:#eee;">
-          <option value="name-asc">Filename A→Z</option>
-          <option value="name-desc">Filename Z→A</option>
-          <option value="date-new">Date Added (newest)</option>
-          <option value="date-old">Date Added (oldest)</option>
+          <option value="name-asc">${tt('Filename A→Z')}</option>
+          <option value="name-desc">${tt('Filename Z→A')}</option>
+          <option value="date-new">${tt('Date Added (newest)')}</option>
+          <option value="date-old">${tt('Date Added (oldest)')}</option>
         </select>
     </div>
 
@@ -90,6 +92,7 @@ export async function initMediaLibrary(container, {
   const searchBox = container.querySelector('#media-search');
   const typeSelect = container.querySelector('#media-type');
   const sortSelect = container.querySelector('#media-sort');
+  searchBox.placeholder = tt('Search…');
 
   searchBox.focus();
 
