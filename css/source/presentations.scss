@@ -1,10 +1,12 @@
-    body {
-      font-family: sans-serif;
-      background: #111;
-      color: #eee;
-      margin: 0;
-      padding: 2rem;
-    }
+body {
+  font-family: sans-serif;
+  background: #111;
+  color: #eee;
+  margin: 0;
+  padding: 2rem;
+  -webkit-user-select: none;
+  user-select: none;
+}
     h1,h2 {
       text-align: center;
       margin-bottom: 2rem;
