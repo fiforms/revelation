@@ -5,6 +5,7 @@
 // Load ./translations.json file
 
 window.translations = {};
+window.translationsLoaded = false;
 if(window.offlineMarkdown) {
   const scriptDir = new URL('.', document.currentScript.src).pathname;
   window.translationsources = [scriptDir + 'translations.json'];
@@ -88,4 +89,8 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     await loadTranslations();
     translatePage(userLanguage);
+    window.translationsLoaded = true;
+    window.dispatchEvent(new CustomEvent('translations-loaded', {
+      detail: { language: userLanguage }
+    }));
 });

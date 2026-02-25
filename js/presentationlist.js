@@ -263,6 +263,22 @@ function applySortMode(mode, { persist = false, closeMenu = false } = {}) {
   }
 }
 
+function rerenderForTranslations() {
+  renderSortMenu();
+  renderPresentationCards();
+  if (!selectedPresentationBase) return;
+  const details = detailsCache.get(getPresentationKey(selectedPresentationBase)) || null;
+  renderSelectedPresentationPanel(selectedPresentationBase, details);
+}
+
+if (window.translationsLoaded) {
+  rerenderForTranslations();
+} else {
+  window.addEventListener('translations-loaded', () => {
+    rerenderForTranslations();
+  }, { once: true });
+}
+
 renderSortMenu();
 initSortMenuOffsetTracking();
 
