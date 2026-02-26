@@ -549,7 +549,7 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
       const shouldLoop = normalizedModifier !== 'noloop';
 
       const tag = isVideo
-        ? `<!-- .slide: data-background-video="${src}"${shouldLoop ? ' data-background-video-loop' : ''} -->`
+        ? `<!-- .slide: data-background-video="${src}"${shouldLoop ? ' data-background-video-loop' : ''} data-background-video-muted -->`
         : `<!-- .slide: data-background-image="${src}" -->`;
       slideLocalSuppressions.add('background');
       if(normalizedModifier === 'sticky') {
