@@ -245,6 +245,20 @@ function presentationIndexPlugin() {
       if (fs.existsSync(revealDistDir)) {
         server.middlewares.use('/css/reveal.js/dist', serveStatic(revealDistDir, { fallthrough: true }));
       }
+      let publishDir = null;
+      if (userDataDir) {
+        publishDir = path.join(userDataDir, 'publish');
+        fs.mkdirSync(publishDir, { recursive: true });
+        server.middlewares.use('/publish', serveStatic(publishDir, {
+          fallthrough: true,
+          setHeaders: (res) => {
+            res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+            res.setHeader('Pragma', 'no-cache');
+            res.setHeader('Expires', '0');
+            res.setHeader('Surrogate-Control', 'no-store');
+          }
+        }));
+      }
 
      // 👇 Find out if Vite was started with --host (network mode)
     const isNetwork = process.argv.includes('--host');
@@ -259,7 +273,7 @@ function presentationIndexPlugin() {
 
     const chokidar = require('chokidar');
 
-    const watcher = chokidar.watch(presentationsDir, {
+      const watcher = chokidar.watch(presentationsDir, {
       ignored: /(^|[/\\])\../, // Ignore dotfiles
       persistent: true,
       ignoreInitial: true,  
@@ -295,7 +309,7 @@ function presentationIndexPlugin() {
       }
     };
 
-    watcher
+      watcher
       .on('add',    filePath => triggerReload('add', filePath))
       .on('change', filePath => triggerReload('change', filePath))
       .on('unlink', filePath => triggerReload('unlink', filePath))
@@ -317,7 +331,7 @@ function presentationIndexPlugin() {
           server.ws.send({ type: 'full-reload' });
         }
       });
-      
+
     // Prefer dist/css output if available; fall back to css/.
     console.log(`Serving /css from ${cssServeDir}`);
     server.middlewares.use(
