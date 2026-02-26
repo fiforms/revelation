@@ -677,6 +677,33 @@ if (openBtn) {
   });
 }
 
+const openScreensBtn = document.getElementById('open-screens');
+if (openScreensBtn) {
+  const screenMode = String(
+    appConfig?.presentationScreenMode
+    || (typeof appConfig?.virtualPeersAlwaysOpen === 'boolean'
+      ? (appConfig.virtualPeersAlwaysOpen ? 'group-control' : 'on-demand')
+      : 'group-control')
+  ).trim().toLowerCase();
+  if (!window.electronAPI?.openScreens || screenMode !== 'group-control') {
+    openScreensBtn.style.display = 'none';
+  }
+  openScreensBtn.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    if (!window.electronAPI?.openScreens) return;
+    try {
+      const result = await window.electronAPI.openScreens();
+      if (result?.success) {
+        showToast(tr('Screens opened.'));
+      } else {
+        showToast(result?.error || tr('Unable to open screens.'));
+      }
+    } catch (err) {
+      showToast(`${tr('Unable to open screens.')}: ${err.message}`);
+    }
+  });
+}
+
 
 const mediaLinkDiv = document.getElementById('media-library-link');
 if (url_key && mediaLinkDiv) {
