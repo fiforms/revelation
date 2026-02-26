@@ -242,6 +242,23 @@ function presentationIndexPlugin() {
       generatePresentationIndex();
       generateMediaIndex();
 
+      // Support sandboxed builder preview iframes (Origin: null) loading module assets.
+      server.middlewares.use((req, res, next) => {
+        const origin = String(req.headers.origin || '').trim().toLowerCase();
+        const isLoopback = isLoopbackAddress(req.socket?.remoteAddress);
+        if (origin === 'null' && isLoopback && !String(req.url || '').startsWith('/peer/')) {
+          res.setHeader('Access-Control-Allow-Origin', 'null');
+          res.setHeader('Vary', 'Origin');
+          res.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,OPTIONS');
+        }
+        if (req.method === 'OPTIONS' && origin === 'null' && isLoopback) {
+          res.statusCode = 204;
+          res.end();
+          return;
+        }
+        next();
+      });
+
       if (fs.existsSync(revealDistDir)) {
         server.middlewares.use('/css/reveal.js/dist', serveStatic(revealDistDir, { fallthrough: true }));
       }

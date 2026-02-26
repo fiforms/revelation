@@ -21,11 +21,13 @@ const isRemoteFollower = urlParams.has('remoteMultiplexId');
 const isRemote = window.location.protocol !== 'file:' &&
                  !['localhost', '127.0.0.1'].includes(window.location.hostname);
 const builderPreviewMode = urlParams.get('builderPreview') === '1';
+const builderPreviewToken = urlParams.get('builderPreviewToken') || '';
 const PREVIEW_BRIDGE = 'revelation-builder-preview-bridge';
 const SAFE_MD_LINK_RE = /^(?:\.\/)?(?:[a-zA-Z0-9_.-]+\/)*[a-zA-Z0-9_.-]+\.md$/;
 
 function setupBuilderPreviewBridge(deck) {
   if (!builderPreviewMode) return;
+  if (!builderPreviewToken) return;
   if (!window.parent || window.parent === window) return;
 
   const postPreviewEvent = (eventName, payload = {}) => {
@@ -33,6 +35,7 @@ function setupBuilderPreviewBridge(deck) {
       {
         bridge: PREVIEW_BRIDGE,
         type: 'preview-event',
+        token: builderPreviewToken,
         event: eventName,
         payload
       },
@@ -50,6 +53,7 @@ function setupBuilderPreviewBridge(deck) {
     if (event.source !== window.parent) return;
     const data = event.data || {};
     if (data.bridge !== PREVIEW_BRIDGE || data.type !== 'builder-command') return;
+    if (data.token !== builderPreviewToken) return;
 
     const command = String(data.command || '');
     const payload = data.payload && typeof data.payload === 'object' ? data.payload : {};

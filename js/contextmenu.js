@@ -158,10 +158,9 @@ export function closePresentationsOnPeers() {
 function getPeerShareUrl() {
   const baseUrl = window.location.href.replace(/#.*/, '');
   const canonicalBaseUrl = stripPeerModeParams(baseUrl);
-  if (!window.localStorage) return null;
-
   try {
-    const presentations = JSON.parse(window.localStorage.getItem('presentations') || '{}');
+    const raw = window.localStorage?.getItem('presentations');
+    const presentations = JSON.parse(raw || '{}');
     const entry = presentations[baseUrl] || presentations[canonicalBaseUrl];
     const multiplexId = entry?.multiplexId;
     if (!multiplexId) return null;

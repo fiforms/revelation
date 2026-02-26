@@ -561,7 +561,15 @@ function applyTintStyleToLayer(layer, tintStyle) {
 function hideControlsOnSpeakerNotes() {
     window.addEventListener('message', event => {
       // Reveal Notes plugin sends this message from the notes window
-      let edata = JSON.parse(event.data)
+      let edata = event.data;
+      if (typeof edata === 'string') {
+        try {
+          edata = JSON.parse(edata);
+        } catch {
+          return;
+        }
+      }
+      if (!edata || typeof edata !== 'object') return;
       if (edata.namespace === 'reveal-notes' && edata.type === 'connected') {
         console.log('Speaker Notes Connected, hiding controls');
         document.querySelector('.controls')?.classList.add('hide-when-notes');

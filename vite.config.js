@@ -8,7 +8,8 @@ export default {
   publicDir: 'assets',   // Default for static assets
   server: {
     port: 8000,
-    allowedHosts: true
+    allowedHosts: true,
+    cors: false
   },
   plugins: [presentationIndexPlugin()],
   build: {
@@ -28,4 +29,3 @@ export default {
     }
   }
 };
-

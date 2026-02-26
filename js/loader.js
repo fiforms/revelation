@@ -8,6 +8,14 @@ const NOTE_SEPARATOR_LEGACY = 'Note:';
 const NOTE_SEPARATOR_CURRENT = ':note:';
 const NOTE_VERSION_BREAKPOINT = [0, 2, 6];
 
+function getStorageItemSafe(key) {
+  try {
+    return window.localStorage?.getItem(key) ?? null;
+  } catch {
+    return null;
+  }
+}
+
 function parseSemverTuple(version) {
   const raw = String(version || '').trim();
   const match = raw.match(/^v?(\d+)\.(\d+)\.(\d+)/i);
@@ -274,7 +282,7 @@ export async function loadAndPreprocessMarkdown(deck,selectedFile = null) {
       } else if (mediaParam === 'low' || mediaParam === 'standard') {
         prefersHigh = false;
       } else if (!window.electronAPI) {
-        const stored = localStorage.getItem('options_media-version');
+        const stored = getStorageItemSafe('options_media-version');
         prefersHigh = stored === 'high';
       }
 
@@ -621,7 +629,7 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
   };
   const prefersHigh = typeof preferHigh === 'boolean'
     ? preferHigh
-    : (localStorage.getItem('options_media-version') === 'high');
+    : (getStorageItemSafe('options_media-version') === 'high');
   const isVideoSource = (value) => /\.(webm|mp4|mov|m4v)(\?.*)?(#.*)?$/i.test(String(value || '').trim());
   const isHighVariantAvailable = (item) => {
     if (!item?.large_variant?.filename) return false;
