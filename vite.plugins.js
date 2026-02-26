@@ -246,10 +246,10 @@ function presentationIndexPlugin() {
       server.middlewares.use((req, res, next) => {
         const origin = String(req.headers.origin || '').trim().toLowerCase();
         const isLoopback = isLoopbackAddress(req.socket?.remoteAddress);
-        if (origin === 'null' && isLoopback && !String(req.url || '').startsWith('/peer/')) {
-          res.setHeader('Access-Control-Allow-Origin', 'null');
-          res.setHeader('Vary', 'Origin');
-          res.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,OPTIONS');
+        if (origin === 'null' && !isLoopback && !String(req.url || '').startsWith('/peer/')) {
+          res.writeHead(403, { 'Content-Type': 'text/plain' });
+          res.end('403 Forbidden: sandbox-origin access allowed only from localhost');
+          return;
         }
         if (req.method === 'OPTIONS' && origin === 'null' && isLoopback) {
           res.statusCode = 204;

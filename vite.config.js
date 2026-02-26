@@ -9,7 +9,11 @@ export default {
   server: {
     port: 8000,
     allowedHosts: true,
-    cors: false
+    cors: {
+      // Builder preview iframe runs sandboxed without allow-same-origin (Origin: null).
+      origin: 'null',
+      methods: ['GET', 'HEAD', 'OPTIONS']
+    }
   },
   plugins: [presentationIndexPlugin()],
   build: {

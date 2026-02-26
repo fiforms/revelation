@@ -59,6 +59,7 @@ function setupBuilderPreviewBridge(deck) {
     const payload = data.payload && typeof data.payload === 'object' ? data.payload : {};
 
     if (command === 'hello') {
+      deck.layout?.();
       postCurrentState('ready');
       return;
     }
@@ -154,7 +155,8 @@ function setupInterPresentationLinkHandler() {
 pluginLoader('presentations',`/plugins_${key}`).then(async function() {
 
   const plugins = [Markdown, Notes, Zoom, Search];
-  if (window.revealRemoteServer) {
+  const enableRevealRemote = !!window.revealRemoteServer && !builderPreviewMode;
+  if (enableRevealRemote) {
     plugins.push(RevealRemote);
   }
 
@@ -169,7 +171,7 @@ pluginLoader('presentations',`/plugins_${key}`).then(async function() {
 
   const deck = new Reveal({
     plugins,
-    ...((window.revealRemoteServer) && {
+    ...(enableRevealRemote && {
       remote: {
         remote: true,
         multiplex: true,
@@ -519,6 +521,8 @@ pluginLoader('presentations',`/plugins_${key}`).then(async function() {
 
     // Let browser layout settle first
     window.setTimeout(() => {
+      deck.layout?.();
+      window.setTimeout(() => deck.layout?.(), 180);
       // Remote followers should not force local slide state after join.
       // The remote plugin will sync to the master's current indices.
       // Builder preview receives explicit slide commands from the editor bridge.
