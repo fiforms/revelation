@@ -22,7 +22,12 @@ export function revealTweaks(deck) {
       updateFixedOverlayVisibility(deck);
     });
     deck.on('pdf-ready', () => {
+      enforcePdfPageBackground();
       fixFitMediaPdfLayout(deck);
+      window.setTimeout(() => {
+        enforcePdfPageBackground();
+        fixFitMediaPdfLayout(deck);
+      }, 80);
     });
 
 
@@ -48,6 +53,7 @@ export function revealTweaks(deck) {
     }
     
     scrubBackgroundVideos(isThumbnail);
+    enforcePdfPageBackground();
     fixFitMediaPdfLayout(deck);
     hideControlsOnSpeakerNotes();
     doubleClickFullScreen();
@@ -81,6 +87,20 @@ function fixFitMediaPdfLayout(deck) {
     slide.style.top = `${top}px`;
     slide.style.height = `${targetHeight}px`;
     slide.style.minHeight = `${targetHeight}px`;
+  });
+}
+
+function enforcePdfPageBackground() {
+  const isPrintPdf = /(?:\?|&)print-pdf(?:&|$)/i.test(window.location.search);
+  if (!isPrintPdf) return;
+
+  const rootStyles = window.getComputedStyle(document.documentElement);
+  const themeBackground = String(rootStyles.getPropertyValue('--r-background-color') || '').trim();
+  if (!themeBackground) return;
+
+  const pages = document.querySelectorAll('.reveal .slides .pdf-page');
+  pages.forEach((page) => {
+    page.style.backgroundColor = themeBackground;
   });
 }
 
