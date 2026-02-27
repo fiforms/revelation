@@ -18,7 +18,8 @@
 @import url(./fonts/noto_serif/noto_serif.css);
 
 // Override theme settings (see ../template/settings.scss)
-// $backgroundColor: #191919;
+// Print/PDF vector export can flatten gradients; keep fallback close to base dark tone.
+$backgroundColor: #1a1a1a;
 
 $mainColor: #d8d8d8;
 $headingColor: #c0c0c0;
