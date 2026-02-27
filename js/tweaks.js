@@ -21,6 +21,9 @@ export function revealTweaks(deck) {
       updateAttributionFromCurrentSlide(deck);
       updateFixedOverlayVisibility(deck);
     });
+    deck.on('pdf-ready', () => {
+      fixFitMediaPdfLayout(deck);
+    });
 
 
     // Play videos with data-imagefit attribute when the slide is shown
@@ -45,9 +48,40 @@ export function revealTweaks(deck) {
     }
     
     scrubBackgroundVideos(isThumbnail);
+    fixFitMediaPdfLayout(deck);
     hideControlsOnSpeakerNotes();
     doubleClickFullScreen();
     hideCursorOnIdle();
+}
+
+function fixFitMediaPdfLayout(deck) {
+  const isPrintPdf = /(?:\?|&)print-pdf(?:&|$)/i.test(window.location.search);
+  if (!isPrintPdf) return;
+
+  const config = deck?.getConfig?.() || {};
+  const baseWidth = Number(config.width) || 1920;
+  const baseHeight = Number(config.height) || 1080;
+  if (!baseWidth || !baseHeight) return;
+  const targetAspect = baseHeight / baseWidth;
+
+  const fitSlides = document.querySelectorAll('.reveal .slides .pdf-page > section');
+  fitSlides.forEach((slide) => {
+    if (!slide.querySelector('[data-imagefit]')) return;
+    const page = slide.closest('.pdf-page');
+    if (!page) return;
+
+    const slideRect = slide.getBoundingClientRect();
+    const pageRect = page.getBoundingClientRect();
+    const slideWidth = slideRect.width || Number.parseFloat(slide.style.width) || 0;
+    if (!slideWidth) return;
+
+    const targetHeight = slideWidth * targetAspect;
+    const top = Math.max((pageRect.height - targetHeight) / 2, 0);
+
+    slide.style.top = `${top}px`;
+    slide.style.height = `${targetHeight}px`;
+    slide.style.minHeight = `${targetHeight}px`;
+  });
 }
 
 function initFitVideoControls(deck) {
