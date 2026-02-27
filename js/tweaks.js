@@ -69,6 +69,10 @@ function fixFitMediaPdfLayout(deck) {
   const baseHeight = Number(config.height) || 1080;
   if (!baseWidth || !baseHeight) return;
   const targetAspect = baseHeight / baseWidth;
+  const margin = Number.isFinite(Number(config.margin)) ? Number(config.margin) : 0.04;
+  const pageHeightOffset = Number.isFinite(Number(config.pdfPageHeightOffset))
+    ? Number(config.pdfPageHeightOffset)
+    : -1;
 
   const fitSlides = document.querySelectorAll('.reveal .slides .pdf-page > section');
   fitSlides.forEach((slide) => {
@@ -81,12 +85,22 @@ function fixFitMediaPdfLayout(deck) {
     const slideWidth = slideRect.width || Number.parseFloat(slide.style.width) || 0;
     if (!slideWidth) return;
 
-    const targetHeight = slideWidth * targetAspect;
-    const top = Math.max((pageRect.height - targetHeight) / 2, 0);
+    // Force fit-media slides to a single printed page. Reveal can create
+    // multi-page containers when pre-layout scrollHeight is large.
+    const singlePageHeight = (slideWidth * targetAspect * (1 + margin)) + pageHeightOffset;
+    if (singlePageHeight > 0) {
+      page.style.height = `${singlePageHeight}px`;
+    }
+
+    const finalPageHeight = singlePageHeight > 0 ? singlePageHeight : pageRect.height;
+    const targetHeight = Math.min(slideWidth * targetAspect, finalPageHeight);
+    const top = Math.max((finalPageHeight - targetHeight) / 2, 0);
 
     slide.style.top = `${top}px`;
     slide.style.height = `${targetHeight}px`;
     slide.style.minHeight = `${targetHeight}px`;
+    slide.style.maxHeight = `${targetHeight}px`;
+    slide.style.overflow = 'hidden';
   });
 }
 
