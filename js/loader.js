@@ -217,6 +217,8 @@ export async function loadAndPreprocessMarkdown(deck,selectedFile = null) {
         delete window.RevelationRuntime.notesScrollSpeed;
       }
 
+      const isExportMode = urlParams.get('exportMode') === '1';
+
       // check for alternative versions, create a selector drop-down
       if (!selectedFile && metadata.alternatives && typeof metadata.alternatives === 'object') {
          const alternativeEntries = Object.entries(metadata.alternatives)
@@ -234,7 +236,7 @@ export async function loadAndPreprocessMarkdown(deck,selectedFile = null) {
          if (matchedFile) {
            return loadAndPreprocessMarkdown(deck, matchedFile);
          }
-         if (!selectedLang && alternativeEntries.length) {
+         if (!selectedLang && alternativeEntries.length && !isExportMode) {
            createAlternativeSelector(
              deck,
              Object.fromEntries(alternativeEntries.map((entry) => [entry.file, entry.langCode]))
