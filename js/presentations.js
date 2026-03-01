@@ -1,4 +1,5 @@
 import Reveal from 'reveal.js';
+import { io as socketIoClient } from 'socket.io-client';
 import Markdown from 'reveal.js/plugin/markdown/markdown.esm.js';
 import Notes from 'reveal.js/plugin/notes/notes.esm.js';
 import Zoom from 'reveal.js/plugin/zoom/zoom.esm.js';
@@ -11,6 +12,8 @@ import { contextMenu, sendPresentationToPeers, closePresentationsOnPeers } from 
 import { pluginLoader } from './pluginloader.js';
 
 (async () => {
+
+window.RevelationSocketIOClient = socketIoClient;
 
 const match = window.location.pathname.match(/presentations_([^/]+)/);
 let key = match ? match[1] : null;

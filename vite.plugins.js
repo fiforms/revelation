@@ -12,7 +12,9 @@ const localIp = ip.address(); // Gets the LAN IP
 const baseDir = __dirname;
 const prefix = 'presentations_';
 const PEER_SOCKET_PATH = '/peer-commands';
+const PRESENTER_PLUGINS_SOCKET_PATH = '/presenter-plugins-socket';
 let peerCommandIo = null;
+let presenterPluginsIo = null;
 const PIN_FAILURE_LIMIT = 3;
 const PIN_BLOCK_MS = 60_000;
 const peerPinFailures = new Map();
@@ -380,6 +382,7 @@ function presentationIndexPlugin() {
 
       // Peer pairing + peer command endpoints (served from the same Vite server)
       ensurePeerCommandServer(server, configPath);
+      ensurePresenterPluginsServer(server);
       server.middlewares.use((req, res, next) => {
         if (!req.url?.startsWith('/peer/')) return next();
 
@@ -821,6 +824,66 @@ function ensurePeerCommandServer(server, configPath) {
 
     socket.on('disconnect', () => {
       peerActiveFollowers.delete(socket.id);
+    });
+  });
+}
+
+function sanitizePluginName(value) {
+  const plugin = String(value || '').trim().toLowerCase();
+  if (!plugin) return '';
+  if (!/^[a-z0-9][a-z0-9_-]{0,63}$/.test(plugin)) return '';
+  return plugin;
+}
+
+function sanitizeRoomId(value) {
+  const roomId = String(value || '').trim();
+  if (!roomId) return '';
+  if (!/^[a-zA-Z0-9_-]{8,128}$/.test(roomId)) return '';
+  return roomId;
+}
+
+function ensurePresenterPluginsServer(server) {
+  if (presenterPluginsIo || !server.httpServer) return;
+
+  presenterPluginsIo = new Server(server.httpServer, {
+    path: PRESENTER_PLUGINS_SOCKET_PATH,
+    cors: { origin: '*', methods: ['GET', 'POST'] }
+  });
+
+  presenterPluginsIo.on('connection', (socket) => {
+    let activeRoom = '';
+    let activePlugin = '';
+
+    socket.on('presenter-plugin:join', (data = {}, ack) => {
+      const plugin = sanitizePluginName(data.plugin);
+      const roomId = sanitizeRoomId(data.roomId);
+      if (!plugin || !roomId) {
+        if (typeof ack === 'function') ack({ ok: false, error: 'Invalid plugin or room' });
+        return;
+      }
+
+      const room = `${plugin}:${roomId}`;
+      if (activeRoom && activeRoom !== room) {
+        socket.leave(activeRoom);
+      }
+      socket.join(room);
+      activeRoom = room;
+      activePlugin = plugin;
+      if (typeof ack === 'function') ack({ ok: true, room });
+    });
+
+    socket.on('presenter-plugin:event', (message = {}) => {
+      if (!activeRoom || !activePlugin) return;
+      const type = String(message.type || '').trim();
+      if (!type) return;
+      const event = {
+        plugin: activePlugin,
+        roomId: activeRoom.split(':').slice(1).join(':'),
+        type,
+        payload: message.payload && typeof message.payload === 'object' ? message.payload : {},
+        ts: Date.now()
+      };
+      socket.to(activeRoom).emit('presenter-plugin:event', event);
     });
   });
 }
