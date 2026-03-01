@@ -847,7 +847,10 @@ function ensurePresenterPluginsServer(server) {
 
   presenterPluginsIo = new Server(server.httpServer, {
     path: PRESENTER_PLUGINS_SOCKET_PATH,
-    cors: { origin: '*', methods: ['GET', 'POST'] }
+    cors: { origin: '*', methods: ['GET', 'POST'] },
+    // Markerboard full-state snapshots can be large (import/restore). Increase
+    // payload budget so those sync events are not dropped by Socket.IO defaults.
+    maxHttpBufferSize: 25 * 1024 * 1024
   });
 
   presenterPluginsIo.on('connection', (socket) => {
