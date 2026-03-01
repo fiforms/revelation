@@ -660,10 +660,6 @@ function doubleClickFullScreen() {
           elem.requestFullscreen();
         } else if (elem.webkitRequestFullscreen) { /* Safari */
           elem.webkitRequestFullscreen();
-        } 
-      } else {
-        if (document.exitFullscreen) {
-          document.exitFullscreen();
         }
       }
     });
