@@ -211,7 +211,7 @@ function getActiveIndexLockOwners() {
 
 function canCurrentInstanceWritePresentationIndex() {
   const owners = getActiveIndexLockOwners();
-  return owners[0] === indexLockId;
+  return owners.length === 1 && owners[0] === indexLockId;
 }
 
 function startIndexLockRefresh() {
