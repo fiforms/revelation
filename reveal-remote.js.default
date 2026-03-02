@@ -1,3 +1,4 @@
 // Default location
 
 window.revealRemoteServer = window.location.protocol + "//" + window.location.hostname + ":1947/";
+window.presenterPluginsPublicServer = "https://revealremote.fiforms.org/presenter-plugins-socket";
