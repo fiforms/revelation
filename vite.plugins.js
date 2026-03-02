@@ -106,6 +106,11 @@ function toPosixPath(value) {
   return String(value || '').replace(/\\/g, '/');
 }
 
+function isTransientFsError(err) {
+  const code = String(err?.code || '');
+  return code === 'ENOENT' || code === 'ENOTDIR' || code === 'ESTALE';
+}
+
 function buildIndexLockId() {
   const hostname = String(os.hostname() || 'host')
     .toLowerCase()
@@ -253,8 +258,17 @@ function isHiddenAlternativeMetadata(data) {
 function collectMarkdownFilesRecursive(rootDir) {
   const files = [];
   const walk = (dirPath, relDir = '') => {
-    const entries = fs.readdirSync(dirPath, { withFileTypes: true });
+    let entries = [];
+    try {
+      entries = fs.readdirSync(dirPath, { withFileTypes: true });
+    } catch (err) {
+      if (!isTransientFsError(err)) {
+        console.warn(`⚠ Failed to list markdown directory ${dirPath}: ${err.message}`);
+      }
+      return;
+    }
     for (const entry of entries) {
+      if (entry.name.startsWith('.')) continue;
       const absPath = path.join(dirPath, entry.name);
       const relPath = relDir ? path.posix.join(relDir, entry.name) : entry.name;
       if (entry.isDirectory()) {
@@ -308,8 +322,24 @@ function generatePresentationIndex() {
   }
 
     // Generate presentation manifest
-    const dirs = fs.readdirSync(presentationsDir).filter((dir) => {
-      return fs.lstatSync(path.join(presentationsDir, dir)).isDirectory();
+    let topLevelEntries = [];
+    try {
+      topLevelEntries = fs.readdirSync(presentationsDir);
+    } catch (err) {
+      console.warn(`⚠ Failed to list presentations dir ${presentationsDir}: ${err.message}`);
+      return;
+    }
+    const dirs = topLevelEntries.filter((dir) => {
+      if (!dir || dir.startsWith('.')) return false;
+      if (isIndexLockFileName(dir)) return false;
+      try {
+        return fs.lstatSync(path.join(presentationsDir, dir)).isDirectory();
+      } catch (err) {
+        if (!isTransientFsError(err)) {
+          console.warn(`⚠ Failed to inspect presentation entry ${dir}: ${err.message}`);
+        }
+        return false;
+      }
     });
 
     const indexData = [];
@@ -320,8 +350,17 @@ function generatePresentationIndex() {
       
       files.forEach((mdFile) => {
         const mdPath = path.join(folderPath, mdFile);
-        const fileContent = fs.readFileSync(mdPath, 'utf-8');
-        const stats = fs.statSync(mdPath);
+        let fileContent = '';
+        let stats = null;
+        try {
+          fileContent = fs.readFileSync(mdPath, 'utf-8');
+          stats = fs.statSync(mdPath);
+        } catch (err) {
+          if (!isTransientFsError(err)) {
+            console.warn(`⚠ Failed to read ${mdPath}: ${err.message}`);
+          }
+          return;
+        }
 
         let data;
         try {
@@ -367,6 +406,14 @@ function generatePresentationIndex() {
     console.log(`📄 presentations/index.json regenerated`);
 }
 
+function safeGeneratePresentationIndex(context = '') {
+  try {
+    generatePresentationIndex();
+  } catch (err) {
+    console.error(`⚠ generatePresentationIndex failed${context ? ` (${context})` : ''}: ${err.message}`);
+  }
+}
+
 function ensureReadmeTemplate() {
   if (!fs.existsSync(readmeTemplatePath)) {
     console.warn(`⚠️ README template folder missing: ${readmeTemplatePath}`);
@@ -379,7 +426,7 @@ function presentationIndexPlugin() {
   return {
     name: 'generate-presentation-index',
     buildStart() {
-      generatePresentationIndex();
+      safeGeneratePresentationIndex('buildStart');
       generateMediaIndex();
     },
     configureServer(server) {
@@ -392,7 +439,7 @@ function presentationIndexPlugin() {
       if(!isGui) {
         copyFonts();
       }
-      generatePresentationIndex();
+      safeGeneratePresentationIndex('configureServer');
       generateMediaIndex();
 
       // Support sandboxed builder preview iframes (Origin: null) loading module assets.
@@ -453,7 +500,7 @@ function presentationIndexPlugin() {
     const triggerReload = (event, filePath) => {
       if (filePath.endsWith('.md') && filePath.includes(presentationsDir)) {
         console.log(`📦 ${event.toUpperCase()}:`, filePath);
-        generatePresentationIndex();
+        safeGeneratePresentationIndex(`watcher:${event}`);
         const relative = toPosixPath(path.relative(presentationsDir, filePath));
         const [slug, ...rest] = relative.split('/');
         if (!slug || !rest.length) return;
@@ -496,7 +543,7 @@ function presentationIndexPlugin() {
       .on('unlinkDir', dirPath => {
         if (dirPath.includes(presentationsDir)) {
           console.log('📁 Folder deleted:', dirPath);
-          generatePresentationIndex();
+          safeGeneratePresentationIndex('watcher:unlinkDir');
           console.log('Triggering full-reload');
           server.ws.send({ type: 'full-reload' });
         }
