@@ -51,6 +51,15 @@ else {
 }
 
 const outputFile = path.join(presentationsDir, 'index.json');
+const INDEX_LOCK_PREFIX = 'lock_';
+const INDEX_LOCK_SUFFIX = '.lock';
+const INDEX_LOCK_REFRESH_MS = 30 * 60 * 1000;
+const INDEX_LOCK_STALE_MS = 2 * INDEX_LOCK_REFRESH_MS + (5 * 60 * 1000);
+const indexLockId = buildIndexLockId();
+const indexLockFileName = `${INDEX_LOCK_PREFIX}${indexLockId}${INDEX_LOCK_SUFFIX}`;
+const indexLockPath = path.join(presentationsDir, indexLockFileName);
+let indexLockRefreshTimer = null;
+let indexLockShutdownHooksInstalled = false;
 
 const readmePresDir = path.join(presentationsDir, 'readme');
 const readmePresentationPath = path.join(readmePresDir, 'presentation.md');
@@ -97,6 +106,141 @@ function toPosixPath(value) {
   return String(value || '').replace(/\\/g, '/');
 }
 
+function buildIndexLockId() {
+  const hostname = String(os.hostname() || 'host')
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]/g, '');
+  const pid = String(process.pid || '0');
+  const random = crypto.randomUUID().replace(/-/g, '');
+  return `${hostname}_${pid}_${random}`;
+}
+
+function isIndexLockFileName(name) {
+  return (
+    typeof name === 'string' &&
+    name.startsWith(INDEX_LOCK_PREFIX) &&
+    name.endsWith(INDEX_LOCK_SUFFIX)
+  );
+}
+
+function extractIndexLockId(name) {
+  if (!isIndexLockFileName(name)) return null;
+  return name.slice(INDEX_LOCK_PREFIX.length, -INDEX_LOCK_SUFFIX.length);
+}
+
+function writeOwnIndexLock() {
+  try {
+    const payload = {
+      instanceId: indexLockId,
+      host: os.hostname(),
+      pid: process.pid,
+      updatedAt: new Date().toISOString()
+    };
+    fs.writeFileSync(indexLockPath, JSON.stringify(payload, null, 2), 'utf-8');
+  } catch (err) {
+    console.warn(`⚠ Failed to refresh index lock ${indexLockFileName}: ${err.message}`);
+  }
+}
+
+function removeOwnIndexLock() {
+  try {
+    if (fs.existsSync(indexLockPath)) {
+      fs.unlinkSync(indexLockPath);
+    }
+  } catch (_err) {
+    // Best-effort cleanup on exit.
+  }
+}
+
+function cleanupStaleIndexLocks() {
+  const now = Date.now();
+  let entries = [];
+  try {
+    entries = fs.readdirSync(presentationsDir);
+  } catch (err) {
+    console.warn(`⚠ Failed to list presentation locks: ${err.message}`);
+    return;
+  }
+
+  for (const name of entries) {
+    if (!isIndexLockFileName(name)) continue;
+    const fullPath = path.join(presentationsDir, name);
+    try {
+      const stats = fs.statSync(fullPath);
+      if (!stats.isFile()) continue;
+      if (now - stats.mtimeMs > INDEX_LOCK_STALE_MS) {
+        fs.unlinkSync(fullPath);
+        console.log(`🧹 Removed stale index lock: ${name}`);
+      }
+    } catch (_err) {
+      // Ignore race conditions from concurrent cleanup.
+    }
+  }
+}
+
+function getActiveIndexLockOwners() {
+  cleanupStaleIndexLocks();
+  writeOwnIndexLock();
+  let entries = [];
+  try {
+    entries = fs.readdirSync(presentationsDir);
+  } catch (err) {
+    console.warn(`⚠ Failed to read index locks: ${err.message}`);
+    return [indexLockId];
+  }
+
+  const owners = [];
+  for (const name of entries) {
+    const lockId = extractIndexLockId(name);
+    if (!lockId) continue;
+    const fullPath = path.join(presentationsDir, name);
+    try {
+      if (fs.statSync(fullPath).isFile()) {
+        owners.push(lockId);
+      }
+    } catch (_err) {
+      // Ignore files that disappear mid-scan.
+    }
+  }
+  if (!owners.includes(indexLockId)) {
+    owners.push(indexLockId);
+  }
+  owners.sort();
+  return owners;
+}
+
+function canCurrentInstanceWritePresentationIndex() {
+  const owners = getActiveIndexLockOwners();
+  return owners[0] === indexLockId;
+}
+
+function startIndexLockRefresh() {
+  if (indexLockRefreshTimer) return;
+  writeOwnIndexLock();
+  cleanupStaleIndexLocks();
+  indexLockRefreshTimer = setInterval(() => {
+    writeOwnIndexLock();
+    cleanupStaleIndexLocks();
+  }, INDEX_LOCK_REFRESH_MS);
+  if (typeof indexLockRefreshTimer.unref === 'function') {
+    indexLockRefreshTimer.unref();
+  }
+}
+
+function installIndexLockShutdownHooks() {
+  if (indexLockShutdownHooksInstalled) return;
+  indexLockShutdownHooksInstalled = true;
+  const cleanup = () => {
+    if (indexLockRefreshTimer) {
+      clearInterval(indexLockRefreshTimer);
+      indexLockRefreshTimer = null;
+    }
+    removeOwnIndexLock();
+  };
+  process.once('beforeExit', cleanup);
+  process.once('exit', cleanup);
+}
+
 function isHiddenAlternativeMetadata(data) {
   if (!data) return false;
   if (String(data.alternatives || '').trim().toLowerCase() === 'hidden') return true;
@@ -129,6 +273,13 @@ function collectMarkdownFilesRecursive(rootDir) {
 }
 
 function generatePresentationIndex() {
+  startIndexLockRefresh();
+  installIndexLockShutdownHooks();
+  if (!canCurrentInstanceWritePresentationIndex()) {
+    console.log(`🔒 Skipping presentations/index.json regeneration (lock owner is another instance).`);
+    return;
+  }
+
   // In GUI mode the wrapper owns docs/readme deck generation.
   const isGui = /^(1|true)$/i.test(process.env.REVELATION_GUI || '');
   if (!isGui) {
