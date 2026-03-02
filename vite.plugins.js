@@ -50,16 +50,13 @@ else {
     presentationsWebPath = `/${folderName}`;
 }
 
-const outputFile = path.join(presentationsDir, 'index.json');
-const INDEX_LOCK_PREFIX = 'lock_';
-const INDEX_LOCK_SUFFIX = '.lock';
-const INDEX_LOCK_REFRESH_MS = 30 * 60 * 1000;
-const INDEX_LOCK_STALE_MS = 2 * INDEX_LOCK_REFRESH_MS + (5 * 60 * 1000);
-const indexLockId = buildIndexLockId();
-const indexLockFileName = `${INDEX_LOCK_PREFIX}${indexLockId}${INDEX_LOCK_SUFFIX}`;
-const indexLockPath = path.join(presentationsDir, indexLockFileName);
-let indexLockRefreshTimer = null;
-let indexLockShutdownHooksInstalled = false;
+const sharedIndexFile = path.join(presentationsDir, 'index.json');
+const isGuiMode = /^(1|true)$/i.test(process.env.REVELATION_GUI || '');
+const userDataDir = process.env.USER_DATA_DIR ? path.resolve(process.env.USER_DATA_DIR) : '';
+const localIndexFile = isGuiMode && userDataDir
+  ? path.join(userDataDir, '.revelation-cache', 'presentations-index.json')
+  : '';
+const outputFile = localIndexFile || sharedIndexFile;
 
 const readmePresDir = path.join(presentationsDir, 'readme');
 const readmePresentationPath = path.join(readmePresDir, 'presentation.md');
@@ -111,139 +108,14 @@ function isTransientFsError(err) {
   return code === 'ENOENT' || code === 'ENOTDIR' || code === 'ESTALE';
 }
 
-function buildIndexLockId() {
-  const hostname = String(os.hostname() || 'host')
-    .toLowerCase()
-    .replace(/[^a-z0-9_-]/g, '');
-  const pid = String(process.pid || '0');
-  const random = crypto.randomUUID().replace(/-/g, '');
-  return `${hostname}_${pid}_${random}`;
-}
-
-function isIndexLockFileName(name) {
+function isLegacyLockOrTempEntry(name) {
+  if (typeof name !== 'string') return false;
+  const lower = name.toLowerCase();
   return (
-    typeof name === 'string' &&
-    name.startsWith(INDEX_LOCK_PREFIX) &&
-    name.endsWith(INDEX_LOCK_SUFFIX)
+    lower.endsWith('.lock') ||
+    lower.includes('.lock.~') ||
+    lower.startsWith('lock_')
   );
-}
-
-function extractIndexLockId(name) {
-  if (!isIndexLockFileName(name)) return null;
-  return name.slice(INDEX_LOCK_PREFIX.length, -INDEX_LOCK_SUFFIX.length);
-}
-
-function writeOwnIndexLock() {
-  try {
-    const payload = {
-      instanceId: indexLockId,
-      host: os.hostname(),
-      pid: process.pid,
-      updatedAt: new Date().toISOString()
-    };
-    fs.writeFileSync(indexLockPath, JSON.stringify(payload, null, 2), 'utf-8');
-  } catch (err) {
-    console.warn(`⚠ Failed to refresh index lock ${indexLockFileName}: ${err.message}`);
-  }
-}
-
-function removeOwnIndexLock() {
-  try {
-    if (fs.existsSync(indexLockPath)) {
-      fs.unlinkSync(indexLockPath);
-    }
-  } catch (_err) {
-    // Best-effort cleanup on exit.
-  }
-}
-
-function cleanupStaleIndexLocks() {
-  const now = Date.now();
-  let entries = [];
-  try {
-    entries = fs.readdirSync(presentationsDir);
-  } catch (err) {
-    console.warn(`⚠ Failed to list presentation locks: ${err.message}`);
-    return;
-  }
-
-  for (const name of entries) {
-    if (!isIndexLockFileName(name)) continue;
-    const fullPath = path.join(presentationsDir, name);
-    try {
-      const stats = fs.statSync(fullPath);
-      if (!stats.isFile()) continue;
-      if (now - stats.mtimeMs > INDEX_LOCK_STALE_MS) {
-        fs.unlinkSync(fullPath);
-        console.log(`🧹 Removed stale index lock: ${name}`);
-      }
-    } catch (_err) {
-      // Ignore race conditions from concurrent cleanup.
-    }
-  }
-}
-
-function getActiveIndexLockOwners() {
-  cleanupStaleIndexLocks();
-  writeOwnIndexLock();
-  let entries = [];
-  try {
-    entries = fs.readdirSync(presentationsDir);
-  } catch (err) {
-    console.warn(`⚠ Failed to read index locks: ${err.message}`);
-    return [indexLockId];
-  }
-
-  const owners = [];
-  for (const name of entries) {
-    const lockId = extractIndexLockId(name);
-    if (!lockId) continue;
-    const fullPath = path.join(presentationsDir, name);
-    try {
-      if (fs.statSync(fullPath).isFile()) {
-        owners.push(lockId);
-      }
-    } catch (_err) {
-      // Ignore files that disappear mid-scan.
-    }
-  }
-  if (!owners.includes(indexLockId)) {
-    owners.push(indexLockId);
-  }
-  owners.sort();
-  return owners;
-}
-
-function canCurrentInstanceWritePresentationIndex() {
-  const owners = getActiveIndexLockOwners();
-  return owners.length === 1 && owners[0] === indexLockId;
-}
-
-function startIndexLockRefresh() {
-  if (indexLockRefreshTimer) return;
-  writeOwnIndexLock();
-  cleanupStaleIndexLocks();
-  indexLockRefreshTimer = setInterval(() => {
-    writeOwnIndexLock();
-    cleanupStaleIndexLocks();
-  }, INDEX_LOCK_REFRESH_MS);
-  if (typeof indexLockRefreshTimer.unref === 'function') {
-    indexLockRefreshTimer.unref();
-  }
-}
-
-function installIndexLockShutdownHooks() {
-  if (indexLockShutdownHooksInstalled) return;
-  indexLockShutdownHooksInstalled = true;
-  const cleanup = () => {
-    if (indexLockRefreshTimer) {
-      clearInterval(indexLockRefreshTimer);
-      indexLockRefreshTimer = null;
-    }
-    removeOwnIndexLock();
-  };
-  process.once('beforeExit', cleanup);
-  process.once('exit', cleanup);
 }
 
 function isHiddenAlternativeMetadata(data) {
@@ -287,13 +159,6 @@ function collectMarkdownFilesRecursive(rootDir) {
 }
 
 function generatePresentationIndex() {
-  startIndexLockRefresh();
-  installIndexLockShutdownHooks();
-  if (!canCurrentInstanceWritePresentationIndex()) {
-    console.log(`🔒 Skipping presentations/index.json regeneration (lock owner is another instance).`);
-    return;
-  }
-
   // In GUI mode the wrapper owns docs/readme deck generation.
   const isGui = /^(1|true)$/i.test(process.env.REVELATION_GUI || '');
   if (!isGui) {
@@ -331,7 +196,7 @@ function generatePresentationIndex() {
     }
     const dirs = topLevelEntries.filter((dir) => {
       if (!dir || dir.startsWith('.')) return false;
-      if (isIndexLockFileName(dir)) return false;
+      if (isLegacyLockOrTempEntry(dir)) return false;
       try {
         return fs.lstatSync(path.join(presentationsDir, dir)).isDirectory();
       } catch (err) {
@@ -402,8 +267,9 @@ function generatePresentationIndex() {
 
     });
 
+    fs.mkdirSync(path.dirname(outputFile), { recursive: true });
     fs.writeFileSync(outputFile, JSON.stringify(indexData, null, 2), 'utf-8');
-    console.log(`📄 presentations/index.json regenerated`);
+    console.log(`📄 presentations/index.json regenerated (${outputFile})`);
 }
 
 function safeGeneratePresentationIndex(context = '') {
@@ -798,6 +664,32 @@ function presentationIndexPlugin() {
 
           next();
        });
+
+       // In Electron GUI mode, serve presentations index from local userData cache.
+       if (outputFile !== sharedIndexFile) {
+          const indexRoutePath = `${presentationsWebPath}/index.json`;
+          server.middlewares.use((req, res, next) => {
+            let parsedUrl;
+            try {
+              parsedUrl = new URL(req.url || '', 'http://localhost');
+            } catch (_err) {
+              return next();
+            }
+            if (parsedUrl.pathname !== indexRoutePath) return next();
+            try {
+              const data = fs.readFileSync(outputFile, 'utf-8');
+              res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+              res.end(data);
+            } catch (err) {
+              if (isTransientFsError(err)) {
+                res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+                res.end('[]');
+                return;
+              }
+              next(err);
+            }
+          });
+        }
 
        // Serve presentations from a custom path
 
