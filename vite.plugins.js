@@ -57,6 +57,7 @@ const localIndexFile = isGuiMode && userDataDir
   ? path.join(userDataDir, '.revelation-cache', 'presentations-index.json')
   : '';
 const outputFile = localIndexFile || sharedIndexFile;
+const INDEX_REBUILD_DEBOUNCE_MS = 1200;
 
 const readmePresDir = path.join(presentationsDir, 'readme');
 const readmePresentationPath = path.join(readmePresDir, 'presentation.md');
@@ -363,21 +364,50 @@ function presentationIndexPlugin() {
       depth: 5
     });
 
-    const triggerReload = (event, filePath) => {
-      if (filePath.endsWith('.md') && filePath.includes(presentationsDir)) {
-        console.log(`📦 ${event.toUpperCase()}:`, filePath);
-        safeGeneratePresentationIndex(`watcher:${event}`);
-        const relative = toPosixPath(path.relative(presentationsDir, filePath));
-        const [slug, ...rest] = relative.split('/');
-        if (!slug || !rest.length) return;
-        const mdFile = rest.join('/');
+    let mdRebuildDebounceTimer = null;
+    const pendingMdReloads = new Map();
 
-        console.log(`Triggering reload-presentations for slug: ${slug}, md: ${mdFile}`);
+    const flushMdRebuild = () => {
+      mdRebuildDebounceTimer = null;
+      if (!pendingMdReloads.size) return;
+
+      safeGeneratePresentationIndex('watcher:md-batch');
+      const pending = Array.from(pendingMdReloads.values());
+      pendingMdReloads.clear();
+
+      for (const item of pending) {
+        console.log(`Triggering reload-presentations for slug: ${item.slug}, md: ${item.mdFile}`);
         server.ws.send({
           type: 'custom',
           event: 'reload-presentations',
-          data: { slug, mdFile }
+          data: { slug: item.slug, mdFile: item.mdFile }
         });
+      }
+    };
+
+    const scheduleMdRebuild = () => {
+      if (mdRebuildDebounceTimer) {
+        clearTimeout(mdRebuildDebounceTimer);
+      }
+      mdRebuildDebounceTimer = setTimeout(flushMdRebuild, INDEX_REBUILD_DEBOUNCE_MS);
+      if (typeof mdRebuildDebounceTimer.unref === 'function') {
+        mdRebuildDebounceTimer.unref();
+      }
+    };
+
+    const queueMdReload = (event, filePath) => {
+      console.log(`📦 ${event.toUpperCase()}:`, filePath);
+      const relative = toPosixPath(path.relative(presentationsDir, filePath));
+      const [slug, ...rest] = relative.split('/');
+      if (!slug || !rest.length) return;
+      const mdFile = rest.join('/');
+      pendingMdReloads.set(relative, { slug, mdFile });
+      scheduleMdRebuild();
+    };
+
+    const triggerReload = (event, filePath) => {
+      if (filePath.endsWith('.md') && filePath.includes(presentationsDir)) {
+        queueMdReload(event, filePath);
       }
 
       if (filePath.endsWith('.json') && filePath.includes('_media')) {
