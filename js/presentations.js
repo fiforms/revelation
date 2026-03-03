@@ -76,6 +76,13 @@ function setupBuilderPreviewBridge(deck) {
 
     if (command === 'toggleOverview' && typeof deck.toggleOverview === 'function') {
       deck.toggleOverview();
+      return;
+    }
+
+    if (command === 'layout') {
+      deck.layout?.();
+      window.setTimeout(() => deck.layout?.(), 120);
+      postCurrentState('slidechanged');
     }
   });
 
