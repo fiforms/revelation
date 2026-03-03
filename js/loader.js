@@ -559,6 +559,15 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
     );
   };
 
+  const convertDoubleUnderscoreUnderlines = (value) => {
+    const line = String(value ?? '');
+    // Convert only delimiter-style double underscores; avoid filename/path underscores.
+    return line.replace(
+      /(^|[\s([{<'"])__([^\s_](?:[^_]*?[^\s_])?)__(?=$|[\s)\]}'".,!?;:])/g,
+      (_, prefix, inner) => `${prefix}<u>${inner}</u>`
+    );
+  };
+
   const iframeSandboxAttr = 'sandbox="allow-scripts allow-same-origin allow-forms"';
 
   const magicImageHandlers = {}
@@ -1282,7 +1291,7 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
       continue;
     }
 
-    const transformedLine = convertUnderscoreCites(line);
+    const transformedLine = convertUnderscoreCites(convertDoubleUnderscoreUnderlines(line));
     rememberLocalSuppressions(transformedLine);
     if (transformedLine.endsWith('++')) {
       processedLines.push(
