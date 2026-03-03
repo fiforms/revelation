@@ -549,6 +549,16 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
     }
   };
 
+  const convertUnderscoreCites = (value) => {
+    const line = String(value ?? '');
+    // Convert only underscore-delimited phrases that look like markdown delimiters.
+    // This avoids filename/path underscores like my_file_name.txt.
+    return line.replace(
+      /(^|[\s([{<'"])_([^\s_](?:[^_]*?[^\s_])?)_(?=$|[\s)\]}'".,!?;:])/g,
+      (_, prefix, inner) => `${prefix}<cite>${inner}</cite>`
+    );
+  };
+
   const iframeSandboxAttr = 'sandbox="allow-scripts allow-same-origin allow-forms"';
 
   const magicImageHandlers = {}
@@ -1272,17 +1282,18 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
       continue;
     }
 
-    rememberLocalSuppressions(line);
-    if (line.endsWith('++')) {
+    const transformedLine = convertUnderscoreCites(line);
+    rememberLocalSuppressions(transformedLine);
+    if (transformedLine.endsWith('++')) {
       processedLines.push(
-        line.replace(/\s*\+\+$/, '') + ' <!-- .element: class="fragment" -->'
+        transformedLine.replace(/\s*\+\+$/, '') + ' <!-- .element: class="fragment" -->'
       );
     } else {
-      const transitionValue = extractSlideTransitionValue(line);
+      const transitionValue = extractSlideTransitionValue(transformedLine);
       if (transitionValue) {
         pendingAutoStackTransition = transitionValue;
       }
-      processedLines.push(line);
+      processedLines.push(transformedLine);
     }
   }
   return processedLines.join('\n');
