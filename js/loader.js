@@ -642,12 +642,6 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
   let currentFence = '';
   let columnPipeState = 0; // 0=start, 1=break, 2=end
   const mediaIndexMap = mediaIndex && typeof mediaIndex === 'object' ? mediaIndex : null;
-  const fallbackConfig = (typeof window !== 'undefined' && window.AppConfig) ? window.AppConfig : null;
-  const ccliLicenseNumber = String(appConfig?.ccliLicenseNumber || fallbackConfig?.ccliLicenseNumber || '{Please set in settings}').trim();
-  const replaceSettingMacros = (value) => {
-    if (!ccliLicenseNumber) return value;
-    return String(value).replace(/:ccli:/gi, ccliLicenseNumber);
-  };
   const prefersHigh = typeof preferHigh === 'boolean'
     ? preferHigh
     : (getStorageItemSafe('options_media-version') === 'high');
@@ -853,8 +847,6 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
       }
       continue;  // 🛑 Skip transformation inside code blocks
     }
-
-    line = replaceSettingMacros(line);
 
     const stackCommentMatch = line.match(/^\s*<!--\s*\.stack:\s*(\S.+?)\s*-->\s*$/i);
     if (stackCommentMatch) {

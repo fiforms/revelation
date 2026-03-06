@@ -615,8 +615,14 @@ if (sortBtn && sortDropdown) {
   });
 }
 
+function getConfiguredCcliNumber(config) {
+  const pluginValue = String(config?.pluginConfigs?.credit_ccli?.licenseNumber || '').trim();
+  if (pluginValue) return pluginValue;
+  return String(config?.ccliLicenseNumber || '').trim();
+}
+
 function appendBrowserPresentationParams(url, overrides = {}) {
-  const ccli = String(appConfig?.ccliLicenseNumber || '').trim();
+  const ccli = getConfiguredCcliNumber(appConfig);
   const needsMedia = !!appConfig?.preferHighBitrate;
   const requestedLanguage = Object.prototype.hasOwnProperty.call(overrides, 'language')
     ? overrides.language
