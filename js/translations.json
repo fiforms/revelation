@@ -119,6 +119,17 @@
         "REVELation: Media Library": "REVELation: Biblioteca de Medios",
         "Documentation Hub": "Centro de Documentación",
         "Back to Documentation Hub": "Volver al Centro de Documentación",
-        "Welcome to REVELation Snapshot Presenter": "Bienvenido a REVELation Snapshot Presenter"
+        "Welcome to REVELation Snapshot Presenter": "Bienvenido a REVELation Snapshot Presenter",
+        "words and music by": "letra y musica por",
+        "Words and music by": "Letra y musica por",
+        "Words by": "Letra por",
+        "Music by": "Musica por",
+        "by": "por",
+        "Public Domain": "Dominio Publico",
+        "CCLI Song #": "Cancion CCLI #",
+        "CCLI License No:": "Licencia CCLI No:",
+        "Source:": "Fuente:",
+        "CCLI License #": "Licencia CCLI #",
+        "{Please set in settings}": "{Configurar en ajustes}"
     }
 }
