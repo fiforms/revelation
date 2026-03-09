@@ -1,9 +1,9 @@
 {
   "name": "revelation",
-  "version": "1.0.3-git2",
+  "version": "1.0.3-git3",
   "dependencies": {
     "chart.js": "^4.5.1",
-    "chokidar": "^4.0.3",
+    "chokidar": "^5.0.0",
     "cors": "^2.8.6",
     "express": "^5.2.1",
     "gray-matter": "^4.0.3",
