@@ -1283,7 +1283,10 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
       continue;
     }
 
-    const transformedLine = convertUnderscoreCites(convertDoubleUnderscoreUnderlines(line));
+    let transformedLine = convertUnderscoreCites(convertDoubleUnderscoreUnderlines(line));
+    if (/^\s*<cite>.*<\/cite>\s{2,}$/.test(transformedLine)) {
+      transformedLine = transformedLine.replace(/\s+$/, '');
+    }
     rememberLocalSuppressions(transformedLine);
     if (transformedLine.endsWith('++')) {
       processedLines.push(
