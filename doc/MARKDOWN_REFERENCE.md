@@ -40,7 +40,7 @@ Important:
 - A line that is exactly `---` is treated as a vertical slide separator, not as a normal Markdown horizontal rule.
 - A line that is exactly `***` is treated as a horizontal slide separator.
 
----
+***
 
 <a id="2-core-markdown-syntax"></a>
 
@@ -90,10 +90,27 @@ Line two
 ### 2.3 Emphasis
 
 ```markdown
-*italic* or _italic_
-**bold** or __bold__
+*italic*
+**bold**
+__underline__
 ***bold italic***
 ~~strikethrough~~
+```
+
+#### Verse Headings and References
+
+REVELation Markdown uses single underscores to deliniate verse headings or references:
+
+```markdown
+_Verse 1_
+```
+
+These are automatically left justified and displayed as block-level elements, unless they 
+come at the end of the text block, in which case they are right-aligned, like a Bible verse reference:
+
+```markdown
+For God so loved the world...  
+_John 3:16_
 ```
 
 ---
@@ -252,7 +269,7 @@ In REVELation presentation markdown:
 - Inside fenced code blocks (``` or ~~~), `---` and `***` are treated as literal code content.
 - Use `___` (or another non-separator HR form) when you want a visual horizontal rule inside slide content.
 
----
+***
 
 <a id="3-html-inside-markdown"></a>
 
@@ -342,7 +359,7 @@ Blocked/removed:
 
 Allowed HTML should still be written as clean, static markup.
 
----
+***
 
 <a id="4-html-comments-and-revealjs-comment-directives"></a>
 
@@ -412,7 +429,7 @@ Example changing transition duration:
 # Slow fade slide
 ```
 
----
+***
 
 <a id="5-revelation-markdown-extensions"></a>
 
@@ -507,7 +524,7 @@ media:
 ![background](media:intro)
 ```
 
----
+***
 
 <a id="6-practical-gotchas"></a>
 

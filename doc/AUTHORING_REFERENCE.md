@@ -157,7 +157,8 @@ Regular paragraph text.
 
 *Italic*
 **Bold**
-<u>Underline (HTML)</u>
+__Underline__
+~~Strikethrough~~
 
 [Link text](https://example.com)
 ```
@@ -174,6 +175,16 @@ REVELation extends normal markdown with slide-focused syntax.
 For multi-language presentation workflows, see [Language Variants Reference](VARIANTS_REFERENCE.md).
 
 ---
+
+#### Styled Headings and References
+
+Wrap headings and references in underscore characters (Italics in standard markdown). 
+These are converted to block-level headings, or right-justified references if they're at the
+end of the paragraph.
+
+```markdown
+_Verse 1_
+```
 
 #### Fragments
 
@@ -197,6 +208,8 @@ Per-slide attribution:
 
 #### Magic images
 
+Use special alt-text in Markdown-stle image tags to trigger special behavior
+
 Syntax:
 
 ```markdown
@@ -218,6 +231,8 @@ Common forms:
 ![web](https://example.com)
 ![web:scrollY=500](https://example.com)
 ```
+
+Note: `![background:sticky]()` is interpreted as a macro, so it will repeat on all slides and will also reset macros.
 ---
 
 #### Media aliases
