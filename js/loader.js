@@ -145,6 +145,7 @@ export function sanitizeRenderedHTML(html) {
 }
 
 export async function loadAndPreprocessMarkdown(deck,selectedFile = null) {
+      style_path = window.__revelationHostedRoute ? '_resources/css/' : '/css/';
       const defaultFile = 'presentation.md';
       const urlParams = new URLSearchParams(window.location.search);
       const variant = (urlParams.get('variant') || '').trim().toLowerCase();

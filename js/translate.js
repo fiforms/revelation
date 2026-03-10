@@ -6,7 +6,7 @@
 
 window.translations = {};
 window.translationsLoaded = false;
-if(window.offlineMarkdown) {
+if(window.offlineMarkdown || window.__revelationHostedRoute) {
   const scriptDir = new URL('.', document.currentScript.src).pathname;
   window.translationsources = [scriptDir + 'translations.json'];
 } else {
