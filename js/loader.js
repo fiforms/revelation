@@ -366,6 +366,9 @@ export async function loadAndPreprocessMarkdown(deck,selectedFile = null) {
 
       // Initialize Reveal.js
       const config = metadata.config || {};
+      if (urlParams.has('remoteMultiplexId')) {
+        config.scrollActivationWidth = null;
+      }
       if (Object.prototype.hasOwnProperty.call(config, 'margin')) {
         const parsedMargin = Number(config.margin);
         if (Number.isFinite(parsedMargin) && parsedMargin < 0.002) {
