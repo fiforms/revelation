@@ -57,6 +57,10 @@ function isDangerousURL(value) {
 }
 
 function sanitizeHTMLFragment(html) {
+  if (typeof document === 'undefined' || typeof document.createElement !== 'function') {
+    return sanitizeHTMLFragmentFallback(html);
+  }
+
   const template = document.createElement('template');
   template.innerHTML = String(html || '');
   const elements = template.content.querySelectorAll('*');
@@ -101,6 +105,44 @@ function sanitizeHTMLFragment(html) {
   }
 
   return template.innerHTML;
+}
+
+function sanitizeHTMLFragmentFallback(html) {
+  let source = sanitizeMarkdownEmbeddedHTML(String(html || ''));
+
+  source = source.replace(/<\s*(script|object|embed|applet|base|meta)\b[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi, '');
+  source = source.replace(/<\s*(script|object|embed|applet|base|meta)\b[^>]*\/?\s*>/gi, '');
+
+  source = source.replace(
+    /<a\b([^>]*)>/gi,
+    (fullMatch, attrs) => {
+      const targetMatch = attrs.match(/\btarget\s*=\s*("([^"]*)"|'([^']*)'|([^\s>]+))/i);
+      const relMatch = attrs.match(/\brel\s*=\s*("([^"]*)"|'([^']*)'|([^\s>]+))/i);
+      const target = (targetMatch?.[2] ?? targetMatch?.[3] ?? targetMatch?.[4] ?? '').toLowerCase();
+
+      if (target !== '_blank') {
+        return `<a${attrs}>`;
+      }
+
+      const relParts = new Set(
+        String(relMatch?.[2] ?? relMatch?.[3] ?? relMatch?.[4] ?? '')
+          .split(/\s+/)
+          .filter(Boolean)
+          .map((part) => part.toLowerCase())
+      );
+      relParts.add('noopener');
+      relParts.add('noreferrer');
+      const relValue = Array.from(relParts).join(' ');
+
+      if (relMatch) {
+        return `<a${attrs.replace(relMatch[0], `rel="${relValue}"`)}>`;
+      }
+
+      return `<a${attrs} rel="${relValue}">`;
+    }
+  );
+
+  return source;
 }
 
 export function sanitizeMarkdownEmbeddedHTML(markdown) {
