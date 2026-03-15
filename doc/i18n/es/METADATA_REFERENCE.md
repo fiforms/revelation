@@ -69,7 +69,7 @@ description: A deep dive into amazingness
 author:
   name: Jane Smith
   email: jane@example.com
-theme: softblood.css
+theme: revelation_dark.css
 thumbnail: thumbnail.jpg
 created: 2026-02-19
 newSlideOnHeading: false
@@ -88,7 +88,7 @@ version: 0.2.7
 | `title`       | `string`             | Título principal mostrado en listas de presentaciones. |
 | `description` | `string`             | Subtítulo o resumen opcional. |
 | `author`      | `string` o `object`  | Nombre del autor o objeto como `{ name, email }`. |
-| `theme`       | `string`             | Nombre de archivo de tema compatible con Reveal.js (por ejemplo `softblood.css`). |
+| `theme`       | `string`             | Obligatorio. Nombre de archivo de tema compatible con Reveal.js (por ejemplo `revelation_dark.css`). |
 | `thumbnail`   | `string`             | Nombre de archivo de imagen de vista previa. |
 | `created`     | `string`             | Cadena de fecha (por ejemplo `2025-07-24`). |
 | `version`     | `string`             | Versión que escribió el archivo por última vez. |
@@ -97,7 +97,7 @@ version: 0.2.7
 
 ---
 
-`theme` debe coincidir con un archivo CSS en los assets de tema del framework, y `thumbnail` se espera cerca de sus archivos de presentación.
+`theme` es obligatorio y debe coincidir con un archivo CSS en los assets de tema del framework. `thumbnail` se espera cerca de sus archivos de presentación.
 
 ---
 
@@ -109,7 +109,7 @@ version: 0.2.7
 ---
 title: Welcome to REVELation
 description: Multilingual, media-rich, modular
-theme: softblood.css
+theme: revelation_dark.css
 thumbnail: cover.webp
 created: 2025-07-24
 
