@@ -52,13 +52,146 @@ function loadSmartQuotes() {
   return module.exports;
 }
 
-function loadLoader(convertSmartQuotes) {
-  const filePath = path.join(REVELATION_ROOT, 'js', 'loader.js');
+function loadPresentationSegments() {
+  const filePath = path.join(REVELATION_ROOT, 'js', 'compiler', 'presentation-segments.js');
+  let source = readText(filePath);
+  source = source.replace(/export function /g, 'function ');
+  source += `
+module.exports = {
+  segmentPresentation,
+  splitSlides,
+  splitSlideContentAndNotes,
+  stripSlideSeparatorsOutsideCodeBlocks
+};
+`;
+
+  const module = { exports: {} };
+  const context = {
+    module,
+    exports: module.exports,
+    require,
+    console
+  };
+  vm.runInNewContext(source, context, { filename: filePath });
+  return module.exports;
+}
+
+function loadSlideCompiler() {
+  const filePath = path.join(REVELATION_ROOT, 'js', 'compiler', 'slide-compiler.js');
+  let source = readText(filePath);
+  source = source.replace(/export function /g, 'function ');
+  source += `
+module.exports = {
+  createSlideCompiler
+};
+`;
+
+  const module = { exports: {} };
+  const context = {
+    module,
+    exports: module.exports,
+    require,
+    console
+  };
+  vm.runInNewContext(source, context, { filename: filePath });
+  return module.exports;
+}
+
+function loadMarkdownLineParsers() {
+  const filePath = path.join(REVELATION_ROOT, 'js', 'compiler', 'markdown-line-parsers.js');
+  let source = readText(filePath);
+  source = source.replace(/export function /g, 'function ');
+  source += `
+module.exports = {
+  createMarkdownLineParsers
+};
+`;
+
+  const module = { exports: {} };
+  const context = {
+    module,
+    exports: module.exports,
+    require,
+    console
+  };
+  vm.runInNewContext(source, context, { filename: filePath });
+  return module.exports;
+}
+
+function loadMediaLineParsers() {
+  const filePath = path.join(REVELATION_ROOT, 'js', 'compiler', 'media-line-parsers.js');
+  let source = readText(filePath);
+  source = source.replace(/export function /g, 'function ');
+  source += `
+module.exports = {
+  createMediaLineParsers
+};
+`;
+
+  const module = { exports: {} };
+  const context = {
+    module,
+    exports: module.exports,
+    require,
+    console,
+    window: global.window
+  };
+  vm.runInNewContext(source, context, { filename: filePath });
+  return module.exports;
+}
+
+function loadLoaderUtils() {
+  const filePath = path.join(REVELATION_ROOT, 'js', 'compiler', 'compiler-utils.js');
+  let source = readText(filePath);
+  source = source.replace(/export function /g, 'function ');
+  source = source.replace(/export \{\s*NOTE_SEPARATOR_CURRENT,\s*NOTE_SEPARATOR_LEGACY\s*\};/, '');
+  source += `
+module.exports = {
+  getStorageItemSafe,
+  usesNewNoteSeparator,
+  getNoteSeparator,
+  sanitizeMarkdownFilename,
+  NOTE_SEPARATOR_CURRENT,
+  NOTE_SEPARATOR_LEGACY
+};
+`;
+
+  const module = { exports: {} };
+  const context = { module, exports: module.exports, require, console, window: global.window };
+  vm.runInNewContext(source, context, { filename: filePath });
+  return module.exports;
+}
+
+function loadHtmlSanitization() {
+  const filePath = path.join(REVELATION_ROOT, 'js', 'compiler', 'html-sanitization.js');
+  let source = readText(filePath);
+  source = source.replace(/export function /g, 'function ');
+  source += `
+module.exports = {
+  isDangerousURL,
+  sanitizeMarkdownEmbeddedHTML,
+  sanitizeRenderedHTML
+};
+`;
+
+  const module = { exports: {} };
+  const context = { module, exports: module.exports, require, console, document: global.document };
+  vm.runInNewContext(source, context, { filename: filePath });
+  return module.exports;
+}
+
+function loadMarkdownCompiler(slideCompiler, markdownLineParsers, mediaLineParsers, htmlSanitization, loaderUtils) {
+  const filePath = path.join(REVELATION_ROOT, 'js', 'compiler', 'markdown-compiler.js');
   let source = readText(filePath);
   source = source.replace("import yaml from 'js-yaml';", "const yaml = require('js-yaml');");
-  source = source.replace("import convertSmartQuotes from './smart-quotes';", 'const convertSmartQuotes = __imports.convertSmartQuotes;');
+  source = source.replace("import { createSlideCompiler } from './slide-compiler.js';", 'const { createSlideCompiler } = __imports.slideCompiler;');
+  source = source.replace("import { createMarkdownLineParsers } from './markdown-line-parsers.js';", 'const { createMarkdownLineParsers } = __imports.markdownLineParsers;');
+  source = source.replace("import { createMediaLineParsers } from './media-line-parsers.js';", 'const { createMediaLineParsers } = __imports.mediaLineParsers;');
+  source = source.replace("import { isDangerousURL, sanitizeMarkdownEmbeddedHTML, sanitizeRenderedHTML } from './html-sanitization.js';", 'const { isDangerousURL, sanitizeMarkdownEmbeddedHTML, sanitizeRenderedHTML } = __imports.htmlSanitization;');
+  source = source.replace(/import \{\s*getStorageItemSafe,\s*usesNewNoteSeparator,\s*getNoteSeparator,\s*NOTE_SEPARATOR_CURRENT,\s*NOTE_SEPARATOR_LEGACY\s*\} from '\.\/compiler-utils\.js';/, 'const { getStorageItemSafe, usesNewNoteSeparator, getNoteSeparator, NOTE_SEPARATOR_CURRENT, NOTE_SEPARATOR_LEGACY } = __imports.loaderUtils;');
   source = source.replace(/export async function /g, 'async function ');
   source = source.replace(/export function /g, 'function ');
+  source = source.replace(/export \{\s*usesNewNoteSeparator,\s*getNoteSeparator,\s*sanitizeMarkdownEmbeddedHTML,\s*sanitizeRenderedHTML\s*\};/, '');
   source += `
 module.exports = {
   extractFrontMatter,
@@ -76,7 +209,7 @@ module.exports = {
     exports: module.exports,
     require,
     console,
-    __imports: { convertSmartQuotes },
+    __imports: { slideCompiler, markdownLineParsers, mediaLineParsers, htmlSanitization, loaderUtils },
     window: global.window,
     document: global.document,
     URLSearchParams,
@@ -87,140 +220,26 @@ module.exports = {
 }
 
 const convertSmartQuotes = loadSmartQuotes();
+const slideCompiler = loadSlideCompiler();
+const markdownLineParsers = loadMarkdownLineParsers();
+const mediaLineParsers = loadMediaLineParsers();
+const htmlSanitization = loadHtmlSanitization();
+const loaderUtils = loadLoaderUtils();
+const {
+  segmentPresentation,
+  stripSlideSeparatorsOutsideCodeBlocks
+} = loadPresentationSegments();
 const {
   extractFrontMatter,
   getNoteSeparator,
   preprocessMarkdown,
   sanitizeMarkdownEmbeddedHTML,
   sanitizeRenderedHTML
-} = loadLoader(convertSmartQuotes);
-
-function splitSlides(markdown) {
-  const lines = normalizeText(markdown).split('\n');
-  const slides = [];
-  let current = [];
-  let insideCodeBlock = false;
-  let currentFence = '';
-  let breakType = 'start';
-
-  for (const line of lines) {
-    const fenceMatch = line.match(/^\s{0,3}((`{3,}|~{3,}))[ \t]*(.*)$/);
-    if (fenceMatch) {
-      const fence = fenceMatch[1];
-      const fenceChar = fence[0];
-      const fenceLength = fence.length;
-      if (!insideCodeBlock) {
-        insideCodeBlock = true;
-        currentFence = fence;
-      } else if (
-        currentFence &&
-        fenceChar === currentFence[0] &&
-        fenceLength >= currentFence.length
-      ) {
-        insideCodeBlock = false;
-        currentFence = '';
-      }
-      current.push(line);
-      continue;
-    }
-
-    const trimmed = line.trim();
-    if (!insideCodeBlock && (trimmed === '---' || trimmed === '***')) {
-      slides.push({ content: current.join('\n'), breakType });
-      current = [];
-      breakType = trimmed === '---' ? 'vertical' : 'horizontal';
-      continue;
-    }
-
-    current.push(line);
-  }
-
-  slides.push({ content: current.join('\n'), breakType });
-  return slides;
-}
+} = loadMarkdownCompiler(slideCompiler, markdownLineParsers, mediaLineParsers, htmlSanitization, loaderUtils);
 
 function isCommentOnlyMarkdown(markdown) {
   if (!markdown || !markdown.trim()) return true;
   return markdown.replace(/<!--[\s\S]*?-->/g, '').trim().length === 0;
-}
-
-function splitSlideContentAndNotes(rawSlide, noteSeparator) {
-  const lines = normalizeText(rawSlide).split('\n');
-  let insideCodeBlock = false;
-  let currentFence = '';
-  let noteIndex = -1;
-
-  for (let i = 0; i < lines.length; i += 1) {
-    const line = lines[i];
-    const fenceMatch = line.match(/^\s{0,3}((`{3,}|~{3,}))[ \t]*(.*)$/);
-    if (fenceMatch) {
-      const fence = fenceMatch[1];
-      const fenceChar = fence[0];
-      const fenceLength = fence.length;
-      if (!insideCodeBlock) {
-        insideCodeBlock = true;
-        currentFence = fence;
-      } else if (
-        currentFence &&
-        fenceChar === currentFence[0] &&
-        fenceLength >= currentFence.length
-      ) {
-        insideCodeBlock = false;
-        currentFence = '';
-      }
-      continue;
-    }
-
-    if (!insideCodeBlock && line.trim() === noteSeparator) {
-      noteIndex = i;
-      break;
-    }
-  }
-
-  if (noteIndex < 0) {
-    return { content: rawSlide, notes: '' };
-  }
-
-  return {
-    content: lines.slice(0, noteIndex).join('\n'),
-    notes: lines.slice(noteIndex + 1).join('\n')
-  };
-}
-
-function stripSlideSeparatorsOutsideCodeBlocks(markdown) {
-  const lines = normalizeText(markdown).split('\n');
-  const kept = [];
-  let insideCodeBlock = false;
-  let currentFence = '';
-
-  for (const line of lines) {
-    const fenceMatch = line.match(/^\s{0,3}((`{3,}|~{3,}))[ \t]*(.*)$/);
-    if (fenceMatch) {
-      const fence = fenceMatch[1];
-      const fenceChar = fence[0];
-      const fenceLength = fence.length;
-      if (!insideCodeBlock) {
-        insideCodeBlock = true;
-        currentFence = fence;
-      } else if (
-        currentFence &&
-        fenceChar === currentFence[0] &&
-        fenceLength >= currentFence.length
-      ) {
-        insideCodeBlock = false;
-        currentFence = '';
-      }
-      kept.push(line);
-      continue;
-    }
-
-    if (!insideCodeBlock && /^\s*(\*\*\*|---)\s*$/.test(line)) {
-      continue;
-    }
-    kept.push(line);
-  }
-
-  return kept.join('\n');
 }
 
 function buildRevealMarkdown(rawMarkdown) {
@@ -244,6 +263,7 @@ function buildRevealMarkdown(rawMarkdown) {
 function buildHandoutHTML(rawMarkdown, mdFile = 'presentation.md') {
   const normalized = normalizeText(rawMarkdown);
   const { metadata, content } = extractFrontMatter(normalized);
+  const noteSeparator = getNoteSeparator(metadata);
   const processed = preprocessMarkdown(
     content,
     metadata.macros || {},
@@ -255,8 +275,7 @@ function buildHandoutHTML(rawMarkdown, mdFile = 'presentation.md') {
     false,
     null
   );
-  const slides = splitSlides(processed);
-  const noteSeparator = getNoteSeparator(metadata);
+  const slides = segmentPresentation(processed, noteSeparator);
   const incremental = metadata?.config && (metadata.config.slideNumber === 'c' || metadata.config.slideNumber === 'c/t');
   const output = [];
 
@@ -270,10 +289,10 @@ function buildHandoutHTML(rawMarkdown, mdFile = 'presentation.md') {
       hIndex = 1;
       vIndex = 1;
       started = true;
-    } else if (slide.breakType === 'horizontal') {
+    } else if (slide.breakBefore === 'horizontal') {
       hIndex += 1;
       vIndex = 1;
-    } else if (slide.breakType === 'vertical') {
+    } else if (slide.breakBefore === 'vertical') {
       vIndex += 1;
     } else {
       hIndex += 1;
@@ -282,10 +301,9 @@ function buildHandoutHTML(rawMarkdown, mdFile = 'presentation.md') {
 
     slideCount += 1;
 
-    const parsedSlide = splitSlideContentAndNotes(slide.content.trim(), noteSeparator);
-    const cleanedMarkdown = stripSlideSeparatorsOutsideCodeBlocks(parsedSlide.content).trim();
-    const cleanedNote = parsedSlide.notes
-      ? stripSlideSeparatorsOutsideCodeBlocks(parsedSlide.notes).trim()
+    const cleanedMarkdown = stripSlideSeparatorsOutsideCodeBlocks(slide.content).trim();
+    const cleanedNote = slide.notes
+      ? stripSlideSeparatorsOutsideCodeBlocks(slide.notes).trim()
       : '';
 
     if (

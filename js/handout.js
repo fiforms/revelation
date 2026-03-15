@@ -4,6 +4,10 @@ import {
   sanitizeRenderedHTML,
   getNoteSeparator
 } from './loader.js';
+import {
+  segmentPresentation,
+  stripSlideSeparatorsOutsideCodeBlocks
+} from './compiler/presentation-segments.js';
 import { marked } from 'marked';
 
 const urlParams = new URLSearchParams(window.location.search);
@@ -128,50 +132,6 @@ function findAlternativeMarkdownFile(metadata = {}, language = '') {
   return null;
 }
 
-function splitSlides(markdown) {
-  const lines = markdown.split('\n');
-  const slides = [];
-  let current = [];
-  let insideCodeBlock = false;
-  let currentFence = '';
-  let breakType = 'start';
-
-  for (const line of lines) {
-    const fenceMatch = line.match(/^\s{0,3}((`{3,}|~{3,}))[ \t]*(.*)$/);
-    if (fenceMatch) {
-      const fence = fenceMatch[1];
-      const fenceChar = fence[0];
-      const fenceLength = fence.length;
-      if (!insideCodeBlock) {
-        insideCodeBlock = true;
-        currentFence = fence;
-      } else if (
-        currentFence &&
-        fenceChar === currentFence[0] &&
-        fenceLength >= currentFence.length
-      ) {
-        insideCodeBlock = false;
-        currentFence = '';
-      }
-      current.push(line);
-      continue;
-    }
-
-    const trimmed = line.trim();
-    if (!insideCodeBlock && (trimmed === '---' || trimmed === '***')) {
-      slides.push({ content: current.join('\n'), breakType });
-      current = [];
-      breakType = trimmed === '---' ? 'vertical' : 'horizontal';
-      continue;
-    }
-
-    current.push(line);
-  }
-
-  slides.push({ content: current.join('\n'), breakType });
-  return slides;
-}
-
 function isCommentOnlyMarkdown(markdown) {
   if (!markdown || !markdown.trim()) return true;
   const withoutComments = markdown
@@ -179,84 +139,6 @@ function isCommentOnlyMarkdown(markdown) {
     .replace(/<!--[\s\S]*?-->/g, '')
     .trim();
   return withoutComments.length === 0;
-}
-
-function splitSlideContentAndNotes(rawSlide, noteSeparator) {
-  const lines = String(rawSlide || '').split(/\r?\n/);
-  let insideCodeBlock = false;
-  let currentFence = '';
-  let noteIndex = -1;
-
-  for (let i = 0; i < lines.length; i += 1) {
-    const line = lines[i];
-    const fenceMatch = line.match(/^\s{0,3}((`{3,}|~{3,}))[ \t]*(.*)$/);
-    if (fenceMatch) {
-      const fence = fenceMatch[1];
-      const fenceChar = fence[0];
-      const fenceLength = fence.length;
-      if (!insideCodeBlock) {
-        insideCodeBlock = true;
-        currentFence = fence;
-      } else if (
-        currentFence &&
-        fenceChar === currentFence[0] &&
-        fenceLength >= currentFence.length
-      ) {
-        insideCodeBlock = false;
-        currentFence = '';
-      }
-      continue;
-    }
-
-    if (!insideCodeBlock && line.trim() === noteSeparator) {
-      noteIndex = i;
-      break;
-    }
-  }
-
-  if (noteIndex < 0) {
-    return { content: String(rawSlide || ''), notes: '' };
-  }
-  return {
-    content: lines.slice(0, noteIndex).join('\n'),
-    notes: lines.slice(noteIndex + 1).join('\n')
-  };
-}
-
-function stripSlideSeparatorsOutsideCodeBlocks(markdown) {
-  const lines = String(markdown || '').split(/\r?\n/);
-  const kept = [];
-  let insideCodeBlock = false;
-  let currentFence = '';
-
-  for (const line of lines) {
-    const fenceMatch = line.match(/^\s{0,3}((`{3,}|~{3,}))[ \t]*(.*)$/);
-    if (fenceMatch) {
-      const fence = fenceMatch[1];
-      const fenceChar = fence[0];
-      const fenceLength = fence.length;
-      if (!insideCodeBlock) {
-        insideCodeBlock = true;
-        currentFence = fence;
-      } else if (
-        currentFence &&
-        fenceChar === currentFence[0] &&
-        fenceLength >= currentFence.length
-      ) {
-        insideCodeBlock = false;
-        currentFence = '';
-      }
-      kept.push(line);
-      continue;
-    }
-
-    if (!insideCodeBlock && /^\s*(\*\*\*|---)\s*$/.test(line)) {
-      continue;
-    }
-    kept.push(line);
-  }
-
-  return kept.join('\n');
 }
 
 // VITE Hot Reloading Hook
@@ -308,6 +190,7 @@ if (!mdFile) {
         }
       }
       document.title = metadata.title || "Presentation Handout";
+      const noteSeparator = getNoteSeparator(metadata);
 
       const processed = preprocessMarkdown(
         content,
@@ -320,10 +203,9 @@ if (!mdFile) {
         false,
         appConfig
       );
-      const slides = splitSlides(processed);
+      const slides = segmentPresentation(processed, noteSeparator);
       const output = [];
       const incremental = metadata && metadata.config && (metadata.config.slideNumber === 'c' || metadata.config.slideNumber === 'c/t');
-      const noteSeparator = getNoteSeparator(metadata);
 	
       let hIndex = 1;
       let vIndex = 1;
@@ -335,10 +217,10 @@ if (!mdFile) {
         hIndex = 1;
         vIndex = 1;
         started = true;
-      } else if (slide.breakType === 'horizontal') {
+      } else if (slide.breakBefore === 'horizontal') {
         hIndex++;
         vIndex = 1;
-      } else if (slide.breakType === 'vertical') {
+      } else if (slide.breakBefore === 'vertical') {
         vIndex++;
       } else {
         // Catch-all: assume horizontal
@@ -348,12 +230,10 @@ if (!mdFile) {
 
       slideCount++;
 
-          const rawSlide = slide.content;
-          const parsedSlide = splitSlideContentAndNotes(rawSlide.trim(), noteSeparator);
-          const cleanedMarkdown = stripSlideSeparatorsOutsideCodeBlocks(parsedSlide.content).trim();
+          const cleanedMarkdown = stripSlideSeparatorsOutsideCodeBlocks(slide.content).trim();
           const slideHTML = sanitizeRenderedHTML(marked.parse(cleanedMarkdown));
-          const cleanedNote = parsedSlide.notes
-            ? stripSlideSeparatorsOutsideCodeBlocks(parsedSlide.notes).trim()
+          const cleanedNote = slide.notes
+            ? stripSlideSeparatorsOutsideCodeBlocks(slide.notes).trim()
             : '';
           const noteHTML = sanitizeRenderedHTML(marked.parse(cleanedNote));
 
