@@ -36,7 +36,9 @@
     "patch-remote": "node scripts/patch-remote.js",
     "init-presentations": "node scripts/init-presentations.js",
     "copy-remote": "node scripts/copy-remote.js",
-    "serve": "npm run copy-remote && concurrently -n VITE,REMOTE -c cyan,green \"npm run vite:serve\" \"npm run remote-server\""
+    "serve": "npm run copy-remote && concurrently -n VITE,REMOTE -c cyan,green \"npm run vite:serve\" \"npm run remote-server\"",
+    "tests": "node tests/run-tests.cjs",
+    "tests:generate": "node tests/run-tests.cjs --generate"
   },
   "devDependencies": {
     "concurrently": "^9.2.1",
