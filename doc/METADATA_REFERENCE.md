@@ -69,7 +69,7 @@ description: A deep dive into amazingness
 author:
   name: Jane Smith
   email: jane@example.com
-theme: softblood.css
+theme: revelation_dark.css
 thumbnail: thumbnail.jpg
 created: 2026-02-19
 newSlideOnHeading: false
@@ -88,7 +88,7 @@ version: 0.2.7
 | `title`       | `string`             | Main title shown in presentation lists. |
 | `description` | `string`             | Optional subtitle or summary. |
 | `author`      | `string` or `object` | Author name or object like `{ name, email }`. |
-| `theme`       | `string`             | Reveal.js-compatible theme filename (for example `softblood.css`). |
+| `theme`       | `string`             | Required. Reveal.js-compatible theme filename (for example `revelation_dark.css`). |
 | `thumbnail`   | `string`             | Preview image filename. |
 | `created`     | `string`             | Date string (for example `2025-07-24`). |
 | `version`     | `string`             | Version that last wrote the file. |
@@ -97,7 +97,7 @@ version: 0.2.7
 
 ---
 
-`theme` should match a CSS file in the framework theme assets, and `thumbnail` is expected near your presentation files.
+`theme` is required and should match a CSS file in the framework theme assets. `thumbnail` is expected near your presentation files.
 
 ---
 
@@ -109,7 +109,7 @@ version: 0.2.7
 ---
 title: Welcome to REVELation
 description: Multilingual, media-rich, modular
-theme: softblood.css
+theme: revelation_dark.css
 thumbnail: cover.webp
 created: 2025-07-24
 
