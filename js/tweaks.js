@@ -6,6 +6,7 @@ export function revealTweaks(deck) {
     const readyTweaks = () => {
       applyStackAttributes(deck);
       updateAttributionFromCurrentSlide(deck);
+      updateHiddenPreviewOverlay(deck);
       ensureLinksOpenExternally(deck);
       updateFixedOverlayVisibility(deck);
     }
@@ -13,12 +14,14 @@ export function revealTweaks(deck) {
     deck.on('ready', readyTweaks);       
     deck.on('slidechanged', () => {
       updateAttributionFromCurrentSlide(deck);
+      updateHiddenPreviewOverlay(deck);
       ensureLinksOpenExternally(deck);
       updateFixedOverlayVisibility(deck);
     });
     deck.on('overviewshown', () => updateFixedOverlayVisibility(deck));
     deck.on('overviewhidden', () => {
       updateAttributionFromCurrentSlide(deck);
+      updateHiddenPreviewOverlay(deck);
       updateFixedOverlayVisibility(deck);
     });
     deck.on('pdf-ready', () => {
@@ -515,10 +518,29 @@ function updateAttributionFromCurrentSlide(deck) {
     }
 }
 
+function ensureHiddenPreviewOverlay() {
+  let overlay = document.getElementById('fixed-hidden-preview-wrapper');
+  if (overlay) return overlay;
+
+  overlay = document.createElement('div');
+  overlay.id = 'fixed-hidden-preview-wrapper';
+  overlay.textContent = 'HIDDEN';
+  document.body.appendChild(overlay);
+  return overlay;
+}
+
+function updateHiddenPreviewOverlay(deck) {
+  const overlay = ensureHiddenPreviewOverlay();
+  const currentSlide = deck.getCurrentSlide?.();
+  const inOverview = !!deck?.isOverview?.();
+  const isHiddenPreview = !!currentSlide?.hasAttribute?.('data-hidden-preview');
+  overlay.style.display = !inOverview && isHiddenPreview ? 'flex' : 'none';
+}
+
 function updateFixedOverlayVisibility(deck) {
   const inOverview = !!deck?.isOverview?.();
   const visibility = inOverview ? 'hidden' : '';
-  ['fixed-tint-wrapper', 'fixed-ai-wrapper', 'fixed-overlay-wrapper'].forEach((id) => {
+  ['fixed-tint-wrapper', 'fixed-ai-wrapper', 'fixed-overlay-wrapper', 'fixed-hidden-preview-wrapper'].forEach((id) => {
     const el = document.getElementById(id);
     if (el) {
       el.style.visibility = visibility;

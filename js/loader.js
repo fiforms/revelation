@@ -144,6 +144,50 @@ export function sanitizeRenderedHTML(html) {
   return sanitizeHTMLFragment(html);
 }
 
+function parseHideTarget(rawValue) {
+  const normalized = String(rawValue || '').trim().toLowerCase();
+  if (!normalized) return 'both';
+  if (normalized === 'handout' || normalized === 'slideshow') {
+    return normalized;
+  }
+  return null;
+}
+
+function shouldHideCurrentSlide(target, forHandout) {
+  if (!target) return false;
+  if (target === 'both') return true;
+  return forHandout ? target === 'handout' : target === 'slideshow';
+}
+
+function ensureHiddenSlidePreviewStyles() {
+  if (typeof document === 'undefined') return;
+  if (document.getElementById('revelation-hidden-slide-preview-styles')) return;
+
+  const styleEl = document.createElement('style');
+  styleEl.id = 'revelation-hidden-slide-preview-styles';
+  styleEl.textContent = `
+    #fixed-hidden-preview-wrapper {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      font-size: clamp(2rem, 7vw, 5rem);
+      font-weight: 800;
+      letter-spacing: 0.24em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.9);
+      background: rgba(128, 0, 0, 0.28);
+      border: 0.2rem solid rgba(255, 255, 255, 0.3);
+      pointer-events: none;
+      z-index: 30;
+      text-shadow: 0 0.08em 0.2em rgba(0, 0, 0, 0.45);
+      box-sizing: border-box;
+    }
+  `;
+  document.head.appendChild(styleEl);
+}
+
 export async function loadAndPreprocessMarkdown(deck,selectedFile = null) {
       style_path = window.__revelationHostedRoute ? '_resources/css/' : '/css/';
       const defaultFile = 'presentation.md';
@@ -342,8 +386,12 @@ export async function loadAndPreprocessMarkdown(deck,selectedFile = null) {
         mediaIndex,
         prefersHigh,
         suppressVisualElements,
-        appConfig
+        appConfig,
+        forceControls
       );
+      if (forceControls) {
+        ensureHiddenSlidePreviewStyles();
+      }
       const processedMarkdown = metadata.convertSmartQuotes === false ? partProcessedMarkdown : convertSmartQuotes(partProcessedMarkdown);
       const transitionSafeMarkdown = forceNoTransitions
         ? processedMarkdown
@@ -480,7 +528,7 @@ function runPluginMarkdownPreprocessors(md, context = {}) {
   return transformed;
 }
 
-export function preprocessMarkdown(md, userMacros = {}, forHandout = false, media = {}, newSlideOnHeading = true, mediaIndex = null, preferHigh = null, suppressVisualElements = false, appConfig = null) {
+export function preprocessMarkdown(md, userMacros = {}, forHandout = false, media = {}, newSlideOnHeading = true, mediaIndex = null, preferHigh = null, suppressVisualElements = false, appConfig = null, showHiddenSlidesInPreview = false) {
   md = runPluginMarkdownPreprocessors(md, {
     forHandout,
     userMacros,
@@ -500,6 +548,11 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
   const thismacros = [];
   const slideLocalSuppressions = new Set();
   let aiSymbolRequested = false;
+  let slideHidden = false;
+  let slideHiddenPreviewMarked = false;
+  let hasVisibleOutput = false;
+  let currentSlideStartIndex = 0;
+  let currentSlideBreakIndex = -1;
 
   const defaultMacros = {
     darkbg: `<!-- .slide: data-darkbg -->`,
@@ -865,12 +918,15 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
         trimmedLine.toLowerCase() === NOTE_SEPARATOR_LEGACY.toLowerCase();
       const isMacroUse = /^\s*\{\{[^}]+\}\}\s*$/.test(line);
       const isInlineMacro = /^\s*:[A-Za-z0-9_]+(?::.*)?:\s*$/.test(line);
+      const isHideMacro =
+        /^\s*\{\{hide(?::(?:handout|slideshow))?\}\}\s*$/i.test(line) ||
+        /^\s*:hide(?::(?:handout|slideshow))?:\s*$/i.test(line);
       const isAttribLine = /^\s*:ATTRIB:.*$/i.test(line) || /^\s*:AI:\s*$/i.test(line);
       const hasMarkdownImage = /!\[[^\]]*]\([^)]*\)/.test(line);
       const hasHtmlVisual = /<\s*(img|video|iframe|figure)\b/i.test(line);
       const hasBackgroundData = /data-background-(image|video|audio|audio-start|audio-loop|audio-stop)/i.test(line);
 
-      if (!isNoteSeparator && (isMacroUse || isInlineMacro || isAttribLine || hasMarkdownImage || hasHtmlVisual || hasBackgroundData)) {
+      if (!isNoteSeparator && !isHideMacro && (isMacroUse || isInlineMacro || isAttribLine || hasMarkdownImage || hasHtmlVisual || hasBackgroundData)) {
         continue;
       }
     }
@@ -965,8 +1021,38 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
     const isNoteSeparatorLine =
       trimmedLine.toLowerCase() === NOTE_SEPARATOR_CURRENT ||
       trimmedLine.toLowerCase() === NOTE_SEPARATOR_LEGACY.toLowerCase();
+    let autoSlide = false;
+    if(newSlideOnHeading && line.match(/^#{1,3} (?!#)/) && !blankslide) {
+        // Always insert a slide break before a heading
+	      autoSlide = true;
+    }
+
+    if (slideHidden) {
+      if (autoSlide || line === '---' || line === '***' || line.match(/^[Nn][Oo][Tt][Ee]\:/) || index >= lines.length - 1) {
+        const breakLine = autoSlide
+          ? (/^###\s*/.test(line) ? '---' : '***')
+          : ((line === '---' || line === '***') ? line : null);
+        if (breakLine && currentSlideBreakIndex >= 0) {
+          processedLines[currentSlideBreakIndex] = breakLine;
+        }
+        slideHidden = false;
+        slideHiddenPreviewMarked = false;
+        blankslide = !autoSlide;
+        thismacros.length = 0;
+        slideLocalSuppressions.clear();
+        attributions.length = 0;
+        aiSymbolRequested = false;
+        if (!autoSlide && (line === '---' || line === '***')) {
+          continue;
+        }
+      } else {
+        continue;
+      }
+    }
+
     if (isNoteSeparatorLine) {
       processedLines.push(line);
+      hasVisibleOutput = true;
       continue;
     }
 
@@ -978,6 +1064,28 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
         ? [paramString ?? '']
         : (paramString ? paramString.split(':') : []);
       if (key !== 'attrib' && key !== 'ai' && !key.startsWith('column')) {
+        if (key === 'hide') {
+          const hideTarget = parseHideTarget(paramString);
+          const shouldHideSlide = shouldHideCurrentSlide(hideTarget, forHandout);
+          const shouldPreviewHiddenSlide = !forHandout && showHiddenSlidesInPreview && shouldHideCurrentSlide(hideTarget, false);
+          if (shouldHideSlide && !shouldPreviewHiddenSlide) {
+            processedLines.length = currentSlideStartIndex;
+            slideHidden = true;
+            continue;
+          }
+          if (shouldPreviewHiddenSlide) {
+            if (!slideHiddenPreviewMarked) {
+              processedLines.push('<!-- .slide: data-hidden-preview -->');
+              slideHiddenPreviewMarked = true;
+              hasVisibleOutput = true;
+            }
+            continue;
+          }
+          if (hideTarget) {
+            continue;
+          }
+          console.log('Markdown Hide Inline Macro Not Found or Invalid: ' + paramString);
+        }
         if (key === 'shiftnone') {
           slideLocalSuppressions.add('shift');
           continue;
@@ -1065,10 +1173,11 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
     if (macroUseMatch) {
       const key = macroUseMatch[1].trim();
       const paramString = macroUseMatch[2];
+      const normalizedKey = key.toLowerCase();
       const params = key.toLowerCase() === 'bgtint'
         ? [paramString ?? '']
         : (paramString ? paramString.split(':') : []);
-      if (key.toLowerCase() === 'transition') {
+      if (normalizedKey === 'transition') {
         const transitionValue = params[0]?.trim() || '';
         if (transitionValue) {
           const transitionLine = `<!-- .slide: data-transition="${transitionValue}" -->`;
@@ -1080,7 +1189,7 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
         }
         console.log('Markdown Transition Macro Not Found: ' + paramString);
       }
-      if (key.toLowerCase() === 'animate') {
+      if (normalizedKey === 'animate') {
         const mode = params[0]?.trim().toLowerCase() || '';
         const animateLine = !mode
           ? '<!-- .slide: data-auto-animate -->'
@@ -1093,7 +1202,7 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
         }
         console.log('Markdown Animate Macro Not Found: ' + paramString);
       }
-      if (key === 'audio') {
+      if (normalizedKey === 'audio') {
         const command = params[0]?.toLowerCase() || '';
         const rawSrc = params[1] || '';
         const src = resolveMediaAlias(rawSrc);
@@ -1109,14 +1218,14 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
           console.log('Markdown Audio Macro Not Found or Missing File: ' + paramString);
         }
 
-        if (audioLine) {
-          if (command === 'stop') {
+          if (audioLine) {
+            if (command === 'stop') {
             processedLines.push(audioLine);
-          } else {
-            thismacros.push(audioLine);
+            } else {
+              thismacros.push(audioLine);
             processedLines.push(audioLine);
-            lastmacros.length = 0;
-          }
+              lastmacros.length = 0;
+            }
           continue;
         }
       }
@@ -1180,12 +1289,6 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
       }
       continue;
     }
-
-    var autoSlide = false;
-    if(newSlideOnHeading && line.match(/^#{1,3} (?!#)/) && !blankslide) {
-        // Always insert a slide break before a heading
-	      autoSlide = true;
-    }
     if (line.trim() !== '' && !line.trim().match(/^<!--.*?-->$/)) {
       blankslide = false;
     }
@@ -1241,6 +1344,7 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
       }
       thismacros.length = 0;
       slideLocalSuppressions.clear();
+      slideHiddenPreviewMarked = false;
 
       if (attributions.length > 0) {
 
@@ -1280,6 +1384,9 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
         }
       }
       processedLines.push(line); // Preserve the slide break itself
+      currentSlideBreakIndex = processedLines.length - 1;
+      currentSlideStartIndex = processedLines.length;
+      hasVisibleOutput = true;
       if (breakType) {
         previousSeparatorType = breakType;
       }
@@ -1296,12 +1403,16 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
       processedLines.push(
         transformedLine.replace(/\s*\+\+$/, '') + ' <!-- .element: class="fragment" -->'
       );
+      hasVisibleOutput = true;
     } else {
       const transitionValue = extractSlideTransitionValue(transformedLine);
       if (transitionValue) {
         pendingAutoStackTransition = transitionValue;
       }
       processedLines.push(transformedLine);
+      if (transformedLine.trim() !== '') {
+        hasVisibleOutput = true;
+      }
     }
   }
   return processedLines.join('\n');

@@ -307,6 +307,9 @@ Line-based commands/macros commonly used while authoring:
 | `:nobg:` | Suppress persisted dark/light background mode |
 | `:shiftnone:` | Suppress persisted left/right shift |
 | `:nothird:` | Suppress persisted upper/lower-third layout |
+| `:hide:` | Hide the current slide in handout and slideshow views |
+| `:hide:handout:` | Hide the current slide only in handout view |
+| `:hide:slideshow:` | Hide the current slide only in slideshow view |
 
 ---
 
@@ -341,8 +344,6 @@ Common examples:
 {{animate}}
 {{autoslide:15000}}
 ```
-
----
 
 Sticky metadata helpers:
 
