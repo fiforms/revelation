@@ -107,20 +107,14 @@ export function createMarkdownLineParsers(context) {
       console.log('Markdown Hide Inline Macro Not Found or Invalid: ' + paramString);
       return false;
     }
-    if (key === 'shiftnone') {
-      slideLocalSuppressions.add('shift');
-      return true;
-    }
-    if (key === 'nobg') {
-      slideLocalSuppressions.add('bgmode');
-      return true;
-    }
-    if (key === 'clearbg') {
-      slideLocalSuppressions.add('background');
-      return true;
-    }
-    if (key === 'nothird') {
-      slideLocalSuppressions.add('third');
+    const localSuppressionTarget = {
+      shiftnone: 'shift',
+      nobg: 'bgmode',
+      clearbg: 'background',
+      nothird: 'third'
+    }[key];
+    if (localSuppressionTarget) {
+      slideLocalSuppressions.add(localSuppressionTarget);
       return true;
     }
     if (key === 'countdown') {
