@@ -178,13 +178,19 @@ export function createSlideCompiler(options = {}) {
     flushCurrentSlideLines();
 
     if (thismacros.length > 0) {
+      // A slide that emits sticky macros becomes the new inheritance source for
+      // following slides.
       lastmacros.length = 0;
       lastmacros.push(...thismacros);
     } else {
+      // Otherwise replay inherited sticky macros unless this slide explicitly
+      // suppresses the macro's semantic group.
       let skipNextStickyAttrib = false;
       for (const val of lastmacros) {
         const suppressedGroups = getSuppressionGroupsForLine(val);
         if (suppressedGroups.some((group) => slideLocalSuppressions.has(group))) {
+          // Background sticky macros are paired with a following attribution, so
+          // suppressing the background must also suppress the next sticky attrib.
           if (suppressedGroups.includes('background')) {
             skipNextStickyAttrib = true;
           }
@@ -207,10 +213,14 @@ export function createSlideCompiler(options = {}) {
         }
         const transitionValue = extractSlideTransitionValue(val);
         if (transitionValue) {
+          // Vertical stacks need the transition promoted onto the stack wrapper,
+          // not repeated on each child slide.
           pendingAutoStackTransition = transitionValue;
         }
         processedLines.push(val);
       }
+      // Separate replayed sticky markup from the slide body for readability in
+      // the generated markdown.
       processedLines.push('');
     }
 
@@ -219,6 +229,8 @@ export function createSlideCompiler(options = {}) {
     slideHiddenPreviewMarked = false;
 
     if (attributions.length > 0) {
+      // Group attributions into one block so slide content stays uncluttered
+      // during parsing and the emitted markup is consistent.
       processedLines.push('<div class="slide-attribution">');
       for (const attrib of attributions) {
         processedLines.push(`<div class="attribution">${attrib}</div>`);
@@ -240,11 +252,15 @@ export function createSlideCompiler(options = {}) {
       previousSeparatorType !== 'vertical' &&
       pendingAutoStackTransition
     ) {
+      // Emit stack-level transition metadata only once, on entry to a vertical
+      // stack, so Reveal applies it to the whole stack.
       processedLines.push(toStackAttrsMarker(`data-transition="${pendingAutoStackTransition}"`));
       processedLines.push('');
     }
 
     if (autoSlide) {
+      // Auto-slide headings become both the separator for the previous slide and
+      // the first content line of the next slide.
       processedLines.push(getBreakLine(line, true));
       processedLines.push('');
       currentSlideLines.push(line);
@@ -257,6 +273,8 @@ export function createSlideCompiler(options = {}) {
       currentSlideBreakIndex = processedLines.length - 1;
     }
     if (breakType) {
+      // Remember the boundary we just emitted so vertical-stack decoration only
+      // happens when crossing into a new stack.
       previousSeparatorType = breakType;
     }
     pendingAutoStackTransition = null;
