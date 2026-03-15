@@ -6,7 +6,7 @@ import Zoom from 'reveal.js/plugin/zoom/zoom.esm.js';
 import Search from 'reveal.js/plugin/search/search.esm.js';
 import RevealRemote from 'reveal.js-remote/plugin/remote.js';
 
-import { loadAndPreprocessMarkdown } from './loader.js';
+import { loadAndPreprocessMarkdown } from './presentation-bootstrap.js';
 import { revealTweaks } from './tweaks.js';
 import { contextMenu, sendPresentationToPeers, closePresentationsOnPeers } from './contextmenu.js';
 import { pluginLoader } from './pluginloader.js';

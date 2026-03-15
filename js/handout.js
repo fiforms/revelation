@@ -3,7 +3,7 @@ import {
   preprocessMarkdown,
   sanitizeRenderedHTML,
   getNoteSeparator
-} from './loader.js';
+} from './compiler/markdown-compiler.js';
 import {
   segmentPresentation,
   stripSlideSeparatorsOutsideCodeBlocks
