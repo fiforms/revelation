@@ -449,6 +449,8 @@ Agregue `++` para convertir una línea en fragmento:
 :autoslide:12000:
 :audio:play:intro.mp3:
 :audio:playloop:bed.mp3:
+:audio:play:media:intro:
+:audio:playloop:media:bed:
 :audio:stop:
 :bgtint:rgba(0,0,0,0.35):
 ```
@@ -461,6 +463,9 @@ Agregue `++` para convertir una línea en fragmento:
 {{transition:fade}}
 {{animate}}
 {{autoslide:12000}}
+{{audio:play:intro.mp3}}
+{{audio:loop:media:intro}}
+{{audio:stop}}
 {{darkbg}}
 {{upperthird}}
 ```
@@ -501,10 +506,13 @@ Second Column
 media:
   intro:
     filename: opener.mp4
+  bed:
+    filename: intro-bed.mp3
 ```
 
 ```markdown
 ![background](media:intro)
+:audio:play:media:bed:
 ```
 
 ---

@@ -32,6 +32,23 @@ export function createMarkdownLineParsers(context) {
     markHiddenPreviewOp
   } = ops;
 
+  const parseMacroParams = (key, paramString) => {
+    if (key === 'bgtint') {
+      return [paramString ?? ''];
+    }
+    if (!paramString) {
+      return [];
+    }
+    if (key === 'audio') {
+      const parts = paramString.split(':');
+      if (parts.length <= 1) {
+        return parts;
+      }
+      return [parts[0], parts.slice(1).join(':')];
+    }
+    return paramString.split(':');
+  };
+
   // Expand macro templates by resolving `$1`, `$2`, ... with media-aware parameters.
   const expandMacroTemplateLines = (template, params) => template
     .replace(/\$(\d+)/g, (_, n) => resolveMediaAlias(params[+n - 1] ?? ''))
@@ -84,7 +101,7 @@ export function createMarkdownLineParsers(context) {
 
     const key = inlineMacroMatch[1].trim().toLowerCase();
     const paramString = inlineMacroMatch[2];
-    const params = key === 'bgtint' ? [paramString ?? ''] : (paramString ? paramString.split(':') : []);
+    const params = parseMacroParams(key, paramString);
 
     if (key === 'attrib' || key === 'ai' || key.startsWith('column')) {
       return false;
@@ -177,7 +194,7 @@ export function createMarkdownLineParsers(context) {
     const key = macroUseMatch[1].trim();
     const paramString = macroUseMatch[2];
     const normalizedKey = key.toLowerCase();
-    const params = normalizedKey === 'bgtint' ? [paramString ?? ''] : (paramString ? paramString.split(':') : []);
+    const params = parseMacroParams(normalizedKey, paramString);
 
     if (normalizedKey === 'transition') {
       const transitionValue = params[0]?.trim() || '';

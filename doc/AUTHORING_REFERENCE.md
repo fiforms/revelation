@@ -269,11 +269,13 @@ Path base rule:
 
 #### Background audio
 
-Use audio commands:
+Use audio commands with either a local file or a `media:<alias>` source:
 
 ```markdown
 :audio:play:intro.mp3:
 :audio:playloop:bed.mp3:
+:audio:play:media:intro:
+:audio:playloop:media:bed:
 :audio:stop:
 ```
 
@@ -290,8 +292,8 @@ Line-based commands/macros commonly used while authoring:
 | `:note:` | Start notes section for the current slide |
 | `:ATTRIB:<text>` | Add attribution for current slide |
 | `:AI:` | Mark current slide with AI symbol |
-| `:audio:play:<src>:` | Start background audio |
-| `:audio:playloop:<src>:` | Start looping background audio |
+| `:audio:play:<src>:` | Start background audio from a local file or `media:<alias>` |
+| `:audio:playloop:<src>:` | Start looping background audio from a local file or `media:<alias>` |
 | `:audio:stop:` | Stop background audio |
 | `:animate:` | Enable auto-animate on current slide |
 | `:animate:restart:` | Restart auto-animate matching |

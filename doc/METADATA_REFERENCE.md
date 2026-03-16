@@ -163,7 +163,7 @@ For translation workflow and synchronized multi-language show setup, see:
 
 ## Media Aliases
 
-Define aliases under `media:`:
+Define aliases under `media:`. These aliases can be used in media embeds and audio commands such as `![background](media:fog)` or `:audio:play:media:intro:`.
 
 ```yaml
 media:

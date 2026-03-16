@@ -254,11 +254,13 @@ Regla de base de rutas:
 
 #### Audio de fondo
 
-Usa comandos de audio:
+Usa comandos de audio con un archivo local o una fuente `media:<alias>`:
 
 ```markdown
 :audio:play:intro.mp3:
 :audio:playloop:bed.mp3:
+:audio:play:media:intro:
+:audio:playloop:media:bed:
 :audio:stop:
 ```
 
@@ -275,8 +277,8 @@ Comandos/macros por línea usados comúnmente durante la autoría:
 | `:note:` | Iniciar la sección de notas para la diapositiva actual |
 | `:ATTRIB:<text>` | Agregar atribución a la diapositiva actual |
 | `:AI:` | Marcar la diapositiva actual con símbolo de IA |
-| `:audio:play:<src>:` | Iniciar audio de fondo |
-| `:audio:playloop:<src>:` | Iniciar audio de fondo en bucle |
+| `:audio:play:<src>:` | Iniciar audio de fondo desde un archivo local o `media:<alias>` |
+| `:audio:playloop:<src>:` | Iniciar audio de fondo en bucle desde un archivo local o `media:<alias>` |
 | `:audio:stop:` | Detener audio de fondo |
 | `:animate:` | Habilitar auto-animate en la diapositiva actual |
 | `:animate:restart:` | Reiniciar coincidencia de auto-animate |

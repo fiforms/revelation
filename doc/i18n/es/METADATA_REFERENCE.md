@@ -163,7 +163,7 @@ Para flujo de traducción y configuración sincronizada multi-idioma en presenta
 
 ## Alias de medios
 
-Defina alias bajo `media:`:
+Defina alias bajo `media:`. Estos alias pueden usarse en incrustaciones de medios y en comandos de audio como `![background](media:fog)` o `:audio:play:media:intro:`.
 
 ```yaml
 media:

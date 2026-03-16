@@ -42,6 +42,7 @@ export async function initMediaLibrary(container, {
           <option value="all">${tt('All')}</option>
           <option value="image">${tt('Images')}</option>
           <option value="video">${tt('Videos')}</option>
+          <option value="audio">${tt('Audio')}</option>
         </select>
         <select id="media-sort"
           style="padding:.35rem .5rem;border-radius:4px;border:1px solid #555;background:#222;color:#eee;">
@@ -297,18 +298,41 @@ export async function initMediaLibrary(container, {
       }
 
       const thumb = document.createElement('img');
-      thumb.src = `/presentations_${state.key}/_media/${item.thumbnail}`;
-      thumb.alt = item.title || item.original_filename;
-      thumb.style = 'max-width:100%;border-radius:4px;margin-bottom:.5rem;cursor:zoom-in;';
-      thumb.addEventListener('click', (e) => {
-        if (mode === 'picker') return;
-        e.stopPropagation();
-        openPreview(item, list.indexOf(item), list);
-      });
-
       const thumbWrap = document.createElement('div');
       thumbWrap.className = 'media-thumb-wrapper';
-      thumbWrap.appendChild(thumb);
+      if (item.mediatype === 'audio' || !item.thumbnail) {
+        thumbWrap.innerHTML = `
+          <div style="
+            aspect-ratio:1/1;
+            width:100%;
+            border-radius:12px;
+            margin-bottom:.5rem;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            position:relative;
+            overflow:hidden;
+            cursor:${mode === 'picker' ? 'pointer' : 'zoom-in'};
+            background:
+              radial-gradient(circle at top, rgba(84,120,163,0.28), transparent 55%),
+              linear-gradient(160deg, #172233 0%, #0c1420 100%);
+            color:#f3f7fb;
+          ">
+            <span style="position:absolute;left:14px;bottom:12px;font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:rgba(243,247,251,.72);">${tt('Audio')}</span>
+            <span style="font-size:44px;color:rgba(255,255,255,.82);text-shadow:0 0 10px rgba(0,0,0,.45);">♪</span>
+          </div>
+        `;
+      } else {
+        thumb.src = `/presentations_${state.key}/_media/${item.thumbnail}`;
+        thumb.alt = item.title || item.original_filename;
+        thumb.style = 'max-width:100%;border-radius:4px;margin-bottom:.5rem;cursor:zoom-in;';
+        thumb.addEventListener('click', (e) => {
+          if (mode === 'picker') return;
+          e.stopPropagation();
+          openPreview(item, list.indexOf(item), list);
+        });
+        thumbWrap.appendChild(thumb);
+      }
 
       const title = document.createElement('div');
       title.className = 'media-title';
@@ -390,6 +414,13 @@ function openPreview(item, index = null, sourceList = null) {
     mediaEl.controls = true;
     mediaEl.autoplay = true;
     mediaEl.className = 'mlightbox-media';
+  } else if (item.mediatype === 'audio') {
+    mediaEl = document.createElement('audio');
+    mediaEl.src = full;
+    mediaEl.controls = true;
+    mediaEl.autoplay = true;
+    mediaEl.className = 'mlightbox-media';
+    mediaEl.style.width = 'min(560px, 90vw)';
   } else {
     mediaEl = document.createElement('img');
     mediaEl.src = full;
@@ -793,6 +824,9 @@ caption.innerHTML = `
     return yaml;
   }
   function generateMD(item) {
+    if (item.mediatype === 'audio') {
+      return `{{audio:play:media:${generateTag(item)}}}`;
+    }
     return `![](media:${generateTag(item)})`;
   }
   function generateTag(item) {
@@ -817,7 +851,8 @@ caption.innerHTML = `
 
     let filtered = list.filter(item => {
       if (type === "video" && item.mediatype !== "video") return false;
-      if (type === "image" && item.mediatype === "video") return false;
+      if (type === "audio" && item.mediatype !== "audio") return false;
+      if (type === "image" && item.mediatype !== "image") return false;
 
       return tokens.every(t =>
         (item.original_filename || "").toLowerCase().includes(t) ||
