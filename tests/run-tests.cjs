@@ -180,6 +180,25 @@ module.exports = {
   return module.exports;
 }
 
+function loadCreditCcliMarkdownPreprocessor() {
+  const filePath = path.join(REVELATION_ROOT, '..', 'plugins', 'credit_ccli', 'markdown-preprocessor.js');
+  let source = readText(filePath);
+  source = source.replace(/export function /g, 'function ');
+  source += '\nmodule.exports = { preprocessMarkdown };\n';
+
+  const module = { exports: {} };
+  const context = {
+    module,
+    exports: module.exports,
+    require,
+    console,
+    window: global.window,
+    tr: (value) => value
+  };
+  vm.runInNewContext(source, context, { filename: filePath });
+  return module.exports;
+}
+
 function loadMarkdownCompiler(slideCompiler, markdownLineParsers, mediaLineParsers, htmlSanitization, loaderUtils) {
   const filePath = path.join(REVELATION_ROOT, 'js', 'compiler', 'markdown-compiler.js');
   let source = readText(filePath);
@@ -236,6 +255,28 @@ const {
   sanitizeMarkdownEmbeddedHTML,
   sanitizeRenderedHTML
 } = loadMarkdownCompiler(slideCompiler, markdownLineParsers, mediaLineParsers, htmlSanitization, loaderUtils);
+const { preprocessMarkdown: preprocessCreditCcliMarkdown } = loadCreditCcliMarkdownPreprocessor();
+
+function runPluginRegressionTests() {
+  const creditsMarkdown = [
+    ':credits:',
+    '  words: Fanny Crosby',
+    '  music: William H. Doane',
+    '  year: 1875',
+    '  copyright: Public Domain Archive',
+    '  license: public'
+  ].join('\n');
+
+  const processed = preprocessCreditCcliMarkdown(creditsMarkdown, {
+    parseYAML: (value) => require('js-yaml').load(value),
+    appConfig: {}
+  });
+
+  assert.match(processed, /Words by Fanny Crosby \(1875\)/);
+  assert.match(processed, /Music by William H\. Doane/);
+  assert.match(processed, /Public Domain/);
+  assert.doesNotMatch(processed, /&copy;|©|\{\{ATTRIB:/);
+}
 
 function isCommentOnlyMarkdown(markdown) {
   if (!markdown || !markdown.trim()) return true;
@@ -356,6 +397,7 @@ function removeDir(dirPath) {
 }
 
 function main() {
+  runPluginRegressionTests();
   const fixtures = getFixtures();
   if (fixtures.length === 0) {
     throw new Error(`No fixtures found in ${FIXTURES_DIR}`);

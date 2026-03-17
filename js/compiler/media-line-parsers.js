@@ -18,9 +18,27 @@ export function createMediaLineParsers(context) {
 
   const { appendLineOp, addAttributionOp } = ops;
 
+  const tr = (key) => {
+    if (typeof window !== 'undefined' && typeof window.tr === 'function') {
+      return window.tr(key);
+    }
+    return key;
+  };
+
+  const inferAttributionPrefix = (sourceLine = '') => {
+    const line = String(sourceLine || '').trim();
+    if (/^!\[background(?::[^\]]+)?\]\(media:[^)]+\)$/i.test(line)) {
+      return tr('Background');
+    }
+    if (/^(?:\{\{audio:play(?:(?:loop))?:media:[^}]+\}\}|:audio:play(?:(?:loop))?:media:[^:]+:)\s*$/i.test(line)) {
+      return tr('Audio');
+    }
+    return '';
+  };
+
   // Resolve inline `media:alias` references and emit attribution when the alias provides one.
   const resolveMediaAliasInLine = (line) => {
-    const mediaAliasMatch = line.match(/[\(\"]media:([a-zA-Z0-9_-]+)[\)\"]/);
+    const mediaAliasMatch = line.match(/\bmedia:([a-zA-Z0-9_-]+)\b/);
     let nextLine = line;
     let lastAttribution = null;
 
@@ -46,8 +64,13 @@ export function createMediaLineParsers(context) {
         const resolvedSrc = `${basePath}${resolvedFile}`;
         nextLine = nextLine.replace(/\((media:[a-zA-Z0-9_-]+)\)/, `(${resolvedSrc})`);
         nextLine = nextLine.replace(/\"(media:[a-zA-Z0-9_-]+)\"/, `"${resolvedSrc}"`);
+        nextLine = nextLine.replace(/(:audio:(?:play|playloop|loop):)(media:[a-zA-Z0-9_-]+)(:)/i, `$1${resolvedSrc}$3`);
+        nextLine = nextLine.replace(/(\{\{audio:(?:play|playloop|loop):)(media:[a-zA-Z0-9_-]+)(\}\})/i, `$1${resolvedSrc}$3`);
         if (item.attribution) {
-          lastAttribution = `© ${item.attribution} (${item.license})`;
+          const prefix = inferAttributionPrefix(line);
+          const label = prefix ? `${prefix} ` : '';
+          const licenseSuffix = item.license ? ` (${item.license})` : '';
+          lastAttribution = `${label}© ${item.attribution}${licenseSuffix}`;
           applyOperations([addAttributionOp(lastAttribution)]);
         }
       }
