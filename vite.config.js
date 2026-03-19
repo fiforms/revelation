@@ -17,6 +17,7 @@ export default {
   },
   plugins: [presentationIndexPlugin()],
   build: {
+    minify: false,
     rollupOptions: {
       input: {
         'offline-bundle': path.resolve(__dirname, 'js/offline.js')
