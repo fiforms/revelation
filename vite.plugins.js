@@ -6,6 +6,8 @@ const matter = require('gray-matter');
 const ip = require('ip');
 const serveStatic = require('serve-static');
 const { Server } = require('socket.io');
+const { v4: uuidv4 } = require('uuid');
+const { toDataURL: qrToDataURL } = require('qrcode');
 
 const localIp = ip.address(); // Gets the LAN IP
 
@@ -15,6 +17,10 @@ const PEER_SOCKET_PATH = '/peer-commands';
 const PRESENTER_PLUGINS_SOCKET_PATH = '/presenter-plugins-socket';
 let peerCommandIo = null;
 let presenterPluginsIo = null;
+let revealRemoteIo = null;
+const revealRemoteStates = {};
+const revealRemoteMultiplexes = {};
+const revealRemoteHashsecret = uuidv4();
 const PIN_FAILURE_LIMIT = 3;
 const PIN_BLOCK_MS = 60_000;
 const peerPinFailures = new Map();
@@ -477,6 +483,8 @@ function presentationIndexPlugin() {
       // Peer pairing + peer command endpoints (served from the same Vite server)
       ensurePeerCommandServer(server, configPath);
       ensurePresenterPluginsServer(server);
+      ensureRevealRemoteServer(server);
+      server.middlewares.use('/_remote/ui', serveStatic(path.resolve(__dirname, 'node_modules/reveal.js-remote/server-ui'), { fallthrough: true }));
       server.middlewares.use((req, res, next) => {
         if (!req.url?.startsWith('/peer/')) return next();
 
@@ -1091,6 +1099,125 @@ function generateMediaIndex() {
 
   fs.writeFileSync(path.join(mediaDir, 'index.json'), JSON.stringify(index, null, 2));
   console.log(`📁 _media/index.json updated with ${Object.keys(index).length} entries`);
+}
+
+function mkRevealRemoteHash(remoteId, multiplexId) {
+  return crypto.createHash('sha256')
+    .update(`${remoteId}-${multiplexId}-${revealRemoteHashsecret}`, 'utf8')
+    .digest('hex');
+}
+
+function initRevealRemotePresenter(socket, initialData, baseUrl) {
+  let remoteId = null;
+  let multiplexId = null;
+  let hash = null;
+
+  if (initialData.remoteId && initialData.multiplexId && initialData.hash &&
+      mkRevealRemoteHash(initialData.remoteId, initialData.multiplexId) === initialData.hash) {
+    remoteId = initialData.remoteId;
+    multiplexId = initialData.multiplexId;
+    hash = initialData.hash;
+  }
+
+  if (remoteId === null) {
+    remoteId = uuidv4();
+    multiplexId = uuidv4();
+    hash = mkRevealRemoteHash(remoteId, multiplexId);
+  }
+
+  socket.join('presenter-' + remoteId);
+
+  const remoteUrl = baseUrl + '_remote/ui/?' + remoteId;
+  const multiplexUrl = initialData.shareUrl.replace(/#.*/, '') +
+    (initialData.shareUrl.indexOf('?') > 0 ? '&' : '?') + 'remoteMultiplexId=' + multiplexId;
+
+  socket.on('disconnect', () => {
+    delete revealRemoteStates[remoteId];
+    delete revealRemoteMultiplexes[multiplexId];
+  });
+
+  Promise.all([
+    qrToDataURL(remoteUrl, { errorCorrectionLevel: 'Q' }),
+    qrToDataURL(multiplexUrl, { errorCorrectionLevel: 'Q' })
+  ]).then((base64) => {
+    socket.emit('init', {
+      remoteUrl, multiplexUrl, hash, remoteId, multiplexId,
+      remoteImage: base64[0], multiplexImage: base64[1]
+    });
+  });
+
+  socket.on('state_changed', (data) => {
+    if (!revealRemoteStates[remoteId]) revealRemoteStates[remoteId] = {};
+    revealRemoteStates[remoteId].state = data;
+    socket.to('remote-' + remoteId).emit('state_changed', data);
+  });
+
+  socket.on('notes_changed', (data) => {
+    if (!revealRemoteStates[remoteId]) revealRemoteStates[remoteId] = {};
+    revealRemoteStates[remoteId].notes = data;
+    socket.to('remote-' + remoteId).emit('notes_changed', data);
+  });
+
+  socket.on('multiplex', (data) => {
+    revealRemoteMultiplexes[multiplexId] = data;
+    socket.to('multiplex-' + multiplexId).emit('multiplex', data);
+  });
+}
+
+function initRevealRemoteControl(socket, data) {
+  const id = data.id;
+  socket.join('remote-' + id);
+  socket.to('presenter-' + id).emit('client_connected', {});
+
+  if (revealRemoteStates[id]) {
+    if (revealRemoteStates[id].notes) socket.emit('notes_changed', revealRemoteStates[id].notes);
+    if (revealRemoteStates[id].state) socket.emit('state_changed', revealRemoteStates[id].state);
+  }
+
+  socket.on('command', (cmd) => {
+    if (typeof cmd?.command === 'string') {
+      socket.to('presenter-' + id).emit('command', { command: cmd.command });
+    }
+  });
+}
+
+function initRevealRemoteFollower(socket, data) {
+  socket.join('multiplex-' + data.id);
+  if (revealRemoteMultiplexes[data.id]) {
+    socket.emit('multiplex', revealRemoteMultiplexes[data.id]);
+  }
+}
+
+function ensureRevealRemoteServer(server) {
+  if (revealRemoteIo || !server.httpServer) return;
+
+  revealRemoteIo = new Server(server.httpServer, {
+    path: '/socket.io',
+    cookie: false,
+    cors: { origin: true }
+  });
+
+  revealRemoteIo.sockets.on('connection', (socket) => {
+    const host = socket.request.headers['x-forwarded-host'] || socket.request.headers['host'];
+    const proto = socket.request.headers['x-forwarded-proto'] || 'http';
+    const baseUrl = proto + '://' + host + '/';
+
+    socket.once('start', (data) => {
+      try {
+        if (data.type === 'presenter') {
+          initRevealRemotePresenter(socket, data, baseUrl);
+        } else if (data.type === 'follower' && data.id) {
+          initRevealRemoteFollower(socket, data);
+        } else if (data.type === 'remote' && data.id) {
+          initRevealRemoteControl(socket, data);
+        }
+      } catch (e) {
+        console.warn(e);
+      }
+    });
+  });
+
+  console.log('🎛️  Reveal Remote server attached to Vite httpServer at /socket.io');
 }
 
 module.exports = presentationIndexPlugin;

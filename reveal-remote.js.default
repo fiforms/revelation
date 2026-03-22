@@ -1,4 +1,4 @@
-// Default location
+// Default location — remote broker is embedded in the Vite server on the same port
 
-window.revealRemoteServer = window.location.protocol + "//" + window.location.hostname + ":1947/";
+window.revealRemoteServer = window.location.protocol + "//" + window.location.host + "/";
 window.presenterPluginsPublicServer = "https://revealremote.fiforms.org/presenter-plugins-socket";
