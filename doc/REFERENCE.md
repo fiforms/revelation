@@ -55,6 +55,9 @@ YAML front matter, macros, and media alias definitions:
 REVELation framework runtime and extension architecture:
 - [revelation/doc/ARCHITECTURE.md](ARCHITECTURE.md)
 
+Reverse Proxy Setup
+- [revelation/doc/REVERSE_PROXY.md](REVERSE_PROXY.md)
+
 ---
 
 <a id="reference-plugins"></a>
@@ -70,10 +73,4 @@ Plugin-specific syntax and behavior lives with the plugin source:
 
 ## Wrapper Documentation
 
-Electron wrapper docs are in the outer repository:
-- [doc/GUI_REFERENCE.md](../../doc/GUI_REFERENCE.md)
-- [doc/TROUBLESHOOTING.md](../../doc/TROUBLESHOOTING.md)
-- [doc/dev/INSTALLING.md](../../doc/dev/INSTALLING.md)
-- [doc/dev/PLUGINS.md](../../doc/dev/PLUGINS.md)
-- [doc/dev/PEERING.md](../../doc/dev/PEERING.md)
-- [doc/dev/README-PDF.md](../../doc/dev/README-PDF.md)
+Electron wrapper docs are in the outer repository.

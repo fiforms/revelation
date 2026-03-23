@@ -55,6 +55,9 @@ Front matter YAML, macros y definiciones de alias de medios:
 Arquitectura de runtime y extensión del framework REVELation:
 - [revelation/doc/ARCHITECTURE.md](ARCHITECTURE.md)
 
+Configuración de proxy inverso:
+- [revelation/doc/REVERSE_PROXY.md](REVERSE_PROXY.md)
+
 ---
 
 <a id="reference-plugins"></a>
@@ -73,6 +76,7 @@ La sintaxis y comportamiento específicos de plugins viven junto al código fuen
 La documentación del wrapper Electron está en el repositorio externo:
 - [doc/GUI_REFERENCE.md](../../doc/GUI_REFERENCE.md)
 - [doc/TROUBLESHOOTING.md](../../doc/TROUBLESHOOTING.md)
+- [doc/REVERSE_PROXY.md](../../doc/REVERSE_PROXY.md)
 - [doc/dev/INSTALLING.md](../../doc/dev/INSTALLING.md)
 - [doc/dev/PLUGINS.md](../../doc/dev/PLUGINS.md)
 - [doc/dev/PEERING.md](../../doc/dev/PEERING.md)
