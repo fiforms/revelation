@@ -335,6 +335,16 @@ function presentationIndexPlugin() {
       if (fs.existsSync(revealDistDir)) {
         server.middlewares.use('/css/reveal.js/dist', serveStatic(revealDistDir, { fallthrough: true }));
       }
+      // /publish — URL Publish screen endpoint
+      // Serves lightweight HTML wrappers + .rev revision files for LAN browser / smart-TV
+      // "virtual screens". When a user adds a "URL Publish" screen in Settings, the Electron
+      // app writes {publishKey}.html and {publishKey}.rev here; remote browsers poll .rev
+      // and reload the iframe automatically when the presentation changes.
+      //
+      // Security: intentionally LAN-accessible (that is its purpose). Access to a specific
+      // file requires knowing the random publishKey embedded in the filename (~64-bit
+      // entropy), generated in configManager.js. serve-static does not serve directory
+      // listings, so the file list is not enumerable.
       let publishDir = null;
       if (userDataDir) {
         publishDir = path.join(userDataDir, 'publish');
@@ -679,21 +689,17 @@ function presentationIndexPlugin() {
 
       // Restrict access to presentation/media indexes to localhost only
       server.middlewares.use((req, res, next) => {
+            let parsedPathname = '';
+            try {
+              parsedPathname = new URL(req.url || '', 'http://localhost').pathname.toLowerCase();
+            } catch (_) { /* malformed URL — let it fall through */ }
 
-            const lowerUrl = req.url?.toLowerCase() || '';
-            if (lowerUrl.includes('index.json')) {
-            const rawIp = req.socket.remoteAddress;
-
-            // Normalize to raw IPv4 if in IPv6-mapped format
-            const clientIp = rawIp.startsWith('::ffff:') ? rawIp.replace('::ffff:', '') : rawIp;
-
-            // Normalize IPv6 localhost
-            const normalizedClientIp = clientIp === '::1' ? '127.0.0.1' : clientIp;
-
-            const isLocalhost = normalizedClientIp === '127.0.0.1';
+            if (parsedPathname.endsWith('/index.json')) {
+            const isLocalhost = isLoopbackAddress(req.socket?.remoteAddress);
 
             if (!isLocalhost) {
-              console.log(`Attempted access from ${normalizedClientIp} blocked.`);
+              const clientIp = normalizeRemoteAddress(req.socket?.remoteAddress);
+              console.log(`Attempted access from ${clientIp} blocked.`);
               res.writeHead(403, { 'Content-Type': 'text/plain' });
               res.end('403 Forbidden: index.json access denied (localhost only)');
               return;
@@ -755,6 +761,16 @@ function presentationIndexPlugin() {
 
         const adminDir = process.env.ADMIN_DIR_OVERRIDE;
         if (adminDir && fs.existsSync(adminDir)) {
+          // Admin UI is public-domain static HTML/JS (same as the GitHub repo), but
+          // restrict to localhost — no reason to expose it on the LAN.
+          server.middlewares.use('/admin', (req, res, next) => {
+            if (!isLoopbackAddress(req.socket?.remoteAddress)) {
+              res.writeHead(403, { 'Content-Type': 'text/plain' });
+              res.end('403 Forbidden: admin access is localhost only');
+              return;
+            }
+            next();
+          });
           server.middlewares.use(
             '/admin',
             serveStatic(adminDir, {
