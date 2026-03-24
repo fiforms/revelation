@@ -399,6 +399,62 @@ body.reveal-ready {
     }
   }
 
+  // Task list (- [ ] / - [x]) styling
+  // marked v17 emits plain <ul>/<li> with no class names — target by checkbox presence.
+  ul:has(li > input[type="checkbox"]) {
+    list-style: none !important;
+    padding-left: 1.5em;
+    margin-left: 0;
+
+    li:has(> input[type="checkbox"]) {
+      position: relative;
+      padding-left: 1.8em;
+      margin-bottom: 0.3em;
+      list-style: none !important;
+
+      // Suppress the ::marker bullet
+      &::marker {
+        content: '';
+      }
+
+      // Hide the native <input type="checkbox">
+      input[type="checkbox"] {
+        display: none;
+      }
+
+      // Draw a semi-transparent square
+      &::before {
+        content: '';
+        display: block;
+        position: absolute;
+        left: 0;
+        top: 0.15em;
+        width: 0.82em;
+        height: 0.82em;
+        border: 0.1em solid rgba(200, 200, 200, 0.5);
+        border-radius: 3px;
+        background: rgba(160, 160, 160, 0.22);
+        box-sizing: border-box;
+      }
+
+      // Checked: tint the box green and overlay a checkmark
+      &:has(input[type="checkbox"]:checked)::before {
+        background: rgba(80, 210, 110, 0.45);
+        border-color: rgba(120, 240, 140, 0.85);
+      }
+
+      &:has(input[type="checkbox"]:checked)::after {
+        content: '✓';
+        position: absolute;
+        left: 0.06em;
+        top: -0.06em;
+        font-size: 1.1em;
+        line-height: 1;
+        color: currentColor;
+        font-weight: 900;
+      }
+    }
+  }
 }
 
 .hide-when-notes {
