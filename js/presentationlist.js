@@ -297,6 +297,9 @@ fetch(`${url_prefix}/index.json`)
     presentationItems = Array.isArray(presentations) ? presentations : [];
     renderSortMenu();
     renderPresentationCards();
+    if (!selectedPresentationBase) {
+      renderNoSelectionPanel();
+    }
   })
   .catch((err) => {
     container.innerHTML = `
@@ -1194,6 +1197,26 @@ function renderSelectedPresentationPanel(pres, details = null) {
   }
 }
 
+function renderNoSelectionPanel() {
+  if (!window.electronAPI) return;
+  const host = getSelectedPanelHost();
+  if (!host) return;
+  host.innerHTML = `<div class="selected-presentation-actions" id="no-selection-panel" style="margin-top:1em;"></div>`;
+  const actionsContainer = host.querySelector('#no-selection-panel');
+  const buttons = [
+    { label: tr('New Presentation'), handler: () => window.electronAPI.openNewPresentation() },
+    { label: tr('Import Presentation'), handler: () => window.electronAPI.openImportPresentation() }
+  ];
+  for (const { label, handler } of buttons) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'selected-presentation-action-btn new-item-btn';
+    btn.textContent = label;
+    btn.addEventListener('click', handler);
+    actionsContainer.appendChild(btn);
+  }
+}
+
 function clearSelection() {
   selectedPresentationKey = '';
   selectedPresentationBase = null;
@@ -1202,10 +1225,7 @@ function clearSelection() {
     selectedCardElement.classList.remove('card-selected');
     selectedCardElement = null;
   }
-  const host = document.getElementById('selected-presentation-panel-host');
-  if (host) {
-    host.innerHTML = '';
-  }
+  renderNoSelectionPanel();
   if (isStandaloneMode) {
     setStandaloneSidebarOpen(false);
   }

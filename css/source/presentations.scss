@@ -180,6 +180,16 @@ body {
       background: #2a2a2a;
     }
 
+    .selected-presentation-action-btn.new-item-btn {
+      background: #1a3a2a;
+      border-color: #2e6644;
+      color: #b8f0cc;
+    }
+
+    .selected-presentation-action-btn.new-item-btn:hover {
+      background: #214d36;
+    }
+
     .standalone-selected-sidebar {
       position: fixed;
       top: 0;
