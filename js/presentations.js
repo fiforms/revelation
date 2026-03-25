@@ -98,6 +98,14 @@ function setupBuilderPreviewBridge(deck) {
   deck.on('overviewhidden', () => {
     postCurrentState('overview');
   });
+
+  // Forward Ctrl+Arrow keys to the parent builder for slide navigation.
+  document.addEventListener('keydown', (event) => {
+    if (!event.ctrlKey && !event.metaKey) return;
+    if (!event.key.startsWith('Arrow')) return;
+    postPreviewEvent('keydown', { key: event.key });
+    event.preventDefault();
+  }, true);
 }
 
 function setupInterPresentationLinkHandler() {
