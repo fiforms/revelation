@@ -522,10 +522,17 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
     if (/^\s*<cite>.*<\/cite>\s{2,}$/.test(transformedLine)) {
       transformedLine = transformedLine.replace(/\s+$/, '');
     }
-    if (transformedLine.endsWith('++')) {
+    if (/\s*\+\+(?::[a-zA-Z0-9:]+)?$/.test(transformedLine)) {
+      // ++  or  ++:preset:options... — always a fragment; plugin handles the rest
       applyOperations([
         rememberSuppressionsOp(transformedLine),
-        appendLineOp(transformedLine.replace(/\s*\+\+$/, '') + ' <!-- .element: class="fragment" -->')
+        appendLineOp(transformedLine.replace(/\s*\+\+(?::[a-zA-Z0-9:]+)?$/, '') + ' <!-- .element: class="fragment" -->')
+      ]);
+    } else if (/\s*==:[a-zA-Z0-9:]+$/.test(transformedLine)) {
+      // ==:preset:options... — auto-animate token; strip silently (plugin handles it upstream)
+      applyOperations([
+        rememberSuppressionsOp(transformedLine),
+        appendLineOp(transformedLine.replace(/\s*==:[a-zA-Z0-9:]+$/, ''))
       ]);
     } else {
       const transitionValue = extractSlideTransitionValue(transformedLine);
