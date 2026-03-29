@@ -87,6 +87,29 @@ if (content.includes(patchMarker2)) {
   console.warn('⚠️ remote.js: could not find msgInit/sendRemoteFullState block to patch. Manual review recommended.');
 }
 
+// Clear Vite's pre-bundled dep cache for remote.js so it re-bundles with the
+// patched source on next server start.  Vite caches pre-built deps under
+// node_modules/.vite/deps/ with a content hash; if the cache is stale it will
+// serve the unpatched version regardless of what's in node_modules.
+const viteDepsCacheDir = path.resolve(__dirname, '../node_modules/.vite/deps');
+const viteCacheFiles = [
+  'reveal__js-remote_plugin_remote__js.js',
+  'reveal__js-remote_plugin_remote__js.js.map',
+];
+viteCacheFiles.forEach(file => {
+  const filePath = path.join(viteDepsCacheDir, file);
+  if (fs.existsSync(filePath)) {
+    fs.rmSync(filePath);
+    console.log(`🗑️  Removed stale Vite dep cache: ${file}`);
+  }
+});
+// Also remove the Vite dep metadata so it fully re-scans on startup.
+const viteMetaPath = path.join(viteDepsCacheDir, '_metadata.json');
+if (fs.existsSync(viteMetaPath)) {
+  fs.rmSync(viteMetaPath);
+  console.log('🗑️  Removed Vite dep cache metadata (will re-scan on next start).');
+}
+
 // Patch server/index.js
 const serverPath = path.resolve(__dirname, '../node_modules/reveal.js-remote/server/index.js');
 
