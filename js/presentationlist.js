@@ -1,4 +1,5 @@
 import { pluginLoader } from './pluginloader.js';
+import { createInfoPanel } from './info-panel.js';
 import yaml from 'js-yaml';
 
 const urlParams = new URLSearchParams(window.location.search);
@@ -310,23 +311,11 @@ fetch(`${url_prefix}/index.json`)
     console.error('[Presentation Load Error]', err);
   });
 
-// Replace hostname indicator logic with dropdown setup
+// Info dropdown setup
 const optionsBtn = document.getElementById('options-button');
 const optionsDropdown = document.getElementById('options-dropdown');
-const lanIpRow = document.getElementById('lan-ip-row');
-const lanIpDisplay = document.getElementById('lan-ip-display');
-const pairingPinRow = document.getElementById('pairing-pin-row');
-const pairingPinDisplay = document.getElementById('pairing-pin-display');
-const selectedLanguageDisplay = document.getElementById('selected-language-display');
-const selectedVariantDisplay = document.getElementById('selected-variant-display');
-const PEER_STATUS_ENDPOINT = '/peer/status';
-const PEER_STATUS_POLL_MS = 4000;
 
 let appConfig = null;
-let peerStatusPollingTimer = null;
-let peerStatusLastEventId = 0;
-let peerStatusActiveFollowers = [];
-let activeMasters = [];
 if (window.electronAPI?.getAppConfig) {
   try {
     appConfig = await window.electronAPI.getAppConfig();
@@ -335,231 +324,20 @@ if (window.electronAPI?.getAppConfig) {
   }
 }
 
-function isMasterModeEnabled() {
-  return !!appConfig?.mdnsPublish;
-}
-
-function isFollowerModeEnabled() {
-  return !!appConfig?.mdnsBrowse;
-}
-
-
-if (lanIpRow && lanIpDisplay) {
-  if (appConfig?.mode === 'network' && appConfig?.hostLANURL) {
-    const port = appConfig?.viteServerPort;
-    const host = appConfig.hostLANURL;
-    lanIpRow.style.display = 'block';
-    lanIpDisplay.textContent = port ? `${host}:${port}` : host;
-  } else {
-    lanIpRow.style.display = 'none';
-  }
-}
-
-if (pairingPinRow && pairingPinDisplay) {
-  if (window.electronAPI && isMasterModeEnabled() && appConfig?.mdnsPairingPin) {
-    pairingPinRow.style.display = 'block';
-    pairingPinDisplay.textContent = appConfig.mdnsPairingPin;
-  } else {
-    pairingPinRow.style.display = 'none';
-  }
-}
-
-function buildFollowerLabel(entry) {
-  const hostname = String(entry?.hostname || '').trim();
-  const name = String(entry?.instanceName || '').trim();
-  const id = String(entry?.instanceId || '').trim();
-  const ip = String(entry?.remoteAddress || '').trim();
-  const preferred = hostname || name || (id && id !== 'unknown' ? id : 'unknown');
-  return ip ? `${preferred} @ ${ip}` : preferred;
-}
-
-function buildMasterLabel(entry) {
-  const name = String(entry?.name || '').trim();
-  const id = String(entry?.instanceId || '').trim();
-  const host = String(entry?.host || entry?.hostHint || '').trim();
-  const port = String(entry?.pairingPort || entry?.pairingPortHint || '').trim();
-  const preferred = name || (id && id !== 'unknown' ? id : 'unknown');
-  if (host && port) return `${preferred} @ ${host}:${port}`;
-  if (host) return `${preferred} @ ${host}`;
-  return preferred;
-}
-
-function ensurePeerStatusRows() {
-  if (!optionsDropdown || !isMasterModeEnabled()) return {};
-  let activeRow = document.getElementById('peer-followers-active-row');
-  if (!activeRow) {
-    activeRow = document.createElement('div');
-    activeRow.id = 'peer-followers-active-row';
-    activeRow.style.marginBottom = '.5rem';
-    activeRow.innerHTML = `<strong>${tr('Active Followers:')}</strong><div id="peer-followers-active-list" style="font-size:.9rem;color:#cfcfcf;margin-top:.2rem;"></div>`;
-    const hr = optionsDropdown.querySelector('hr');
-    optionsDropdown.insertBefore(activeRow, hr || null);
-  }
-  const activeHeading = activeRow.querySelector('strong');
-  if (activeHeading) {
-    activeHeading.textContent = tr('Active Followers:');
-  }
-
-  return {
-    activeListEl: document.getElementById('peer-followers-active-list')
-  };
-}
-
-function ensureMasterStatusRow() {
-  if (!optionsDropdown || !isFollowerModeEnabled()) return {};
-  let masterRow = document.getElementById('peer-masters-active-row');
-  if (!masterRow) {
-    masterRow = document.createElement('div');
-    masterRow.id = 'peer-masters-active-row';
-    masterRow.style.marginBottom = '.5rem';
-    masterRow.innerHTML = `<strong>${tr('Active Masters:')}</strong><div id="peer-masters-active-list" style="font-size:.9rem;color:#cfcfcf;margin-top:.2rem;"></div>`;
-    const hr = optionsDropdown.querySelector('hr');
-    optionsDropdown.insertBefore(masterRow, hr || null);
-  }
-  const masterHeading = masterRow.querySelector('strong');
-  if (masterHeading) {
-    masterHeading.textContent = tr('Active Masters:');
-  }
-  return {
-    masterRow,
-    masterListEl: document.getElementById('peer-masters-active-list')
-  };
-}
-
-function renderPeerStatusRows() {
-  if (!isMasterModeEnabled()) {
-    const activeRow = document.getElementById('peer-followers-active-row');
-    if (activeRow) activeRow.style.display = 'none';
-    return;
-  }
-  const { activeListEl } = ensurePeerStatusRows();
-  const activeRow = document.getElementById('peer-followers-active-row');
-  if (activeRow) activeRow.style.display = 'block';
-
-  if (activeListEl) {
-    if (!peerStatusActiveFollowers.length) {
-      activeListEl.textContent = tr('None');
-    } else {
-      activeListEl.innerHTML = peerStatusActiveFollowers
-        .slice(0, 8)
-        .map((entry) => `<div>${buildFollowerLabel(entry)}</div>`)
-        .join('');
-    }
-  }
-}
-
-function renderMasterStatusRow() {
-  if (!isFollowerModeEnabled()) {
-    const masterRow = document.getElementById('peer-masters-active-row');
-    if (masterRow) masterRow.style.display = 'none';
-    return;
-  }
-
-  const { masterRow, masterListEl } = ensureMasterStatusRow();
-  if (masterRow) masterRow.style.display = 'block';
-  if (!masterListEl) return;
-
-  if (!activeMasters.length) {
-    masterListEl.textContent = tr('None');
-    return;
-  }
-
-  masterListEl.innerHTML = activeMasters
-    .slice(0, 8)
-    .map((entry) => `<div>${buildMasterLabel(entry)}</div>`)
-    .join('');
-}
-
-function processPeerStatusEvents(events = []) {
-  events.forEach((event) => {
-    if (!event || typeof event !== 'object') return;
-    if (event.type === 'follower-connected') {
-      const label = buildFollowerLabel(event);
-      showToast(`Follower connected: ${label}`);
-      return;
-    }
-    if (event.type === 'pin-lockout') {
-      const ip = String(event.remoteAddress || 'unknown');
-      const retryAfterSec = Number.parseInt(event.retryAfterSec, 10);
-      const retryText = Number.isFinite(retryAfterSec) && retryAfterSec > 0
-        ? ` (${retryAfterSec}s)`
-        : '';
-      showToast(`Peer PIN lockout from ${ip}${retryText}`);
-    }
-  });
-}
-
-async function pollPeerStatus() {
-  if (!window.electronAPI || !isMasterModeEnabled()) return;
-  const query = peerStatusLastEventId > 0 ? `?since=${peerStatusLastEventId}` : '';
-  const response = await fetch(`${PEER_STATUS_ENDPOINT}${query}`);
-  if (response.status === 403 || response.status === 404) {
-    peerStatusActiveFollowers = [];
-    renderPeerStatusRows();
-    return;
-  }
-  if (!response.ok) {
-    throw new Error(`Peer status request failed (${response.status})`);
-  }
-  const data = await response.json();
-  peerStatusActiveFollowers = Array.isArray(data.activeFollowers) ? data.activeFollowers : [];
-  processPeerStatusEvents(Array.isArray(data.events) ? data.events : []);
-  if (Number.isFinite(data.lastEventId)) {
-    peerStatusLastEventId = data.lastEventId;
-  }
-  renderPeerStatusRows();
-}
-
-async function pollMasterStatus() {
-  if (!window.electronAPI || !isFollowerModeEnabled()) return;
-  const statuses = await window.electronAPI.getPeerMasterStatuses();
-  const list = Array.isArray(statuses) ? statuses : [];
-  activeMasters = list.filter((entry) => entry?.connected === true);
-  renderMasterStatusRow();
-}
-
-function startPeerStatusPolling() {
-  if (!window.electronAPI || peerStatusPollingTimer) return;
-  pollPeerStatus().catch((err) => {
-    console.warn('Peer status poll failed:', err.message || err);
-  });
-  pollMasterStatus().catch((err) => {
-    console.warn('Master status poll failed:', err.message || err);
-  });
-  peerStatusPollingTimer = window.setInterval(() => {
-    pollPeerStatus().catch((err) => {
-      console.warn('Peer status poll failed:', err.message || err);
-    });
-    pollMasterStatus().catch((err) => {
-      console.warn('Master status poll failed:', err.message || err);
-    });
-  }, PEER_STATUS_POLL_MS);
-}
-
-function formatVariantName(variant) {
-  if (!variant) return tr('Normal');
-  if (variant === 'lowerthirds') return 'Lower Thirds';
-  if (variant === 'confidencemonitor') return 'Confidence Monitor';
-  if (variant === 'notes') return 'Notes';
-  return variant;
-}
-
-const SCREEN_TYPE_VARIANTS = [
-  { value: '', label: 'Normal' },
-  { value: 'lowerthirds', label: 'Lower Thirds' },
-  { value: 'confidencemonitor', label: 'Confidence Monitor' },
-  { value: 'notes', label: 'Notes' }
-];
-
-if (selectedLanguageDisplay) {
-  const lang = (appConfig?.preferredPresentationLanguage || appConfig?.language || 'en').toLowerCase();
-  selectedLanguageDisplay.textContent = lang;
-}
-
-if (selectedVariantDisplay) {
-  const variant = (appConfig?.screenTypeVariant || '').toLowerCase();
-  selectedVariantDisplay.textContent = formatVariantName(variant);
-}
+const infoPanel = optionsDropdown
+  ? createInfoPanel(optionsDropdown, () => appConfig, {
+      onPeerEvent(event) {
+        if (event.type === 'follower-connected') {
+          showToast(`Follower connected: ${event.hostname || event.instanceName || event.remoteAddress || 'unknown'}`);
+        } else if (event.type === 'pin-lockout') {
+          const ip = String(event.remoteAddress || 'unknown');
+          const retryAfterSec = Number.parseInt(event.retryAfterSec, 10);
+          const retryText = Number.isFinite(retryAfterSec) && retryAfterSec > 0 ? ` (${retryAfterSec}s)` : '';
+          showToast(`Peer PIN lockout from ${ip}${retryText}`);
+        }
+      }
+    })
+  : null;
 
 if (optionsBtn) {
   const variant = (appConfig?.screenTypeVariant || '').trim().toLowerCase();
@@ -575,21 +353,10 @@ if (optionsBtn) {
 if (optionsBtn && optionsDropdown) {
   optionsBtn.addEventListener('click', (e) => {
     e.stopPropagation();
-    if (sortDropdown) {
-      sortDropdown.style.display = 'none';
-    }
+    if (sortDropdown) sortDropdown.style.display = 'none';
     const isVisible = optionsDropdown.style.display === 'block';
     optionsDropdown.style.display = isVisible ? 'none' : 'block';
-    if (!isVisible && isMasterModeEnabled()) {
-      pollPeerStatus().catch((err) => {
-        console.warn('Peer status poll failed:', err.message || err);
-      });
-    }
-    if (!isVisible && isFollowerModeEnabled()) {
-      pollMasterStatus().catch((err) => {
-        console.warn('Master status poll failed:', err.message || err);
-      });
-    }
+    if (!isVisible) infoPanel?.triggerPoll();
   });
 
   document.addEventListener('click', (e) => {
@@ -599,7 +366,7 @@ if (optionsBtn && optionsDropdown) {
   });
 }
 
-startPeerStatusPolling();
+infoPanel?.startPolling();
 
 if (sortBtn && sortDropdown) {
   sortBtn.addEventListener('click', (e) => {
