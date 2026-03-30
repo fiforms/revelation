@@ -282,7 +282,10 @@ export async function loadAndPreprocessMarkdown(deck, selectedFile = null) {
       config.margin = 0.002;
     }
   }
-  if (variant === 'notes') config.showNotes = true;
+  if (variant === 'notes') {
+    config.showNotes = true;
+    config.controls = true;
+  }
   if (forceControls) {
     config.controls = true;
     config.progress = true;
