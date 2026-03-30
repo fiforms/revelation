@@ -106,6 +106,43 @@ See [QUICK_REFERENCE.md](QUICK_REFERENCE.md) for media alias syntax.
 
 ---
 
+## Default Front Matter
+
+Use this as the standard YAML front matter for every new presentation:
+
+```yaml
+---
+title: {Ask the user, or derive from their instructions}
+description: {Ask the user, or derive from their instructions}
+author: {See CUSTOM_INSTRUCTIONS.md; if not set there, ask the user and save it to CUSTOM_INSTRUCTIONS.md}
+theme: revelation_dark.css
+stylesheet: style.css
+thumbnail: thumbnail.jpg
+created: '{today's date as YYYY-MM-DD}'
+newSlideOnHeading: false
+config:
+  transition: fade
+  width: 960
+  height: 540
+  maxScale: 4
+  controls: false
+  progress: false
+  slideNumber: true
+  showSlideNumber: speaker
+  hashOneBasedIndex: true
+  hash: true
+version: 1.0.5-git
+---
+```
+
+**Author workflow:** Before creating any presentation, check `CUSTOM_INSTRUCTIONS.md` for a saved `author` value. If none is found, ask the user for their name/organization and save it into `CUSTOM_INSTRUCTIONS.md` (e.g. `author: Jane Smith`) so it does not need to be asked again.
+
+Any of the `config` values above can be overridden per-presentation when the user requests different behaviour.
+
+On a first run, explain width/height to the user: It determines relative font size and the aspect ratio of slide content. 960x540 is fine for a Full HD screen as everything will scale larger. 540x960 would be good for a mobile / vertical layout. Save user preference in CUSTOM_INSTRUCTIONS.md
+
+---
+
 ## Format Quick Reference
 
 See [QUICK_REFERENCE.md](QUICK_REFERENCE.md) for the full format. Key syntax at a glance:
@@ -113,8 +150,25 @@ See [QUICK_REFERENCE.md](QUICK_REFERENCE.md) for the full format. Key syntax at 
 ```markdown
 ---
 title: My Talk
+description: A short summary
+author: Jane Smith
 theme: revelation_dark.css
+stylesheet: style.css
+thumbnail: thumbnail.jpg
+created: '2026-03-30'
 newSlideOnHeading: false
+config:
+  transition: fade
+  width: 960
+  height: 540
+  maxScale: 4
+  controls: false
+  progress: false
+  slideNumber: true
+  showSlideNumber: speaker
+  hashOneBasedIndex: true
+  hash: true
+version: 1.0.5-git
 ---
 
 {{darkbg}}
