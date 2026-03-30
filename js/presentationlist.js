@@ -14,6 +14,13 @@ let selectedSidebarMdFile = '';
 const detailsCache = new Map();
 const isStandaloneMode = !window.electronAPI;
 
+const SCREEN_TYPE_VARIANTS = [
+  { value: '', label: 'Normal' },
+  { value: 'lowerthirds', label: 'Lower Thirds' },
+  { value: 'confidencemonitor', label: 'Confidence Monitor' },
+  { value: 'notes', label: 'Notes' }
+];
+
 if(!url_key) {
     container.innerHTML = tr('No key specified, unable to load presentation list');
 }
