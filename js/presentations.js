@@ -205,7 +205,7 @@ pluginLoader('presentations',`/plugins_${key}`).then(async function() {
 
   loadAndPreprocessMarkdown(deck);
   const NOTES_SCROLL_DELAY_MS = 3000;
-  const NOTES_SCROLL_SPEED_VH_PERCENT_PER_SEC_DEFAULT = 2;
+  const NOTES_SCROLL_SPEED_VH_PERCENT_PER_SEC_DEFAULT = 3.5;
   const NOTES_SCROLL_READY_RETRIES = 16;
   const NOTES_SCROLL_READY_RETRY_MS = 250;
   const NOTES_SCROLL_USER_RESUME_IDLE_MS = 1400;
