@@ -509,15 +509,165 @@ pluginLoader('presentations',`/plugins_${key}`).then(async function() {
     notesScrollContextKey = '';
     cancelNotesAutoScroll();
     updateNotesPaneVisibility();
+    updateNextSlidePreview?.();
     deck.layout?.();
     if (modeChanged) {
       // Let CSS transitions settle when crossing wide/narrow layout mode.
       window.setTimeout(() => {
         updateNotesPaneVisibility();
+        updateNextSlidePreview?.();
         deck.layout?.();
       }, 320);
     }
   }
+
+  // --- Next Slide Preview (notes variant) ---
+
+  function setupNextSlidePreview() {
+    if (document.body.dataset.variant !== 'notes') return null;
+
+    const previewEl = document.createElement('div');
+    previewEl.id = 'notes-next-preview';
+    previewEl.className = 'notes-next-preview';
+
+    const labelEl = document.createElement('div');
+    labelEl.className = 'notes-next-preview-label';
+    labelEl.textContent = 'Next';
+
+    const slideWrapEl = document.createElement('div');
+    slideWrapEl.className = 'notes-next-preview-slide-wrap';
+
+    previewEl.appendChild(labelEl);
+    previewEl.appendChild(slideWrapEl);
+    document.body.appendChild(previewEl);
+
+    function updateNextSlidePreview() {
+      slideWrapEl.innerHTML = '';
+
+      if (deck.isOverview?.()) {
+        document.body.classList.remove('has-next-preview');
+        return;
+      }
+
+      const indices = deck.getIndices?.();
+      if (!indices) {
+        document.body.classList.remove('has-next-preview');
+        return;
+      }
+
+      const { h, v } = indices;
+      const nextV = (v || 0) + 1;
+      let nextH = h, nextVActual = nextV;
+      let nextSlide = deck.getSlide(h, nextV);
+      if (!nextSlide) {
+        nextH = h + 1;
+        nextVActual = 0;
+        nextSlide = deck.getSlide(nextH, 0);
+      }
+
+      if (!nextSlide) {
+        document.body.classList.remove('has-next-preview');
+        return;
+      }
+
+      document.body.classList.add('has-next-preview');
+
+      const slideW = deck.getConfig?.().width || 960;
+      const slideH = deck.getConfig?.().height || 700;
+      const wrapW = slideWrapEl.offsetWidth;
+      const wrapH = slideWrapEl.offsetHeight;
+      const scale = (slideW > 0 && slideH > 0 && wrapW > 0 && wrapH > 0)
+        ? Math.min(wrapW / slideW, wrapH / slideH) : 1;
+
+      // Wrap in .reveal > .slides so the theme CSS cascade applies
+      const fakeReveal = document.createElement('div');
+      fakeReveal.className = 'reveal';
+      fakeReveal.style.cssText = 'position:absolute;inset:0;pointer-events:none;overflow:hidden;';
+
+      // Background: Reveal keeps backgrounds in a separate .backgrounds container.
+      // Clone the matching background element and place it behind the slide.
+      const bgEl = deck.getSlideBackground?.(nextH, nextVActual);
+      if (bgEl) {
+        const bgClone = bgEl.cloneNode(true);
+        // Disable any background videos
+        bgClone.querySelectorAll('video').forEach(el => {
+          el.removeAttribute('src');
+          el.querySelectorAll('source').forEach(s => s.remove());
+        });
+        const fakeBgs = document.createElement('div');
+        fakeBgs.className = 'backgrounds';
+        Object.assign(fakeBgs.style, {
+          position: 'absolute',
+          width: `${slideW}px`,
+          height: `${slideH}px`,
+          top: '50%',
+          left: '50%',
+          transform: `translate(-50%, -50%) scale(${scale})`,
+          transformOrigin: 'center center',
+        });
+        // The background element itself needs to be sized to fill its container
+        bgClone.style.cssText += ';width:100%;height:100%;display:block;';
+        fakeBgs.appendChild(bgClone);
+        fakeReveal.appendChild(fakeBgs);
+      }
+
+      const fakeSlides = document.createElement('div');
+      fakeSlides.className = 'slides';
+      fakeSlides.style.cssText = 'position:absolute;inset:0;';
+
+      const clone = nextSlide.cloneNode(true);
+
+      // Remove present/past/future state so Reveal's CSS doesn't hide content
+      clone.classList.remove('future', 'past');
+      clone.classList.add('present');
+      // Ensure nested stacks are also treated as present
+      clone.querySelectorAll('.future, .past').forEach(el => {
+        el.classList.remove('future', 'past');
+        el.classList.add('present');
+      });
+
+      // Show all fragments
+      clone.querySelectorAll('.fragment').forEach(el => el.classList.add('visible'));
+
+      // Disable media
+      clone.querySelectorAll('video, audio').forEach(el => {
+        el.removeAttribute('src');
+        el.removeAttribute('autoplay');
+        el.removeAttribute('data-autoplay');
+        el.querySelectorAll('source').forEach(s => s.remove());
+      });
+      clone.querySelectorAll('iframe').forEach(el => el.removeAttribute('src'));
+
+      // Strip speaker notes
+      clone.querySelectorAll('aside.notes').forEach(el => el.remove());
+
+      Object.assign(clone.style, {
+        position: 'absolute',
+        width: `${slideW}px`,
+        height: `${slideH}px`,
+        top: '50%',
+        left: '50%',
+        transform: `translate(-50%, -50%) scale(${scale})`,
+        transformOrigin: 'center center',
+        display: 'block',
+        pointerEvents: 'none',
+      });
+
+      fakeSlides.appendChild(clone);
+      fakeReveal.appendChild(fakeSlides);
+      slideWrapEl.appendChild(fakeReveal);
+    }
+
+    deck.on('slidechanged', updateNextSlidePreview);
+    deck.on('fragmentshown', updateNextSlidePreview);
+    deck.on('fragmenthidden', updateNextSlidePreview);
+    deck.on('overviewshown', updateNextSlidePreview);
+    deck.on('overviewhidden', updateNextSlidePreview);
+
+    return updateNextSlidePreview;
+  }
+
+  const updateNextSlidePreview = setupNextSlidePreview();
 
   revealTweaks(deck);
   contextMenu(deck);
@@ -531,6 +681,7 @@ pluginLoader('presentations',`/plugins_${key}`).then(async function() {
   deck.on('ready', () => {
     notesViewportMode = getNotesViewportMode();
     updateNotesPaneVisibility();
+    updateNextSlidePreview?.();
 
     if (typeof window.translatePage === 'function') {
       const userLanguage = String(navigator.language || 'en').slice(0, 2);

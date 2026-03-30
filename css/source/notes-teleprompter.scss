@@ -8,6 +8,10 @@
   --notes-pane-ratio-to-main: 150%;
   --notes-mobile-pane-height: 45vh;
   --notes-mobile-pane-height: 45dvh;
+  --notes-preview-height: 30vh;
+  --notes-preview-height: 30dvh;
+  --notes-preview-narrow-height: 25vh;
+  --notes-preview-narrow-height: 25dvh;
 }
 
 .reveal.show-notes {
@@ -20,7 +24,8 @@
   top: 0;
   left: 100%;
   width: var(--notes-pane-ratio-to-main) !important;
-  height: 100%;
+  height: 100vh;
+  height: 100dvh;
   max-height: none;
   transform: none;
   border: 1px solid rgba(255, 255, 255, 0.16);
@@ -59,6 +64,63 @@ body.notes-pane-hidden .reveal.show-notes .speaker-notes {
   pointer-events: none;
 }
 
+/* --- Next Slide Preview --- */
+
+.notes-next-preview {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  z-index: 10;
+  flex-direction: column;
+  background: #0a0a0a;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  border-right: 1px solid rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+}
+
+.notes-next-preview-label {
+  flex-shrink: 0;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.6rem;
+  font-family: sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.notes-next-preview-slide-wrap {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Wide mode, notes pane open: preview spans slide column width */
+body.has-next-preview:not(.notes-pane-hidden) .notes-next-preview {
+  display: flex;
+  width: var(--notes-main-width);
+  height: var(--notes-preview-height);
+}
+
+/* Wide mode, notes pane open: shrink slide area by preview height */
+body.has-next-preview:not(.notes-pane-hidden) .reveal.show-notes {
+  max-height: calc(100vh - var(--notes-preview-height)) !important;
+  max-height: calc(100dvh - var(--notes-preview-height)) !important;
+}
+
+/* Wide mode, notes pane hidden: compact 30×30 in lower-left */
+body.has-next-preview.notes-pane-hidden .notes-next-preview {
+  display: flex;
+  width: 30vw;
+  height: var(--notes-preview-height);
+}
+
+/* Wide mode, notes pane hidden: shrink slide to keep preview clear */
+body.has-next-preview.notes-pane-hidden .reveal.show-notes {
+  max-height: calc(100vh - var(--notes-preview-height)) !important;
+  max-height: calc(100dvh - var(--notes-preview-height)) !important;
+}
+
 @media screen and (max-width: 1024px) {
   .reveal.show-notes {
     max-width: none !important;
@@ -86,5 +148,25 @@ body.notes-pane-hidden .reveal.show-notes .speaker-notes {
 
   body.notes-pane-hidden .reveal.show-notes .speaker-notes {
     transform: translateY(-100%);
+  }
+
+  /* Narrow: preview always full-width at bottom, 25vh tall */
+  body.has-next-preview .notes-next-preview {
+    display: flex;
+    width: 100% !important;
+    height: var(--notes-preview-narrow-height) !important;
+    border-right: 0;
+  }
+
+  /* Narrow, notes open: slide sandwiched between notes pane and preview */
+  body.has-next-preview .reveal.show-notes {
+    max-height: calc(100vh - var(--notes-mobile-pane-height) - var(--notes-preview-narrow-height)) !important;
+    max-height: calc(100dvh - var(--notes-mobile-pane-height) - var(--notes-preview-narrow-height)) !important;
+  }
+
+  /* Narrow, notes hidden: slide just avoids the preview */
+  body.has-next-preview.notes-pane-hidden .reveal.show-notes {
+    max-height: calc(100vh - var(--notes-preview-narrow-height)) !important;
+    max-height: calc(100dvh - var(--notes-preview-narrow-height)) !important;
   }
 }
