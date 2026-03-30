@@ -478,7 +478,7 @@ pluginLoader('presentations',`/plugins_${key}`).then(async function() {
       return;
     }
     const hasNotes = currentSlideHasNotes();
-    const shouldHide = !hasNotes;
+    const shouldHide = !hasNotes || !!deck.isOverview?.();
     const changed = document.body.classList.contains('notes-pane-hidden') !== shouldHide;
     document.body.classList.toggle('notes-pane-hidden', shouldHide);
     if (shouldHide) {
@@ -557,6 +557,8 @@ pluginLoader('presentations',`/plugins_${key}`).then(async function() {
   deck.on('slidechanged', updateNotesPaneVisibility);
   deck.on('fragmentshown', updateNotesPaneVisibility);
   deck.on('fragmenthidden', updateNotesPaneVisibility);
+  deck.on('overviewshown', updateNotesPaneVisibility);
+  deck.on('overviewhidden', updateNotesPaneVisibility);
 
   window.addEventListener('resize', () => {
     if (notesResizeDebounceTimer) {
