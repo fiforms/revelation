@@ -579,57 +579,70 @@ pluginLoader('presentations',`/plugins_${key}`).then(async function() {
       const scale = (slideW > 0 && slideH > 0 && wrapW > 0 && wrapH > 0)
         ? Math.min(wrapW / slideW, wrapH / slideH) : 1;
 
-      // Wrap in .reveal > .slides so the theme CSS cascade applies
-      const fakeReveal = document.createElement('div');
-      fakeReveal.className = 'reveal';
-      fakeReveal.style.cssText = 'position:absolute;inset:0;pointer-events:none;overflow:hidden;';
+      // Pixel offsets to center the scaled slide in the wrap — avoids
+      // percentage-based translate which breaks under Reveal's perspective transforms.
+      const scaledW = slideW * scale;
+      const scaledH = slideH * scale;
+      const offsetX = Math.round((wrapW - scaledW) / 2);
+      const offsetY = Math.round((wrapH - scaledH) / 2);
 
-      // Background: Reveal keeps backgrounds in a separate .backgrounds container.
-      // Clone the matching background element and place it behind the slide.
+      // Positioned container — 'overview' makes appearance plugin show all
+      // animated elements at full opacity regardless of data-appearance-can-start.
+      const fakeReveal = document.createElement('div');
+      fakeReveal.className = 'reveal overview';
+      fakeReveal.style.cssText = 'position:absolute;inset:0;pointer-events:none;overflow:hidden;background:transparent;';
+
+      // Shared placement CSS for both background and slide: top-left at offset,
+      // scale from top-left corner so position math stays simple.
+      const placementCss = [
+        'position:absolute',
+        `width:${slideW}px`,
+        `height:${slideH}px`,
+        `top:${offsetY}px`,
+        `left:${offsetX}px`,
+        `transform:scale(${scale})`,
+        'transform-origin:top left',
+      ].join(';');
+
+      // Background: Reveal keeps these in a separate .backgrounds container.
       const bgEl = deck.getSlideBackground?.(nextH, nextVActual);
       if (bgEl) {
         const bgClone = bgEl.cloneNode(true);
-        // Disable any background videos
+        bgClone.classList.remove('future', 'past');
+        bgClone.classList.add('present');
+        bgClone.style.cssText = 'display:block;width:100%;height:100%;opacity:1;visibility:visible;transform:none;position:absolute;top:0;left:0;';
         bgClone.querySelectorAll('video').forEach(el => {
-          el.removeAttribute('src');
-          el.querySelectorAll('source').forEach(s => s.remove());
+          el.removeAttribute('autoplay');
+          el.removeAttribute('data-autoplay');
+          el.pause?.();
         });
         const fakeBgs = document.createElement('div');
         fakeBgs.className = 'backgrounds';
-        Object.assign(fakeBgs.style, {
-          position: 'absolute',
-          width: `${slideW}px`,
-          height: `${slideH}px`,
-          top: '50%',
-          left: '50%',
-          transform: `translate(-50%, -50%) scale(${scale})`,
-          transformOrigin: 'center center',
-        });
-        // The background element itself needs to be sized to fill its container
-        bgClone.style.cssText += ';width:100%;height:100%;display:block;';
+        fakeBgs.style.cssText = placementCss;
         fakeBgs.appendChild(bgClone);
         fakeReveal.appendChild(fakeBgs);
       }
 
+      // Slides wrapper — disable perspective to prevent coordinate-space distortion.
       const fakeSlides = document.createElement('div');
       fakeSlides.className = 'slides';
-      fakeSlides.style.cssText = 'position:absolute;inset:0;';
+      fakeSlides.style.cssText = 'position:absolute;inset:0;perspective:none;';
 
       const clone = nextSlide.cloneNode(true);
 
-      // Remove present/past/future state so Reveal's CSS doesn't hide content
+      // Strip present/past/future so Reveal's visibility rules don't hide content.
       clone.classList.remove('future', 'past');
       clone.classList.add('present');
-      // Ensure nested stacks are also treated as present
       clone.querySelectorAll('.future, .past').forEach(el => {
         el.classList.remove('future', 'past');
         el.classList.add('present');
       });
 
-      // Show all fragments
+      // Show all fragments and appearance-animated elements in final state.
       clone.querySelectorAll('.fragment').forEach(el => el.classList.add('visible'));
+      clone.querySelectorAll('.animate__animated').forEach(el => el.classList.add('animationended'));
 
-      // Disable media
+      // Disable media.
       clone.querySelectorAll('video, audio').forEach(el => {
         el.removeAttribute('src');
         el.removeAttribute('autoplay');
@@ -637,21 +650,10 @@ pluginLoader('presentations',`/plugins_${key}`).then(async function() {
         el.querySelectorAll('source').forEach(s => s.remove());
       });
       clone.querySelectorAll('iframe').forEach(el => el.removeAttribute('src'));
-
-      // Strip speaker notes
       clone.querySelectorAll('aside.notes').forEach(el => el.remove());
 
-      Object.assign(clone.style, {
-        position: 'absolute',
-        width: `${slideW}px`,
-        height: `${slideH}px`,
-        top: '50%',
-        left: '50%',
-        transform: `translate(-50%, -50%) scale(${scale})`,
-        transformOrigin: 'center center',
-        display: 'block',
-        pointerEvents: 'none',
-      });
+      // Replace all inline styles (Reveal sets transform offsets, visibility:hidden, etc.)
+      clone.style.cssText = placementCss + ';display:block;visibility:visible;opacity:1;pointer-events:none;';
 
       fakeSlides.appendChild(clone);
       fakeReveal.appendChild(fakeSlides);
@@ -710,6 +712,21 @@ pluginLoader('presentations',`/plugins_${key}`).then(async function() {
   deck.on('fragmenthidden', updateNotesPaneVisibility);
   deck.on('overviewshown', updateNotesPaneVisibility);
   deck.on('overviewhidden', updateNotesPaneVisibility);
+
+  // Refocus the viewport 2 seconds after clicking in the notes pane so
+  // keyboard controls don't get stuck on the scrollable notes element.
+  if (document.body.dataset.variant === 'notes') {
+    let notesFocusReturnTimer = null;
+    document.addEventListener('mousedown', (e) => {
+      if (!e.target.closest('.speaker-notes')) return;
+      if (notesFocusReturnTimer) window.clearTimeout(notesFocusReturnTimer);
+      notesFocusReturnTimer = window.setTimeout(() => {
+        notesFocusReturnTimer = null;
+        const viewport = document.querySelector('.reveal-viewport') || document.querySelector('.reveal') || document.body;
+        viewport.focus({ preventScroll: true });
+      }, 2000);
+    });
+  }
 
   window.addEventListener('resize', () => {
     if (notesResizeDebounceTimer) {
