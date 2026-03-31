@@ -460,31 +460,85 @@ if (openBtn) {
   });
 }
 
-const openScreensBtn = document.getElementById('open-screens');
-if (openScreensBtn) {
-  const screenMode = String(
-    appConfig?.presentationScreenMode
-    || (typeof appConfig?.virtualPeersAlwaysOpen === 'boolean'
-      ? (appConfig.virtualPeersAlwaysOpen ? 'group-control' : 'on-demand')
-      : 'group-control')
-  ).trim().toLowerCase();
-  if (!window.electronAPI?.openScreens || screenMode !== 'group-control') {
-    openScreensBtn.style.display = 'none';
-  }
-  openScreensBtn.addEventListener('click', async (e) => {
-    e.stopPropagation();
-    if (!window.electronAPI?.openScreens) return;
-    try {
-      const result = await window.electronAPI.openScreens();
-      if (result?.success) {
-        showToast(tr('Screens opened.'));
-      } else {
-        showToast(result?.error || tr('Unable to open screens.'));
+function showPeerScreensFlyout(anchorBtn) {
+  const existing = document.getElementById('peer-screens-flyout');
+  if (existing) { existing.remove(); return; }
+
+  const rect = anchorBtn.getBoundingClientRect();
+  const flyout = document.createElement('div');
+  flyout.id = 'peer-screens-flyout';
+  flyout.style.cssText = `
+    position: fixed;
+    top: ${rect.bottom + 4}px;
+    left: ${rect.left}px;
+    min-width: ${rect.width}px;
+    background: #1a1a1a;
+    border: 1px solid #444;
+    border-radius: 6px;
+    padding: 0.3rem;
+    z-index: 9999;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+  `;
+
+  const items = [
+    {
+      label: tr('Open Screens'),
+      action: async () => {
+        if (!window.electronAPI?.openScreens) return;
+        try {
+          const result = await window.electronAPI.openScreens();
+          if (result?.success) {
+            showToast(tr('Screens opened.'));
+          } else {
+            showToast(result?.error || tr('Unable to open screens.'));
+          }
+        } catch (err) {
+          showToast(`${tr('Unable to open screens.')}: ${err.message}`);
+        }
       }
-    } catch (err) {
-      showToast(`${tr('Unable to open screens.')}: ${err.message}`);
+    },
+    /* { label: tr('Blank Remote Screens'), action: () => {} }, */
+    {
+      label: tr('End Remote Presentation'),
+      action: async () => {
+        if (!window.electronAPI?.sendPeerCommand) return;
+        try {
+          await window.electronAPI.sendPeerCommand({ type: 'close-presentation', payload: {} });
+        } catch (err) {
+          showToast(`${tr('Unable to end remote presentation.')}: ${err.message}`);
+        }
+      }
+    },
+    {
+      label: tr('Close Screens'),
+      action: async () => {
+        if (!window.electronAPI?.closeScreens) return;
+        try {
+          await window.electronAPI.closeScreens();
+        } catch (err) {
+          showToast(`${tr('Unable to close screens.')}: ${err.message}`);
+        }
+      }
     }
-  });
+  ];
+
+  for (const item of items) {
+    const el = document.createElement('button');
+    el.type = 'button';
+    el.className = 'selected-presentation-action-btn';
+    el.textContent = item.label;
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      flyout.remove();
+      item.action();
+    });
+    flyout.appendChild(el);
+  }
+
+  document.body.appendChild(flyout);
+  setTimeout(() => {
+    document.addEventListener('click', () => flyout.remove(), { once: true });
+  }, 0);
 }
 
 
@@ -988,6 +1042,25 @@ function renderNoSelectionPanel() {
     btn.textContent = label;
     btn.addEventListener('click', handler);
     actionsContainer.appendChild(btn);
+  }
+
+  const screenMode = String(
+    appConfig?.presentationScreenMode
+    || (typeof appConfig?.virtualPeersAlwaysOpen === 'boolean'
+      ? (appConfig.virtualPeersAlwaysOpen ? 'group-control' : 'on-demand')
+      : 'group-control')
+  ).trim().toLowerCase();
+  if (window.electronAPI?.openScreens && screenMode === 'group-control') {
+    const peerBtn = document.createElement('button');
+    peerBtn.type = 'button';
+    peerBtn.className = 'selected-presentation-action-btn new-item-btn';
+    peerBtn.textContent = tr('Peer Screens') + '\u2026 \u25b8';
+    peerBtn.style.marginTop = '0.5rem';
+    peerBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      showPeerScreensFlyout(peerBtn);
+    });
+    actionsContainer.appendChild(peerBtn);
   }
 }
 
