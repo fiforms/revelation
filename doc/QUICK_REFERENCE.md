@@ -144,6 +144,111 @@ Append `++` to any list item or line to make it a click-reveal fragment:
 - Second point ++
 ```
 
+### Fragment animation
+
+Append `++:animationtype` or `==:animationtype` for appearance-enabled fragment animation special effects. `==:` appear automatically, `++:` appear on click.
+
+```markdown
+![](important_image.jpg) ==:flipX
+
+---
+
+## Heading appears automatically with letter rotating effect ==:rotate:let:40
+
+- First point appear automatically ==:rise
+- Second point appears on click ++:rise
+```
+
+`animationtype` can be one of:
+
+**Fade (rise/drop)**
+- `rise` — fade in from below
+- `riseBig` — fade in from below (large travel)
+- `riseLeft` — fade in from bottom-left
+- `riseRight` — fade in from bottom-right
+- `drop` — fade in from above
+- `dropBig` — fade in from above (large travel)
+- `dropLeft` — fade in from top-left
+- `dropRight` — fade in from top-right
+- `fly` — fade in from left
+- `flyBig` — fade in from left (large travel)
+- `flyRight` — fade in from right
+- `flyRightBig` — fade in from right (large travel)
+- `fade` — simple fade in
+
+**Bounce**
+- `bounce` — bounce in
+- `bounceDown` — bounce in from above
+- `bounceUp` — bounce in from below
+- `bounceLeft` — bounce in from left
+- `bounceRight` — bounce in from right
+
+**Slide**
+- `slide` — slide in from left
+- `slideRight` — slide in from right
+- `slideDown` — slide in from above
+- `slideUp` — slide in from below
+
+**Zoom**
+- `zoom` — zoom in
+- `zoomDown` — zoom in from above
+- `zoomUp` — zoom in from below
+- `zoomLeft` — zoom in from left
+- `zoomRight` — zoom in from right
+
+**Back**
+- `backDown` — back in from above
+- `backUp` — back in from below
+- `backLeft` — back in from left
+- `backRight` — back in from right
+
+**Rotate**
+- `rotate` — rotate in
+- `rotateDownLeft` — rotate in from top-left
+- `rotateDownRight` — rotate in from top-right
+- `rotateUpLeft` — rotate in from bottom-left
+- `rotateUpRight` — rotate in from bottom-right
+
+**Flip / Roll**
+- `flipX` — flip in on X axis
+- `flipY` — flip in on Y axis
+- `flipFull` — full flip
+- `roll` — roll in
+- `jack` — jack in the box
+
+**Light Speed**
+- `lightLeft` — light speed in from left
+- `lightRight` — light speed in from right
+
+**Shrink / Skid** *(reveal.js-appearance custom)*
+- `shrink` — shrink in
+- `shrinkBig` — shrink in (large)
+- `shrinkBlur` — shrink in with blur
+- `skidLeft` — skid in from left
+- `skidLeftBig` — skid in from left (large)
+- `skidRight` — skid in from right
+- `skidRightBig` — skid in from right (large)
+
+**Attention Seekers** *(loop on existing elements)*
+- `hop` — bounce
+- `headShake` — head shake
+- `heartbeat` — heartbeat pulse
+- `pulse` — pulse
+- `tada` — tada
+- `wobble` — wobble
+- `jello` — jello
+- `rubber` — rubber band
+- `shakeX` — shake horizontally
+- `shakeY` — shake vertically
+- `flash` — flash
+- `swing` — swing
+
+animationtype can be modified by appending :word or :letter, as well as a custom time delay in ms, for example:
+
+```markdown
+# This heading zooms word by word very quickly ==:zoom:word:50
+```
+
 ### `_text_` — verse heading / reference
 
 Single underscores produce a styled block element, not italic:

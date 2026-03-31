@@ -53,7 +53,7 @@ REVELation Presentations/          ← this folder (presentationsDir)
 | Presentation folder | URL-safe slug, e.g. `sunday-morning`, `advent-week-3` |
 | Main markdown file | Generally defaults to `presentation.md` — Additional related presentations use url-safe names and share resources (like week1.md, week2.md) |
 | Language variants | `presentation_<lang>.md`, e.g. `presentation_es.md`, `presentation_fr.md` |
-| Custom CSS | `style.css` (referenced via `stylesheet: style.css` in front matter) Can be named differently. |
+| Custom CSS | `style.css` (referenced via `stylesheet: style.css` in front matter) Can be named differently. Styles should be prefixed by .reveal to style elements inside the reveal.js slideshow |
 | Thumbnail | `thumbnail.jpg` auto-generated preview. OK if missing, software can re-generate this. |
 
 ---
@@ -139,6 +139,8 @@ _media/index.json. For backgrounds, look for entries with "Background" or "Backg
     "title": "kentucky_waterfall_julialynn_loop_1.CC-BY.dmcfeeters.mp4",
     "keywords": "Motion Backgrounds",
     "description": "Julia Lynn Falls, Slow Motion, Loop Video.",
+    "url_library": "https://example.com/kentucky_waterfall_julialynn_loop_1.CC-BY.dmcfeeters.mp4",
+    "url_direct": "https://example.com/kentucky_waterfall_julialynn_loop_1.CC-BY.dmcfeeters.mp4?download",
     "filename": "0787c7d91d5bc289d61e9d985931fd16.mp4",
    "mediatype": "video",
   },
@@ -150,6 +152,8 @@ This media could be added by inserting this into front matter:
 media:
   julia_lynn:
     filename: 0787c7d91d5bc289d61e9d985931fd16.mp4
+    url_library: 'https://example.com/kentucky_waterfall_julialynn_loop_1.CC-BY.dmcfeeters.mp4'
+    url_direct: 'https://example.com/kentucky_waterfall_julialynn_loop_1.CC-BY.dmcfeeters.mp4?download'
     title: kentucky_waterfall_julialynn_loop_1.CC-BY.dmcfeeters.mp4
     mediatype: video
     description: >-
@@ -162,7 +166,15 @@ Then, add this to the header of a slide, which will use this as a background on 
 ![background:sticky](media:julia_lynn)
 ```
 
-If text is written over a graphic or video background, you should usually use the {{lightbg}} or {{darkbg}} macros.
+### Important Notes on Media Backgrounds
+
+ - If text is written over a graphic or video background, the sticky background video macro should be accompanied by {{lightbg}} or {{darkbg}} macros to create a semi-transparent box around the text.
+ - If a subtle background is desired, or text should be more prominent, use a semi-transparent bgtint macro along with the sticky background, like this (or even a gradient)
+
+```markdown
+![background:sticky](media:julia_lynn)
+{{bgtint:rgba(0,0,0,0.5)}}
+```
 
 ---
 
@@ -288,8 +300,11 @@ Speaker notes here.
 - `***` — horizontal slide break (new column)
 - `---` — vertical slide break (child slide)
 - `:note:` — start speaker notes
+- `==:rise` — fragment automatically shown with rise animation
 - `++` — fragment (click-to-reveal)
+- `++:drop` — fragment (click-to-reveal) with drop animation
 - `{{macro}}` — sticky top-matter macro (persists to following slides)
 - `{{}}` — reset all sticky state
 - `![background](file.mp4)` — slide background
+- `![background:sticky](file.mp4)` — slide background (sticky macro)
 - `_text_` — verse heading or right-aligned reference
