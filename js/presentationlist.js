@@ -25,13 +25,12 @@ if(!url_key) {
     container.innerHTML = tr('No key specified, unable to load presentation list');
 }
 
-if (container) {
-  container.addEventListener('click', (event) => {
-    if (event.target === container) {
-      clearSelection();
-    }
-  });
-}
+document.addEventListener('click', (event) => {
+  if (!selectedCardElement) return;
+  const excluded = ['#presentation-list .card', '#sort-menu', '#options-menu', '#media-library-link'];
+  if (excluded.some((sel) => event.target.closest(sel))) return;
+  clearSelection();
+});
 
 // VITE Hot Reloading Hook
 if (import.meta.hot) {
