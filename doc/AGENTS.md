@@ -110,6 +110,62 @@ See [QUICK_REFERENCE.md](QUICK_REFERENCE.md) for media alias syntax.
 
 ---
 
+## Formatting Tips for Agents
+
+### Backgrounds
+
+If slides have no backgrounds, there is no need to use macros like {{darkgb}} or {{lightbg}}
+
+Beautiful backgrounds can be created by using the bgtint macro with a css gradient, like this:
+
+```markdown
+{{bgtint:linear-gradient(to bottom,rgba(255,180,180,1.00) 0%,rgba(220,120,220,1.00) 100%)}}
+```
+
+This would fill the slide with a full opaque coral / pink gradient, fairly light. So if the theme has 
+a darker background and light text by default, this should be overridden by combining with:
+
+```markdown
+{{darktext}}
+```
+
+### Media
+
+Unless instructed otherwise in CUSTOM_INSTRUCTIONS, consider searching for relevant media in 
+_media/index.json. For backgrounds, look for entries with "Background" or "Backgrounds" as keywords, for instance:
+
+```json
+  "0787c7d91d5bc289d61e9d985931fd16.mp4": {
+    "title": "kentucky_waterfall_julialynn_loop_1.CC-BY.dmcfeeters.mp4",
+    "keywords": "Motion Backgrounds",
+    "description": "Julia Lynn Falls, Slow Motion, Loop Video.",
+    "filename": "0787c7d91d5bc289d61e9d985931fd16.mp4",
+   "mediatype": "video",
+  },
+```
+
+This media could be added by inserting this into front matter:
+
+```yaml
+media:
+  julia_lynn:
+    filename: 0787c7d91d5bc289d61e9d985931fd16.mp4
+    title: kentucky_waterfall_julialynn_loop_1.CC-BY.dmcfeeters.mp4
+    mediatype: video
+    description: >-
+      Julia Lynn Falls, Slow Motion, Loop Video.
+```
+
+Then, add this to the header of a slide, which will use this as a background on all slides until macros are reset:
+
+```markdown
+![background:sticky](media:julia_lynn)
+```
+
+If text is written over a graphic or video background, you should usually use the {{lightbg}} or {{darkbg}} macros.
+
+---
+
 ## Default Front Matter
 
 Use this as the standard YAML front matter for every new presentation:
@@ -119,13 +175,13 @@ Use this as the standard YAML front matter for every new presentation:
 title: {Ask the user, or derive from their instructions}
 description: {Ask the user, or derive from their instructions}
 author: {See CUSTOM_INSTRUCTIONS.md; if not set there, ask the user and save it to CUSTOM_INSTRUCTIONS.md}
-theme: revelation_dark.css
+theme: {Choose an appropriate built-in theme from available selectsion, see Theme Selections below}
 stylesheet: style.css
 thumbnail: thumbnail.jpg
 created: '{today's date as YYYY-MM-DD}'
 newSlideOnHeading: false
 config:
-  transition: fade
+  transition: {Choose a transition from below, or refer to CUSTOM_INSTRUCTIONS}
   width: 960
   height: 540
   maxScale: 4
@@ -144,6 +200,47 @@ version: 1.0.5-git
 Any of the `config` values above can be overridden per-presentation when the user requests different behaviour.
 
 On a first run, explain width/height to the user: It determines relative font size and the aspect ratio of slide content. 960x540 is fine for a Full HD screen as everything will scale larger. 540x960 would be good for a mobile / vertical layout. Save user preference in CUSTOM_INSTRUCTIONS.md
+
+---
+
+## Theme Selections
+
+Choose a theme css file from the table below for the `theme` value in YAML. All color decisions in the slides should be based on the theme's choice of "light on dark" or "dark on light." To override text color in "light on dark" themes used {{darktext}}. To override text color in "dark on light" themes use {{lighttext}}
+
+| Theme | Description | Color Scheme |
+| --- | --- | --- |
+| revelation_dark.css | A default business-like dark theme; Inter/Noto Serif headings | light-on-dark |
+| revelation_light.css | A default business-like light theme; Inter/Noto Serif headings | dark-on-light |
+| beige.css | Warm beige designer theme; bold League Gothic headings | dark-on-light |
+| black.css | Near-black dark theme; Source Sans Pro headings | light-on-dark |
+| black-contrast.css | Pure black high-contrast theme; Source Sans Pro headings | light-on-dark |
+| dracula.css | Dark purple-charcoal palette; League Gothic headings | light-on-dark |
+| league.css | Charcoal dark theme; dramatic League Gothic headings | light-on-dark |
+| moon.css | Deep navy/teal dark theme; League Gothic headings | light-on-dark |
+| night.css | Very dark theme; bold Montserrat headings | light-on-dark |
+| serif.css | Light cream background; elegant Palatino serif headings | dark-on-light |
+| simple.css | Clean white; condensed News Cycle headings | dark-on-light |
+| sky.css | Light blue-white background; Quicksand rounded headings | dark-on-light |
+| softblood.css | Near-black; Ubuntu headings; softened Blood theme | light-on-dark |
+| solarized.css | Warm cream Solarized-inspired; League Gothic headings | dark-on-light |
+| white.css | Clean white theme; Source Sans Pro headings | dark-on-light |
+| white-contrast.css | Pure white high-contrast; Source Sans Pro headings | dark-on-light |
+
+---
+
+## Slide Transitions
+
+Choose an appropriate transition from this list:
+ - fade: Gentle cross-fade, suitable anywhere
+ - slide: Sliding transition, more noticible but nice
+ - convex: 3D transition (exterior look), use for special effect
+ - concave: 3D transition (interior look), use for special effect
+ - zoom: Most dramatic Zoom / Exploding transition, use for special effect
+ - none: Simple cut transition, suitable anywhere
+
+For individual slide transitions, "in" and "out" transitions can be selected independently, like:
+
+:transition:zoom-in fade-out:
 
 ---
 
