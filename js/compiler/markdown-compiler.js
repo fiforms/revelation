@@ -525,15 +525,16 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
     if (/\s*\+\+(?::[a-zA-Z0-9:]+)?$/.test(transformedLine)) {
       // ++  or  ++:preset:options... — always a fragment; plugin handles the rest
       const strippedFragment = transformedLine.replace(/\s*\+\+(?::[a-zA-Z0-9:]+)?$/, '');
-      const listItemMatch = /^(\s*(?:\d+[.)]\s+|[-*+]\s+))(.*)$/.exec(strippedFragment);
-      // For list items, use data-parentfragment instead of class so that a
-      // post-processor (see presentation-bootstrap.js) can move the value to
-      // the parent <li> after Reveal has applied <!-- .element: --> attrs.
-      // That gives a real <li class="fragment">, hiding bullet + content
-      // together via Reveal's standard fragment CSS.
-      // For non-list content (paragraphs), class="fragment" on the last inline
-      // element is the correct behaviour (e.g. __word__ ++ appears in place).
-      const fragmentOutputLine = listItemMatch
+      const isListItem = /^(\s*(?:\d+[.)]\s+|[-*+]\s+))/.test(strippedFragment);
+      const nextLine = lines[index + 1];
+      const isEndOfParagraph = !isListItem && (nextLine === undefined || nextLine.trim() === '');
+      // List items and paragraph-final lines use data-parentfragment so the
+      // bootstrap post-processor can lift the class to the parent <li> or <p>
+      // after Reveal applies <!-- .element: --> attrs — giving a real block-level
+      // fragment that hides bullet/content together.
+      // Mid-paragraph ++ (e.g. __word__ ++) keeps class="fragment" on the inline
+      // element so each word appears in place as its own fragment.
+      const fragmentOutputLine = (isListItem || isEndOfParagraph)
         ? strippedFragment + ' <!-- .element: data-parentfragment="fragment" -->'
         : strippedFragment + ' <!-- .element: class="fragment" -->';
       applyOperations([

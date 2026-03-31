@@ -300,14 +300,14 @@ export async function loadAndPreprocessMarkdown(deck, selectedFile = null) {
   }
 
   // After Reveal applies <!-- .element: --> attributes, lift data-parentfragment
-  // values onto the parent <li> so the whole list item (bullet + content)
-  // animates as a fragment rather than just the inner inline element.
+  // values onto the nearest block-level parent (<li> or <p>) so the whole item
+  // or paragraph animates as a fragment rather than just the inner inline element.
   deck.on('ready', () => {
     document.querySelectorAll('[data-parentfragment]').forEach(el => {
-      const li = el.closest('li');
-      if (!li) return;
+      const parent = el.closest('li, p');
+      if (!parent) return;
       const classes = (el.getAttribute('data-parentfragment') || '').split(/\s+/).filter(Boolean);
-      if (classes.length) li.classList.add(...classes);
+      if (classes.length) parent.classList.add(...classes);
       el.removeAttribute('data-parentfragment');
     });
   });
