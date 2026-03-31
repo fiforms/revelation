@@ -524,9 +524,21 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
     }
     if (/\s*\+\+(?::[a-zA-Z0-9:]+)?$/.test(transformedLine)) {
       // ++  or  ++:preset:options... — always a fragment; plugin handles the rest
+      const strippedFragment = transformedLine.replace(/\s*\+\+(?::[a-zA-Z0-9:]+)?$/, '');
+      const listItemMatch = /^(\s*(?:\d+[.)]\s+|[-*+]\s+))(.*)$/.exec(strippedFragment);
+      // For list items, use data-parentfragment instead of class so that a
+      // post-processor (see presentation-bootstrap.js) can move the value to
+      // the parent <li> after Reveal has applied <!-- .element: --> attrs.
+      // That gives a real <li class="fragment">, hiding bullet + content
+      // together via Reveal's standard fragment CSS.
+      // For non-list content (paragraphs), class="fragment" on the last inline
+      // element is the correct behaviour (e.g. __word__ ++ appears in place).
+      const fragmentOutputLine = listItemMatch
+        ? strippedFragment + ' <!-- .element: data-parentfragment="fragment" -->'
+        : strippedFragment + ' <!-- .element: class="fragment" -->';
       applyOperations([
         rememberSuppressionsOp(transformedLine),
-        appendLineOp(transformedLine.replace(/\s*\+\+(?::[a-zA-Z0-9:]+)?$/, '') + ' <!-- .element: class="fragment" -->')
+        appendLineOp(fragmentOutputLine)
       ]);
     } else if (/\s*==:[a-zA-Z0-9:]+$/.test(transformedLine)) {
       // ==:preset:options... — auto-animate token; strip silently (plugin handles it upstream)

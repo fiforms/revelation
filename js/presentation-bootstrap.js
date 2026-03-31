@@ -299,6 +299,19 @@ export async function loadAndPreprocessMarkdown(deck, selectedFile = null) {
     config.backgroundTransition = 'none';
   }
 
+  // After Reveal applies <!-- .element: --> attributes, lift data-parentfragment
+  // values onto the parent <li> so the whole list item (bullet + content)
+  // animates as a fragment rather than just the inner inline element.
+  deck.on('ready', () => {
+    document.querySelectorAll('[data-parentfragment]').forEach(el => {
+      const li = el.closest('li');
+      if (!li) return;
+      const classes = (el.getAttribute('data-parentfragment') || '').split(/\s+/).filter(Boolean);
+      if (classes.length) li.classList.add(...classes);
+      el.removeAttribute('data-parentfragment');
+    });
+  });
+
   // Hand off to Reveal after all markdown, DOM, and runtime config preparation is complete.
   deck.initialize(config);
 }
