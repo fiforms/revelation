@@ -556,21 +556,37 @@ pluginLoader('presentations',`/plugins_${key}`).then(async function() {
       }
 
       const { h, v } = indices;
-      const nextV = (v || 0) + 1;
-      let nextH = h, nextVActual = nextV;
-      let nextSlide = deck.getSlide(h, nextV);
-      if (!nextSlide) {
-        nextH = h + 1;
-        nextVActual = 0;
-        nextSlide = deck.getSlide(nextH, 0);
+
+      // If the current slide has fragments not yet shown, preview the current
+      // slide fully built out. Otherwise preview the next slide.
+      const currentSlide = deck.getCurrentSlide?.();
+      const hasUnshownFragments = currentSlide &&
+        Array.from(currentSlide.querySelectorAll('.fragment')).some(f => !f.classList.contains('visible'));
+
+      let previewSlide, previewH, previewV;
+      if (hasUnshownFragments) {
+        previewSlide = currentSlide;
+        previewH = h;
+        previewV = v || 0;
+      } else {
+        const nextV = (v || 0) + 1;
+        previewH = h;
+        previewV = nextV;
+        previewSlide = deck.getSlide(h, nextV);
+        if (!previewSlide) {
+          previewH = h + 1;
+          previewV = 0;
+          previewSlide = deck.getSlide(previewH, 0);
+        }
       }
 
-      if (!nextSlide) {
+      if (!previewSlide) {
         document.body.classList.remove('has-next-preview');
         return;
       }
 
       document.body.classList.add('has-next-preview');
+      labelEl.textContent = hasUnshownFragments ? 'Complete' : 'Next';
 
       const slideW = deck.getConfig?.().width || 960;
       const slideH = deck.getConfig?.().height || 700;
@@ -605,7 +621,7 @@ pluginLoader('presentations',`/plugins_${key}`).then(async function() {
       ].join(';');
 
       // Background: Reveal keeps these in a separate .backgrounds container.
-      const bgEl = deck.getSlideBackground?.(nextH, nextVActual);
+      const bgEl = deck.getSlideBackground?.(previewH, previewV);
       if (bgEl) {
         const bgClone = bgEl.cloneNode(true);
         bgClone.classList.remove('future', 'past');
@@ -628,7 +644,7 @@ pluginLoader('presentations',`/plugins_${key}`).then(async function() {
       fakeSlides.className = 'slides';
       fakeSlides.style.cssText = 'position:absolute;inset:0;perspective:none;';
 
-      const clone = nextSlide.cloneNode(true);
+      const clone = previewSlide.cloneNode(true);
 
       // Strip present/past/future so Reveal's visibility rules don't hide content.
       clone.classList.remove('future', 'past');
