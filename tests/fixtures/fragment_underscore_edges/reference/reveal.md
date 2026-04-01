@@ -5,7 +5,7 @@
 
 Filename my_file_name.md should stay literal.
 
-This line becomes fragment <!-- .element: class="fragment" -->
+This line becomes fragment <!-- .element: data-parentfragment="fragment" -->
 
 `code ++ and <cite>name</cite> and __name__`
 

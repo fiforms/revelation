@@ -6,7 +6,7 @@
 
 Hello “world” with <u>underlined</u> text.
 
-- First point <!-- .element: class="fragment" -->
+- First point <!-- .element: data-parentfragment="fragment" -->
 - Second point
 
 :note:
