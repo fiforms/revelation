@@ -522,16 +522,33 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
       const captionNextLine = lines[index + 1];
       const captionLineMatch = captionNextLine !== undefined ? captionNextLine.match(/^:caption:(.*):\s*$/) : null;
       if (captionLineMatch) {
-        const strippedImageLine = line.replace(/\s*(?:\+\+(?::[a-zA-Z0-9:]+)?|==:[a-zA-Z0-9:]+)$/, '');
+        // A <!-- .element: ... --> suffix (e.g. from the appearance plugin) should be
+        // absorbed and applied directly to the <figure> element, since element comments
+        // are not processed inside raw HTML blocks by the markdown renderer.
+        const elementCommentMatch = line.match(/\s*<!--\s*\.element:\s*(.*?)\s*-->\s*$/);
+        const strippedImageLine = line
+          .replace(/\s*<!--\s*\.element:\s*.*?-->\s*$/, '')
+          .replace(/\s*(?:\+\+(?::[a-zA-Z0-9:]+)?|==:[a-zA-Z0-9:]+)$/, '');
         const plainImageMatch = strippedImageLine.match(/^!\[([^\]]*)\]\(([^)]+)\)$/);
         if (plainImageMatch) {
           const altText = escapeHtmlAttr(plainImageMatch[1]);
           const src = escapeHtmlAttr(plainImageMatch[2]);
           const captionText = captionLineMatch[1];
-          const isFragment = /\s*\+\+(?::[a-zA-Z0-9:]+)?$/.test(line);
-          const fragmentClass = isFragment ? ' fragment' : '';
+          // Build figure class list: start with base class, then merge any class from
+          // an element comment, falling back to a bare ++ fragment check.
+          let figureClasses = 'captioned-image';
+          let extraFigureAttrs = '';
+          if (elementCommentMatch) {
+            const attrStr = elementCommentMatch[1];
+            const classMatch = attrStr.match(/\bclass="([^"]+)"/);
+            if (classMatch) figureClasses += ' ' + classMatch[1];
+            const remaining = attrStr.replace(/\bclass="[^"]*"\s*/g, '').trim();
+            if (remaining) extraFigureAttrs = ' ' + remaining;
+          } else if (/\s*\+\+(?::[a-zA-Z0-9:]+)?$/.test(line)) {
+            figureClasses += ' fragment';
+          }
           const captionHtml = captionText ? `<figcaption>${captionText}</figcaption>` : '';
-          const figureHtml = `<figure class="captioned-image${fragmentClass}"><img src="${src}" alt="${altText}">${captionHtml}</figure>`;
+          const figureHtml = `<figure class="${figureClasses}"${extraFigureAttrs}><img src="${src}" alt="${altText}">${captionHtml}</figure>`;
           applyOperations([rememberSuppressionsOp(line), appendLineOp(figureHtml)]);
           compiler.markContentLine(figureHtml);
           // If the caption line is the last line of the file it will be skipped and never trigger
