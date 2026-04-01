@@ -103,6 +103,11 @@ export function createMarkdownLineParsers(context) {
     const paramString = inlineMacroMatch[2];
     const params = parseMacroParams(key, paramString);
 
+    if (key === 'caption') {
+      // :caption: lines are consumed by the captioned-image lookahead in the main compiler loop.
+      // Silently discard any that reach here (e.g. after a background magic image that skipped them).
+      return true;
+    }
     if (key === 'attrib' || key === 'ai' || key.startsWith('column')) {
       return false;
     }

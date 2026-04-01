@@ -370,32 +370,43 @@ body.reveal-ready {
     object-fit: contain;
   }
 
+  // Polaroid-style captioned image block.
+  // Produced by the :caption: line syntax: ![](img.jpg) / :caption:Caption text.:
   figure.captioned-image {
-    display: block;
-    position: absolute;
-    top: 0; left: 0;
-    right: 0; bottom: 0;
-    margin: 1em 0;
-    max-width: 95%;
-    max-height: 95%;
-    text-align: center;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0.55em 0.55em 1.2em;
+    background: rgba(255, 255, 255, 0.13);
+    border-radius: 3px;
+    box-shadow:
+      0 8px 28px rgba(0, 0, 0, 0.55),
+      0 2px 8px rgba(0, 0, 0, 0.35),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+    max-width: min(82%, calc(var(--slide-width) * 0.80));
+    margin: 0.15em auto;
 
     img {
-      max-width: 100%;
-      max-height: 100%;
-      object-fit: contain;
-      height: auto;
       display: block;
-      margin: 0 auto;
+      max-width: 100%;
+      max-height: calc(var(--slide-height) * 0.60);
+      width: auto;
+      height: auto;
+      object-fit: contain;
     }
 
     figcaption {
-      font-size: 0.8rem;
-      margin-top: -0.5em;
-      padding: 0.4em 0.8em;
-      border-radius: 4px;
-      display: inline-block;
-      max-width: 90%;
+      margin-top: 0.6em;
+      font-size: 0.38em;
+      line-height: 1.5;
+      text-align: center;
+      max-width: 100%;
+      word-wrap: break-word;
+      color: inherit;
+      opacity: 0.88;
+      text-shadow: none;
+      font-weight: 400;
+      font-style: italic;
     }
   }
 

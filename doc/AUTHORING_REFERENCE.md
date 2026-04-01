@@ -233,6 +233,39 @@ Common forms:
 ```
 
 Note: `![background:sticky]()` is interpreted as a macro, so it will repeat on all slides and will also reset macros.
+
+---
+
+#### Captioned images
+
+Place a `:caption:` line **immediately after** a plain markdown image (no blank line between them) to wrap the image in a polaroid-style `<figure>` block:
+
+```markdown
+![](photo.jpg)
+:caption:The ruins of the old cathedral, 1887.:
+```
+
+An empty caption still produces the figure frame without caption text:
+
+```markdown
+![](photo.jpg)
+:caption::
+```
+
+Fragment and auto-animate annotations on the image line transfer to the whole figure, so the image and caption appear together as one unit:
+
+```markdown
+![](keynote.jpg) ++
+:caption:This slide animates in with its caption.:
+
+![](chart.png) ==:flipX
+:caption:Quarterly trend — the whole frame flips in.:
+```
+
+Caveats:
+- There must be **no blank line** between the image and the `:caption:` line.
+- Background (`![background](...)`) and sticky-background images do not support captions; a `:caption:` line after them is silently ignored.
+
 ---
 
 #### Media aliases
@@ -292,6 +325,7 @@ Line-based commands/macros commonly used while authoring:
 | `:note:` | Start notes section for the current slide |
 | `:ATTRIB:<text>` | Add attribution for current slide |
 | `:AI:` | Mark current slide with AI symbol |
+| `:caption:<text>:` | Add a caption to the image on the preceding line (no blank line between) |
 | `:audio:play:<src>:` | Start background audio from a local file or `media:<alias>` |
 | `:audio:playloop:<src>:` | Start looping background audio from a local file or `media:<alias>` |
 | `:audio:stop:` | Stop background audio |

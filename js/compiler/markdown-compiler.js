@@ -421,8 +421,14 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
   });
 
   // Main compiler scan: process one source line at a time while preserving fence and slide state.
+  let skipNextLine = false;
   for (let line of lines) {
     index += 1;
+    // Caption lookahead consumes the :caption: line in the previous iteration — skip it here.
+    if (skipNextLine) {
+      skipNextLine = false;
+      continue;
+    }
     // Fence transitions are handled first so separator-like lines inside code blocks stay inert.
     const fenceMatch = line.match(/^\s{0,3}((`{3,}|~{3,}))[ \t]*(.*)$/);
     if (fenceMatch) {
@@ -467,6 +473,10 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
       const hasHtmlVisual = /<\s*(img|video|iframe|figure)\b/i.test(line);
       const hasBackgroundData = /data-background-(image|video|audio|audio-start|audio-loop|audio-stop)/i.test(line);
       if (!isNoteSeparator && !isHideMacro && (isMacroUse || isInlineMacro || isAttribLine || hasMarkdownImage || hasHtmlVisual || hasBackgroundData)) {
+        // If this image line would have triggered caption lookahead, skip the caption line too.
+        if (hasMarkdownImage && lines[index + 1] && /^:caption:.*:\s*$/.test(lines[index + 1])) {
+          skipNextLine = true;
+        }
         continue;
       }
     }
@@ -504,6 +514,36 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
     if (isNoteSeparatorLine) {
       applyOperations([appendLineOp(line)]);
       continue;
+    }
+    // Caption lookahead: a plain markdown image line immediately followed by :caption:...: produces a
+    // polaroid-style <figure>.  Fragment (++) and auto-animate (==:) annotations on the image line
+    // transfer to the <figure> element so the whole unit animates together.
+    {
+      const captionNextLine = lines[index + 1];
+      const captionLineMatch = captionNextLine !== undefined ? captionNextLine.match(/^:caption:(.*):\s*$/) : null;
+      if (captionLineMatch) {
+        const strippedImageLine = line.replace(/\s*(?:\+\+(?::[a-zA-Z0-9:]+)?|==:[a-zA-Z0-9:]+)$/, '');
+        const plainImageMatch = strippedImageLine.match(/^!\[([^\]]*)\]\(([^)]+)\)$/);
+        if (plainImageMatch) {
+          const altText = escapeHtmlAttr(plainImageMatch[1]);
+          const src = escapeHtmlAttr(plainImageMatch[2]);
+          const captionText = captionLineMatch[1];
+          const isFragment = /\s*\+\+(?::[a-zA-Z0-9:]+)?$/.test(line);
+          const fragmentClass = isFragment ? ' fragment' : '';
+          const captionHtml = captionText ? `<figcaption>${captionText}</figcaption>` : '';
+          const figureHtml = `<figure class="captioned-image${fragmentClass}"><img src="${src}" alt="${altText}">${captionHtml}</figure>`;
+          applyOperations([rememberSuppressionsOp(line), appendLineOp(figureHtml)]);
+          compiler.markContentLine(figureHtml);
+          // If the caption line is the last line of the file it will be skipped and never trigger
+          // shouldFinalize naturally, so we finalise the current slide explicitly right now.
+          if (index + 1 >= totalLines - 1) {
+            const finalizeResult = compiler.finalizeSlide('', false, columnPipeState);
+            columnPipeState = finalizeResult.nextColumnPipeState;
+          }
+          skipNextLine = true;
+          continue;
+        }
+      }
     }
     // Try specialized line parsers before falling back to ordinary markdown content.
     if (tryHandleInlineMacroLine(line) || tryHandleMacroUseLine(line) || tryHandleStickyMetaLine(line)) {
