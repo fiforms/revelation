@@ -10,28 +10,20 @@ export function pluginLoader(page, prefix) {
     return handlePluginList(window.__offlinePluginList, page);
   }
 
-  if (window.electronAPI && window.electronAPI.getPluginList) {
-    // Use Electron API
-    return window.electronAPI.getPluginList({ host: window.location.host }).then(pluginList => {
+  return fetch(`${prefix}/plugins.json`)
+    .then(res => {
+      if (!res.ok) {
+        throw new Error(`Server error: ${res.status}`);
+      }
+      return res.json();
+    })
+    .then(pluginList => {
       return handlePluginList(pluginList, page);
+    })
+    .catch(err => {
+      console.error("Failed to fetch plugin list:", err);
+      return [];
     });
-  } else {
-    // Fallback: fetch from server
-    return fetch(`${prefix}/plugins.json`)
-      .then(res => {
-        if (!res.ok) {
-          throw new Error(`Server error: ${res.status}`);
-        }
-        return res.json();
-      })
-      .then(pluginList => {
-        return handlePluginList(pluginList, page);
-      })
-      .catch(err => {
-        console.error("Failed to fetch plugin list:", err);
-        return [];
-      });
-  }
 }
 
 function showPluginNotice(message, options = {}) {
