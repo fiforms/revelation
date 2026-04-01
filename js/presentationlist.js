@@ -44,6 +44,10 @@ if(window.electronAPI) {
   window.electronAPI.onShowToast((msg) => {
     showToast(msg);
   });
+  window.electronAPI.onLanIpChanged?.(({ newIP }) => {
+    if (appConfig) appConfig.hostLANURL = newIP;
+    infoPanel?.update();
+  });
 }
 
 pluginLoader('presentationlist',`/plugins_${url_key}`);
