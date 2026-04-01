@@ -1,0 +1,73 @@
+<section class="slide">
+<div class="slide-number slide-number-link"><a data-handout-skip-intercept="1" href="index.html?p=presentation.md#1/1" target="_blank">1.1</a></div>
+<div class="slide-number slide-number-nolink" style="display: none">1.1</div>
+<p>List items with ++ promote the fragment to the whole li:</p>
+<ol>
+<li><strong>Egg</strong> <!-- .element: data-parentfragment="fragment" --></li>
+<li><strong>Larva</strong> (caterpillar) <!-- .element: data-parentfragment="fragment" --></li>
+<li><strong>Pupa</strong> (chrysalis) <!-- .element: data-parentfragment="fragment" --></li>
+<li><strong>Adult</strong> (butterfly) <!-- .element: data-parentfragment="fragment" --></li>
+</ol>
+
+</section>
+<section class="slide">
+<div class="slide-number slide-number-link"><a data-handout-skip-intercept="1" href="index.html?p=presentation.md#2/1" target="_blank">2.1</a></div>
+<div class="slide-number slide-number-nolink" style="display: none">2.1</div>
+<p>List items with ++:modifier also promote to the whole li.
+The modifier is stripped here; the appearance plugin handles
+it in the browser before the compiler sees the line.</p>
+<ul>
+<li><strong>Drop</strong> <!-- .element: data-parentfragment="fragment" --></li>
+<li><strong>Rise</strong> <!-- .element: data-parentfragment="fragment" --></li>
+<li>Non-fragment item</li>
+</ul>
+
+</section>
+<section class="slide">
+<div class="slide-number slide-number-link"><a data-handout-skip-intercept="1" href="index.html?p=presentation.md#3/1" target="_blank">3.1</a></div>
+<div class="slide-number slide-number-nolink" style="display: none">3.1</div>
+<p>==:modifier is stripped silently (handled by the appearance
+plugin upstream; no fragment marker is emitted):</p>
+<ul>
+<li><strong>Auto-animates</strong></li>
+<li>Plain item</li>
+</ul>
+
+</section>
+<section class="slide">
+<div class="slide-number slide-number-link"><a data-handout-skip-intercept="1" href="index.html?p=presentation.md#4/1" target="_blank">4.1</a></div>
+<div class="slide-number slide-number-nolink" style="display: none">4.1</div>
+<p>Mid-paragraph ++ targets only the last inline element,
+not the whole paragraph:</p>
+<p>Butterflies grow in
+<u>four</u> <!-- .element: class="fragment" -->
+stages: the first stage is the
+<u>egg</u> <!-- .element: class="fragment" -->
+while the last stage is the butterfly.</p>
+
+</section>
+<section class="slide">
+<div class="slide-number slide-number-link"><a data-handout-skip-intercept="1" href="index.html?p=presentation.md#5/1" target="_blank">5.1</a></div>
+<div class="slide-number slide-number-nolink" style="display: none">5.1</div>
+<p>++ at the end of a paragraph promotes the fragment to the
+whole p element (next line is blank):</p>
+<p>Here is another paragraph
+that should appear
+all together <!-- .element: data-parentfragment="fragment" --></p>
+
+</section>
+<section class="slide">
+<div class="slide-number slide-number-link"><a data-handout-skip-intercept="1" href="index.html?p=presentation.md#6/1" target="_blank">6.1</a></div>
+<div class="slide-number slide-number-nolink" style="display: none">6.1</div>
+<p>++:modifier at the end of a paragraph also promotes to p.
+Mid-paragraph ++:modifier targets only the inline element.</p>
+<p>Here is a
+<strong>paragraph</strong> <!-- .element: class="fragment" -->
+with some animated
+<strong>fragments</strong> <!-- .element: class="fragment" -->
+in it.</p>
+<p>Here is another paragraph
+that should appear
+all together <!-- .element: data-parentfragment="fragment" --></p>
+
+</section>
