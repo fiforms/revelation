@@ -781,11 +781,8 @@ if (window.parent && window.parent !== window) {
 // VITE Hot Reloading Hook
 if (import.meta.hot) {
   let reloadPending = false;
-  import.meta.hot.on('reload-presentations', (data) => {
-    if (!window.location.href.includes(`${data.slug}/`) || mdFile !== data.mdFile) return;
-    if (reloadPending) return;
-    reloadPending = true;
-    console.log('[HMR] Reloading presentation');
+
+  const fadeAndReload = () => {
     const cover = document.getElementById('screen-cover');
     if (!cover || !cover.classList.contains('faded-out')) {
       location.reload();
@@ -798,7 +795,50 @@ if (import.meta.hot) {
       if (e.propertyName === 'opacity') doReload();
     }, { once: true });
     setTimeout(doReload, 950); // fallback if transitionend doesn't fire
+  };
+
+  import.meta.hot.on('reload-presentations', (data) => {
+    if (!window.location.href.includes(`${data.slug}/`) || mdFile !== data.mdFile) return;
+    if (reloadPending) return;
+    reloadPending = true;
+
+    if (isRemoteFollower) {
+      // Don't reload immediately — wait for the next navigation event from the
+      // presenter so the follower reloads in sync rather than mid-slide.
+      console.log('[HMR] Follower: deferring reload to next navigation');
+      return;
+    }
+
+    console.log('[HMR] Reloading presentation');
+    fadeAndReload();
   });
+
+  // Followers: hook into RevealRemote so the reload fires on the next
+  // incoming multiplex navigation rather than immediately.
+  if (isRemoteFollower) {
+    const remotePlugin = deck.getPlugin('RevealRemote');
+    if (remotePlugin?.onBeforeSync) {
+      remotePlugin.onBeforeSync(async () => {
+        if (!reloadPending) return; // undefined → proceed normally
+        // Fade then reload; return false to suppress this navigation
+        // (we're about to reload anyway).
+        console.log('[HMR] Follower: navigation received, fading and reloading');
+        await new Promise((resolve) => {
+          const cover = document.getElementById('screen-cover');
+          if (!cover || !cover.classList.contains('faded-out')) { resolve(); return; }
+          cover.classList.remove('faded-out');
+          let done = false;
+          const finish = () => { if (!done) { done = true; resolve(); } };
+          cover.addEventListener('transitionend', (e) => {
+            if (e.propertyName === 'opacity') finish();
+          }, { once: true });
+          setTimeout(finish, 950);
+        });
+        location.reload();
+        return false;
+      });
+    }
+  }
 }
 
 })();
