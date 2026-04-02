@@ -720,7 +720,10 @@ pluginLoader('presentations',`/plugins_${key}`).then(async function() {
       }
       document.body.classList.remove('hidden');
       document.body.classList.add('reveal-ready');
-    }, 800); // adjust if needed 
+      // Fade out the black screen cover (500ms, see #screen-cover CSS in presentation.html)
+      const screenCover = document.getElementById('screen-cover');
+      if (screenCover) screenCover.classList.add('faded-out');
+    }, 500); // adjust if needed 
   });
 
   deck.on('slidechanged', updateNotesPaneVisibility);
@@ -777,11 +780,24 @@ if (window.parent && window.parent !== window) {
 
 // VITE Hot Reloading Hook
 if (import.meta.hot) {
+  let reloadPending = false;
   import.meta.hot.on('reload-presentations', (data) => {
-    if(window.location.href.includes(`${data.slug}/`) && mdFile === data.mdFile) {
-      console.log('[HMR] Reloading presentation');
+    if (!window.location.href.includes(`${data.slug}/`) || mdFile !== data.mdFile) return;
+    if (reloadPending) return;
+    reloadPending = true;
+    console.log('[HMR] Reloading presentation');
+    const cover = document.getElementById('screen-cover');
+    if (!cover || !cover.classList.contains('faded-out')) {
       location.reload();
+      return;
     }
+    cover.classList.remove('faded-out'); // triggers CSS fade to black (800ms)
+    let done = false;
+    const doReload = () => { if (!done) { done = true; location.reload(); } };
+    cover.addEventListener('transitionend', (e) => {
+      if (e.propertyName === 'opacity') doReload();
+    }, { once: true });
+    setTimeout(doReload, 950); // fallback if transitionend doesn't fire
   });
 }
 
