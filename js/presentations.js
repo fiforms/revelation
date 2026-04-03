@@ -249,7 +249,7 @@ pluginLoader('presentations',`/plugins_${key}`).then(async function() {
 
   function getNotesScrollSpeedVhPercentPerSec() {
     const runtimeSpeed = Number.parseFloat(window.RevelationRuntime?.notesScrollSpeed);
-    if (Number.isFinite(runtimeSpeed) && runtimeSpeed > 0) {
+    if (Number.isFinite(runtimeSpeed) && runtimeSpeed >= 0) {
       return runtimeSpeed;
     }
     return NOTES_SCROLL_SPEED_VH_PERCENT_PER_SEC_DEFAULT;

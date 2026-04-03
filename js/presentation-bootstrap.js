@@ -110,7 +110,7 @@ export async function loadAndPreprocessMarkdown(deck, selectedFile = null) {
 
   // Publish runtime-only values that other views consume, e.g. teleprompter notes scroll speed.
   window.RevelationRuntime = window.RevelationRuntime || {};
-  if (Number.isFinite(yamlScrollSpeed) && yamlScrollSpeed > 0) {
+  if (Number.isFinite(yamlScrollSpeed) && yamlScrollSpeed >= 0) {
     window.RevelationRuntime.notesScrollSpeed = yamlScrollSpeed;
   } else {
     delete window.RevelationRuntime.notesScrollSpeed;
