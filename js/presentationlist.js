@@ -1053,7 +1053,7 @@ function renderNoSelectionPanel() {
       ? (appConfig.virtualPeersAlwaysOpen ? 'group-control' : 'on-demand')
       : 'group-control')
   ).trim().toLowerCase();
-  if (window.electronAPI?.openScreens && screenMode === 'group-control') {
+  if (window.electronAPI?.openScreens) {
     const peerBtn = document.createElement('button');
     peerBtn.type = 'button';
     peerBtn.className = 'selected-presentation-action-btn new-item-btn';
