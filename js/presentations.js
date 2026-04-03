@@ -202,6 +202,7 @@ pluginLoader('presentations',`/plugins_${key}`).then(async function() {
   window.deck = deck;
   setupBuilderPreviewBridge(deck);
   setupInterPresentationLinkHandler();
+  setHotReloading();
 
   loadAndPreprocessMarkdown(deck);
   const NOTES_SCROLL_DELAY_MS = 3000;
@@ -778,8 +779,9 @@ if (window.parent && window.parent !== window) {
 }
 
 
-// VITE Hot Reloading Hook
-if (import.meta.hot) {
+function setHotReloading() {
+  // VITE Hot Reloading Hook
+  if (!import.meta.hot) return false;
   let reloadPending = false;
 
   const fadeAndReload = () => {
@@ -800,7 +802,7 @@ if (import.meta.hot) {
   import.meta.hot.on('reload-presentations', (data) => {
     if (!window.location.href.includes(`${data.slug}/`) || mdFile !== data.mdFile) return;
     if (reloadPending) return;
-    reloadPending = true;
+    reloadPending = Date.now();
 
     if (isRemoteFollower) {
       // Don't reload immediately — wait for the next navigation event from the
@@ -815,14 +817,29 @@ if (import.meta.hot) {
 
   // Followers: hook into RevealRemote so the reload fires on the next
   // incoming multiplex navigation rather than immediately.
+  // Must be deferred to deck.on('ready') — getPlugin() returns undefined
+  // if called before deck.initialize() has completed.
   if (isRemoteFollower) {
-    const remotePlugin = deck.getPlugin('RevealRemote');
-    if (remotePlugin?.onBeforeSync) {
+    window.deck.on('ready', () => {
+      const remotePlugin = window.deck.getPlugin('RevealRemote');
+      if (!remotePlugin) {
+        console.warn('[HMR] Follower: RevealRemote plugin not found; deferred reload will not work');
+        return;
+      }
+      if (!remotePlugin.onBeforeSync) {
+        console.warn('[HMR] Follower: RevealRemote missing onBeforeSync hook; is node_modules up to date?');
+        return;
+      }
       remotePlugin.onBeforeSync(async () => {
         if (!reloadPending) return; // undefined → proceed normally
+        let currentTime = Date.now();
+        if (currentTime - reloadPending < 3000) {
+          console.log('[HMR] Follower: onBeforeSync triggered but reload already pending — ignoring');
+          return; // too soon since reload was triggered, likely same navigation event
+        }
         // Fade then reload; return false to suppress this navigation
         // (we're about to reload anyway).
-        console.log('[HMR] Follower: navigation received, fading and reloading');
+        console.log('[HMR] Follower: navigation received while reload pending — fading and reloading');
         await new Promise((resolve) => {
           const cover = document.getElementById('screen-cover');
           if (!cover || !cover.classList.contains('faded-out')) { resolve(); return; }
@@ -837,7 +854,7 @@ if (import.meta.hot) {
         location.reload();
         return false;
       });
-    }
+    });
   }
 }
 
