@@ -698,6 +698,15 @@ pluginLoader('presentations',`/plugins_${key}`).then(async function() {
   });
 
   deck.on('ready', () => {
+    // Restore heading id anchors removed in marked v5+.
+    deck.getSlides().forEach(slide => {
+      slide.querySelectorAll('h1, h2, h3, h4, h5, h6').forEach(h => {
+        if (!h.id) {
+          h.id = h.textContent.trim().toLowerCase().replace(/[^\w]+/g, '-').replace(/^-|-$/g, '');
+        }
+      });
+    });
+
     notesViewportMode = getNotesViewportMode();
     updateNotesPaneVisibility();
     updateNextSlidePreview?.();
