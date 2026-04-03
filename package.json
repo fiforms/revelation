@@ -10,21 +10,21 @@
     "highlight.js": "^11.11.1",
     "ip": "^2.0.1",
     "js-yaml": "^4.1.1",
-    "marked": "^17.0.1",
+    "marked": "^17.0.5",
     "npm-run-all": "^4.1.5",
-    "reveal.js": "^5.2.1",
+    "reveal.js": "^6.0.0",
     "reveal.js-plugins": "^4.6.0",
     "reveal.js-remote": "github:fiforms/reveal.js-remote",
     "socket.io": "^4.8.3",
     "socket.io-client": "^4.8.3",
-    "vite": "^7.3.1"
+    "vite": "^8.0.3"
   },
   "scripts": {
     "dev": "npm-run-all --parallel watch:theme vite",
     "vite": "vite",
     "vite:serve": "vite --host",
-    "watch:theme": "sass --watch css/source:css --silence-deprecation import --load-path=node_modules --load-path=node_modules/reveal.js/css/theme/source",
-    "build:theme": "sass css/source:dist/css --silence-deprecation import --load-path=node_modules --load-path=node_modules/reveal.js/css/theme/source",
+    "watch:theme": "sass --watch css/source:css --silence-deprecation import --load-path=node_modules --load-path=node_modules/reveal.js/css/theme",
+    "build:theme": "sass css/source:dist/css --silence-deprecation import --load-path=node_modules --load-path=node_modules/reveal.js/css/theme",
     "build:fonts": "node scripts/copy-fonts.js",
     "build": "npm-run-all vite:build build:theme build:fonts",
     "vite:build": "vite build",
@@ -39,6 +39,7 @@
   },
   "devDependencies": {
     "concurrently": "^9.2.1",
+    "esbuild": "^0.27.0",
     "sass": "^1.97.3"
   }
 }

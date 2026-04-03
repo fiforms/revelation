@@ -1,9 +1,9 @@
 import Reveal from 'reveal.js';
 import { io as socketIoClient } from 'socket.io-client';
-import Markdown from 'reveal.js/plugin/markdown/markdown.esm.js';
-import Notes from 'reveal.js/plugin/notes/notes.esm.js';
-import Zoom from 'reveal.js/plugin/zoom/zoom.esm.js';
-import Search from 'reveal.js/plugin/search/search.esm.js';
+import Markdown from 'reveal.js/plugin/markdown';
+import Notes from 'reveal.js/plugin/notes';
+import Zoom from 'reveal.js/plugin/zoom';
+import Search from 'reveal.js/plugin/search';
 import RevealRemote from 'reveal.js-remote/plugin/remote.js';
 
 import { loadAndPreprocessMarkdown } from './presentation-bootstrap.js';
