@@ -73,6 +73,55 @@ See [QUICK_REFERENCE.md](QUICK_REFERENCE.md) for media alias syntax.
 
 ---
 
+## REVELation Web API
+
+You as an LLM are capabable of and expected to utilize the REVELation Web API provided by
+the software system that runs these files. This runs at a localhost URL. The user should
+provide you with these bits of information on first run. Prompt the user like this:
+
+"I need to be able to access your local REVELation Web API. Please launch your software, 
+navigate to Settings -> Networking and enable the local API server. Then provide me with the
+API server port and the server access key displayed on this screen. It's important to leave
+the software running when prompting me for changes so that I can access the necessary
+information.
+"
+
+Save the API server port and the user's key in CUSTOM_INSTRUCTIONS.md
+
+You can then access this API at the following URL's:
+
+### Bible Verse API
+
+Base URL: `http://127.0.0.1:<port>/api/bibletext`
+
+All requests require `?key=<access-key>` or the `X-Api-Key: <access-key>` header.
+
+On first use, if the user hasn't already indicated preference, prompt the user for their preferred translation (list available translations for the user). Also ask if the user prefers to have attribution tags in presentations (:ATTRIB:Scripture from the NKJV:) for new presentations. When editing existing presentations, try to follow the pattern already observed in the markdown file. 
+
+| Endpoint | Parameters | Description |
+|---|---|---|
+| `GET /api/bibletext/passage` | `ref` (required), `translation` (default: `KJV.local`), `attribution` (`true`/`false`), `refPosition` (`end`/`start`), `lang` | Returns hymn slides as `text/plain` markdown for the given reference (e.g. `ref=John+3:16`) |
+| `GET /api/bibletext/translations` | — | Returns a JSON list of available local translations |
+| `GET /api/bibletext/books` | `translation` (required) | Returns the book list for the given translation |
+| `GET /api/bibletext/chapter` | `translation`, `book`, `chapter` (all required) | Returns all verses for a given chapter |
+| `GET /api/bibletext/search` | `translation`, `query` (required), `maxResults` (default: `20`) | Full-text search of verses in the given translation |
+
+### Seventh-day Adventist Hymnal (Adventist Hymns) API
+
+Base URL: `http://127.0.0.1:<port>/api/adventisthymns`
+
+All requests require `?key=<access-key>` or the `X-Api-Key: <access-key>` header.
+
+Use search API if the user gives a name but not a number, confirm with the user if multiple options are available.
+
+| Endpoint | Parameters | Description |
+|---|---|---|
+| `GET /api/adventisthymns/hymn` | `number` (required) | Returns the hymn slides as `text/plain` markdown (fetched live from adventisthymns.com) |
+| `GET /api/adventisthymns/index` | — | Returns the full hymn index as JSON (cached, refreshed daily) |
+| `GET /api/adventisthymns/search` | `query` (required) | Filters the hymn index by title substring or exact hymn number; returns matching entries as JSON |
+
+---
+
 ## What the App Manages Automatically — Do Not Create These
 
 | File/Folder | Why to leave it alone |
@@ -90,6 +139,7 @@ See [QUICK_REFERENCE.md](QUICK_REFERENCE.md) for media alias syntax.
 - **Translate** slide content while keeping slide structure (separators, fragment markers) in sync with the master.
 - **Edit front matter** (title, theme, config, media aliases, macros) as needed.
 - **Source and link media** if appropriate or requested to do so, and if within capabilities.
+- **Use the REVELation Web API** to access authoritative markdown blocks to include in presentations.
 - **Leave all auto-generated files alone** (manifest.json, readme/, _media sidecars).
 
 ---
