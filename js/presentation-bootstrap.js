@@ -26,6 +26,7 @@ import {
   getStorageItemSafe,
   getNoteSeparator,
   sanitizeMarkdownFilename,
+  resolveLegacyCssFolder,
   NOTE_SEPARATOR_CURRENT
 } from './compiler/compiler-utils.js';
 import { ensureHiddenSlidePreviewStyles, createAlternativeSelector } from './loader-dom.js';
@@ -150,7 +151,15 @@ export async function loadAndPreprocessMarkdown(deck, selectedFile = null) {
   document.title = metadata.title || 'Reveal.js Presentation';
   const selectedTheme = variantThemeMap[variant] || metadata.theme;
   if (selectedTheme) {
-    document.getElementById('theme-stylesheet').href = style_path + selectedTheme;
+    // Presentations saved in older versions use a frozen snapshot of the old CSS so
+    // that the reveal.js upstream changes don't alter their appearance.
+    const legacyFolder = resolveLegacyCssFolder(metadata);
+    // Legacy CSS snapshots live under oldcss/<version>/ rather than css/ so they
+    // bypass the /css serveStatic middleware and are served straight from publicDir.
+    const themeDir = legacyFolder
+      ? style_path.replace(/css\/$/, `oldcss/${legacyFolder}/`)
+      : style_path;
+    document.getElementById('theme-stylesheet').href = themeDir + selectedTheme;
   }
   if (metadata.stylesheet) {
     const styleEl = document.createElement('link');

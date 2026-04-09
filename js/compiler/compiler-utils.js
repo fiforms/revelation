@@ -8,6 +8,16 @@ const NOTE_SEPARATOR_LEGACY = 'Note:';
 const NOTE_SEPARATOR_CURRENT = ':note:';
 const NOTE_VERSION_BREAKPOINT = [0, 2, 6];
 
+// Each entry says: presentations saved before `breakpoint` should load themes
+// from `folder` rather than from the current build.  Entries must be ordered
+// from oldest breakpoint to newest; the first entry whose breakpoint exceeds the
+// presentation version wins.  Add a new row here whenever a reveal.js upgrade
+// changes compiled CSS defaults in a way that would alter existing presentations.
+const CSS_VERSION_SNAPSHOTS = [
+  { folder: '1.0.6', breakpoint: [1, 0, 7] },
+  // { folder: '1.1.0', breakpoint: [1, 1, 1] },
+];
+
 // Parse a simple `major.minor.patch` semver string into a numeric tuple.
 function parseSemverTuple(version) {
   const raw = String(version || '').trim();
@@ -35,6 +45,17 @@ export function getStorageItemSafe(key) {
   } catch {
     return null;
   }
+}
+
+// Return the name of the frozen CSS snapshot folder to use for this deck, or
+// null if the current build's CSS should be used.  Presentations with no version
+// field are treated as older than every snapshot breakpoint.
+export function resolveLegacyCssFolder(metadata = {}) {
+  const tuple = parseSemverTuple(metadata?.version);
+  for (const { folder, breakpoint } of CSS_VERSION_SNAPSHOTS) {
+    if (!tuple || compareVersionTuples(tuple, breakpoint) < 0) return folder;
+  }
+  return null;
 }
 
 // Determine whether deck metadata should opt into the modern `:note:` separator.
