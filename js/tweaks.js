@@ -403,8 +403,11 @@ function initCountdowns(deck) {
 
 // Hide the cursor after a period of inactivity
 function hideCursorOnIdle() {
-  let timer;
   const hideDelay = 2000; // milliseconds
+
+  let timer = setTimeout(() => {
+      document.body.style.cursor = 'none';
+  }, hideDelay);;
 
   document.addEventListener('mousemove', () => {
     document.body.style.cursor = 'default';
