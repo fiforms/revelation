@@ -394,7 +394,7 @@ config:
   showSlideNumber: speaker
   hashOneBasedIndex: true
   hash: true
-version: 1.0.6beta
+version: 1.0.7
 ---
 ```
 
@@ -472,7 +472,7 @@ config:
   showSlideNumber: speaker
   hashOneBasedIndex: true
   hash: true
-version: 1.0.6beta
+version: 1.0.7
 ---
 
 # Slide Title
