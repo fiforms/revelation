@@ -34,6 +34,7 @@ presentations/index.json
 # Ignore large or temporary asset directories
 assets/backgrounds/
 assets/tmp/
+assets/oldcss/
 
 # Generated output for llm helper
 revelation_file_summary.txt
