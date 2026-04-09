@@ -100,11 +100,54 @@ On first use, if the user hasn't already indicated preference, prompt the user f
 
 | Endpoint | Parameters | Description |
 |---|---|---|
-| `GET /api/bibletext/passage` | `ref` (required), `translation` (default: `KJV.local`), `attribution` (`true`/`false`), `refPosition` (`end`/`start`), `lang` | Returns hymn slides as `text/plain` markdown for the given reference (e.g. `ref=John+3:16`) |
-| `GET /api/bibletext/translations` | — | Returns a JSON list of available local translations |
+| `GET /api/bibletext/passage` | `ref` (required), `translation` (default: `KJV.local`), `attribution` (`true`/`false`), `lang` | Returns hymn slides as `text/plain` markdown for the given reference (e.g. `ref=John+3:16`) |
+| `GET /api/bibletext/translations` | — | Returns a YAML list of available local translations |
 | `GET /api/bibletext/books` | `translation` (required) | Returns the book list for the given translation |
 | `GET /api/bibletext/chapter` | `translation`, `book`, `chapter` (all required) | Returns all verses for a given chapter |
 | `GET /api/bibletext/search` | `translation`, `query` (required), `maxResults` (default: `20`) | Full-text search of verses in the given translation |
+
+### Media Library API
+
+Base URL: `http://127.0.0.1:<port>/api/addmedia`
+
+All requests require `?key=<access-key>` or the `X-Api-Key: <access-key>` header.
+
+Use the search endpoint to find relevant media by keyword, then use the item endpoint to get a YAML snippet ready to paste into front matter.
+
+| Endpoint | Parameters | Description |
+|---|---|---|
+| `GET /api/addmedia/search` | `query` (required) | Search media by keyword against title, description, keywords, and original filename. Returns a YAML list of matches with `filename`, `title`, `mediatype`, `keywords`, and a short `description`. |
+| `GET /api/addmedia/item` | `filename` (required) | Returns a `text/yaml` snippet for the given media file, ready to paste directly under `media:` in front matter. The tag is deterministically generated. |
+
+**Typical workflow:**
+1. `GET /api/addmedia/search?query=background` — find candidates
+2. `GET /api/addmedia/item?filename=<filename from search>` — get the YAML entry
+3. Paste the returned YAML block under `media:` in the presentation front matter
+4. Reference it in slide content as `media:<tag>` (the tag is the key returned in step 2)
+
+---
+
+### Virtual Bible Snapshots Media API
+
+Base URL: `http://127.0.0.1:<port>/api/virtualbiblesnapshots`
+
+All requests require `?key=<access-key>` or the `X-Api-Key: <access-key>` header.
+
+Searches the online VRBM (Virtual Resource & Background Media) catalogue and imports selected items into the local `_media` library.
+
+| Endpoint | Method | Parameters / Body | Description |
+|---|---|---|---|
+| `/api/virtualbiblesnapshots/search` | GET | `query` (required), `collection` (optional: `thumbs`, `videos`, `music`, `illustrations`), `maxResults` (default: 30) | Search the remote catalogue by keyword. Returns a YAML list of matching items. Each item includes all fields needed to identify it and to pass directly to the import endpoint. Results are cached for 1 hour. |
+| `/api/virtualbiblesnapshots/import?key=<access-key>` | POST | Form body `md5=<md5 from search results>` | Downloads the asset into the local `_media` library and returns a `text/yaml` snippet ready to paste directly under `media:` in front matter (same format as `GET /api/addmedia/item`). |
+
+**Typical workflow:**
+1. `GET /api/virtualbiblesnapshots/search?query=waterfall` — find candidates
+2. Pick an item from the results
+3. `POST /api/virtualbiblesnapshots/import?key=<access-key>` with body `md5=<md5>` — download and store it
+4. Paste the returned YAML block under `media:` in the presentation front matter
+5. Reference it in slide content as `media:<tag>` (the tag is the key in the returned YAML)
+
+---
 
 ### Seventh-day Adventist Hymnal (Adventist Hymns) API
 
@@ -117,7 +160,6 @@ Use search API if the user gives a name but not a number, confirm with the user 
 | Endpoint | Parameters | Description |
 |---|---|---|
 | `GET /api/adventisthymns/hymn` | `number` (required) | Returns the hymn slides as `text/plain` markdown (fetched live from adventisthymns.com) |
-| `GET /api/adventisthymns/index` | — | Returns the full hymn index as JSON (cached, refreshed daily) |
 | `GET /api/adventisthymns/search` | `query` (required) | Filters the hymn index by title substring or exact hymn number; returns matching entries as JSON |
 
 ---
@@ -149,7 +191,7 @@ Use search API if the user gives a name but not a number, confirm with the user 
 1. The main markdown file in every presentation folder is always named **`presentation.md`**.
 2. Language variants are named **`presentation_<lang>.md`** (e.g. `presentation_es.md`) in the same folder.
 3. Slide separators (`***`, `---`) and `:note:` must be **alone on their own line** with blank lines before and after.
-4. For simple presentations, use only vertical slide separators (---). For complex presentations, separate groups of vertical slides into columns with (***).
+4. For simple presentations, use only vertical slide separators (---). For complex presentations, separate groups of vertical slides into columns with (***). Songs or Hymns should always be in their own separate column.
 5. Set `newSlideOnHeading: false` in front matter when using explicit separators.
 6. All language variants must keep identical slide counts and separator positions for peer sync.
 7. Slides should not be too long. 
@@ -157,6 +199,104 @@ Use search API if the user gives a name but not a number, confirm with the user 
   - First-level headings are huge, they should be on their own slide. About 2 - 3 words is all that can fit on a line
   - Second-level headings are still large, only 3 lines of text can go along with a second-level heading
 8. Update CUSTOM_INSTRUCTIONS.md as needed to remember user's preferences. Do not edit this file, CLAUDE.md or QUICK_REFERENCE.md
+9. For specific texts such as Bible Passages or Hymns, use the provided API and DO NOT guess or provide the text from your training data.
+10. If a requests should be filled using the API but the API is unavailable, stop and ask the user to start the REVELation application and/or update settings. 
+
+---
+
+## Common Scenarios and Steps
+
+1. Translating Slides: 
+ - Translate all slide content and notes into the target language.
+ - Keep all tags, formating, and slide numbers in sync.
+ - Add variant tags in the metadata to appropriately link and sync between languages
+ - If quotations are taken from the Bible, use the REVELation API to look up the reference in a translation in the target language, then copy verbatum from that translation. Ask the user to choose their preferred translation in the target language. If none is available, clearly indicate to the user that quotations are machine-translated. 
+ 2. Converting a manuscript into a presentation:
+  - If the user presents you with a full manuscript, break the manuscript into sensible chunks in the :note: portion of the slides, so that the user's verbatim manuscript can be read by paging slide by slide and reading only the notes field
+  - Deduce the user's outline and organization, create an overview or brief outline in the notes on the first slide.
+  - Major headings or sections of the presentation should be divided into separate columns, with useful title slides
+  - Create separate slides for each quotation. If Bible verses, then one slide per verse. Prefer loading all verse content from the REVELation API to create the slides, rather than trusting user input.
+3. Creating a presentation from scratch
+ - Warn the user that it is unwise to present AI generated content as a finished product (concerns about plagiarism and "slop")
+ - Write down a "big idea" and create an outline from the user's prompt.
+ - Unless already provided, research and note a story or anecdote to use, (if for a sermon) find relevant Scripture references.
+ - Create the first slide, and in the notes include the "Big Idea" and an outline of the entire presentation.
+ - Proceed similar to step (2), creating columns for each main section, slides for each verse, etc. Include a full manuscript in the notes for each slide.
+ - (If for a sermon) Suggest an opening an opening and closing hymn, and use a relevant api from the REVELation app to source the words for each into their own column.
+
+ General format for a sermon presentation
+
+```markdown
+YAML:here
+---
+# Sermon Title
+
+:note:
+The Big Idea: God loves everyone, no matter what they look like
+
+## Outline:
+ - God's Love in the Old Testament
+  - Genesis: the Flood
+ - God's Love in the New Testament
+  - Jesus: Woman at the Well
+    - (verses, content here)
+  - Jesus: Forgives Peter
+    - (verses, content here)
+ - God's Love in my Personal Experience
+
+***
+
+# Opening Hymn
+(sourced from REVELation API)
+
+---
+
+_Verse 1_
+...
+
+***
+
+# Sermon Title
+
+:note:
+(Sermon Introduction, Anecdote)
+
+***
+
+# God's Love
+### In the Old Testament
+
+:note:
+What I would say on each slide
+
+---
+
+(Content Here)
+
+:note:
+Always have something to say
+
+...
+
+***
+
+# God's Love
+### In the New Testament
+
+
+:note:
+Always
+
+
+...
+
+***
+
+# Closing Hymn
+
+...
+
+```
 
 ---
 
@@ -181,39 +321,36 @@ a darker background and light text by default, this should be overridden by comb
 
 ### Media
 
-Unless instructed otherwise in CUSTOM_INSTRUCTIONS, consider searching for relevant media in 
-_media/index.json. For backgrounds, look for entries with "Background" or "Backgrounds" as keywords, for instance:
+Unless instructed otherwise in CUSTOM_INSTRUCTIONS, use the **Media Library API** to search for and insert shared media. Do not read `_media/index.json` directly — the API is authoritative and returns ready-to-use YAML.
 
-```json
-  "0787c7d91d5bc289d61e9d985931fd16.mp4": {
-    "title": "kentucky_waterfall_julialynn_loop_1.CC-BY.dmcfeeters.mp4",
-    "keywords": "Motion Backgrounds",
-    "description": "Julia Lynn Falls, Slow Motion, Loop Video.",
-    "url_library": "https://example.com/kentucky_waterfall_julialynn_loop_1.CC-BY.dmcfeeters.mp4",
-    "url_direct": "https://example.com/kentucky_waterfall_julialynn_loop_1.CC-BY.dmcfeeters.mp4?download",
-    "filename": "0787c7d91d5bc289d61e9d985931fd16.mp4",
-   "mediatype": "video",
-  },
+For backgrounds, search with a relevant keyword:
+
+```
+GET /api/addmedia/search?query=background&key=<key>
 ```
 
-This media could be added by inserting this into front matter:
+This returns a YAML list of matches. Pick a suitable item, then fetch its front matter snippet:
+
+```
+GET /api/addmedia/item?filename=0787c7d91d5bc289d61e9d985931fd16.mp4&key=<key>
+```
+
+The response is YAML text ready to paste directly under `media:` in the front matter, for example:
 
 ```yaml
-media:
-  julia_lynn:
+  julia0787:
     filename: 0787c7d91d5bc289d61e9d985931fd16.mp4
-    url_library: 'https://example.com/kentucky_waterfall_julialynn_loop_1.CC-BY.dmcfeeters.mp4'
-    url_direct: 'https://example.com/kentucky_waterfall_julialynn_loop_1.CC-BY.dmcfeeters.mp4?download'
     title: kentucky_waterfall_julialynn_loop_1.CC-BY.dmcfeeters.mp4
     mediatype: video
-    description: >-
-      Julia Lynn Falls, Slow Motion, Loop Video.
+    description: Julia Lynn Falls, Slow Motion, Loop Video.
+    url_library: https://example.com/kentucky_waterfall_julialynn_loop_1.CC-BY.dmcfeeters.mp4
+    url_direct: https://example.com/kentucky_waterfall_julialynn_loop_1.CC-BY.dmcfeeters.mp4?download
 ```
 
 Then, add this to the header of a slide, which will use this as a background on all slides until macros are reset:
 
 ```markdown
-![background:sticky](media:julia_lynn)
+![background:sticky](media:julia0787)
 ```
 
 ### Important Notes on Media Backgrounds
