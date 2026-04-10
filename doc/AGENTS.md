@@ -343,6 +343,8 @@ The response is YAML text ready to paste directly under `media:` in the front ma
     title: kentucky_waterfall_julialynn_loop_1.CC-BY.dmcfeeters.mp4
     mediatype: video
     description: Julia Lynn Falls, Slow Motion, Loop Video.
+    attribution: Daniel McFeeters
+    license: CC-BY
     url_library: https://example.com/kentucky_waterfall_julialynn_loop_1.CC-BY.dmcfeeters.mp4
     url_direct: https://example.com/kentucky_waterfall_julialynn_loop_1.CC-BY.dmcfeeters.mp4?download
 ```
@@ -352,6 +354,10 @@ Then, add this to the header of a slide, which will use this as a background on 
 ```markdown
 ![background:sticky](media:julia0787)
 ```
+
+### Important Notes on media: YAML
+
+All of the fields for media elements listed in the example above are important, and should definitely be included (even though some are omitted from search result listings). If some are omited, the functionality of the presentation will be degraded.
 
 ### Important Notes on Media Backgrounds
 
