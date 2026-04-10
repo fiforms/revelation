@@ -27,7 +27,7 @@ if(!url_key) {
 
 document.addEventListener('click', (event) => {
   if (!selectedCardElement) return;
-  const excluded = ['#presentation-list .card', '#sort-menu', '#options-menu', '#media-library-link'];
+  const excluded = ['#presentation-list .card', '#sort-menu', '#options-menu', '#media-library-link', '#selected-presentation-panel-host'];
   if (excluded.some((sel) => event.target.closest(sel))) return;
   clearSelection();
 });
@@ -1005,7 +1005,8 @@ function renderSelectedPresentationPanel(pres, details = null) {
   `;
 
   host.querySelectorAll('.selected-presentation-file-link[data-file-md]').forEach((button) => {
-    button.addEventListener('click', () => {
+    button.addEventListener('click', (e) => {
+      e.stopPropagation();
       const mdFile = String(button.dataset.fileMd || '').trim();
       if (!mdFile || !selectedPresentationBase) return;
       if (mdFile === selectedSidebarMdFile) return;
@@ -1093,7 +1094,7 @@ async function selectPresentationFile(mdFile) {
   };
   renderSelectedPresentationPanel(selectedPresentationBase);
   const details = await loadPresentationDetails(selection);
-  if (selectedPresentationKey !== getCurrentSelectionKey()) return;
+  if (!selectedPresentationBase || selectedPresentationKey !== getCurrentSelectionKey()) return;
   renderSelectedPresentationPanel(selectedPresentationBase, details);
 }
 
@@ -1109,7 +1110,7 @@ async function selectPresentation(pres, cardElement) {
 
   renderSelectedPresentationPanel(pres);
   const details = await loadPresentationDetails({ ...pres, md: selectedSidebarMdFile });
-  if (selectedPresentationKey !== getCurrentSelectionKey()) return;
+  if (!selectedPresentationBase || selectedPresentationKey !== getCurrentSelectionKey()) return;
   renderSelectedPresentationPanel(selectedPresentationBase, details);
 }
 
