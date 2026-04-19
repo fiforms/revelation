@@ -7,6 +7,30 @@
 
 @use "sass:color";
 
+// Override theme settings BEFORE importing settings.scss so !default values don't win.
+// Note: reveal.js 6.0 uses kebab-case variable names.
+// Print/PDF vector export can flatten gradients; keep fallback background light.
+$background: #ddd4c6;
+
+$main-color: #202020;
+$heading-color: #332f21;
+
+$main-font-size: 42px;
+$main-font: 'Inter Latin', 'Noto Serif Greek', 'Noto Serif Hebrew', system-ui, sans-serif;
+$heading-font: 'Inter Latin', 'Noto Serif Greek', 'Noto Serif Hebrew', system-ui, sans-serif;
+$heading-text-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+$heading-letter-spacing: 0.01em;
+$heading-text-transform: none;
+$heading-font-weight: 600;
+$link-color: #1369b5;
+$link-color-hover: color.scale( $link-color, $lightness: 15% );
+$selection-background-color: rgba( $link-color, 0.75 );
+
+$heading1-size: 2.8em;
+$heading2-size: 2.4em;
+$heading3-size: 2.2em;
+$heading4-size: 2.0em;
+
 // Reveal.js template base (via include path from node_modules)
 @import 'reveal.js/dist/reveal.css';
 @import "reveal.js/css/theme/template/mixins";
@@ -17,33 +41,8 @@
 @import url(./fonts/inter/inter.css);
 @import url(./fonts/noto_serif/noto_serif.css);
 
-// Override theme settings (see ../template/settings.scss)
-// Print/PDF vector export can flatten gradients; keep fallback background light.
-$backgroundColor: #ddd4c6;
-
-$mainColor: #202020;
-$headingColor: #332f21;
-
-$mainFontSize: 42px;
-$mainFont: 'Inter Latin', 'Noto Serif Greek', 'Noto Serif Hebrew', system-ui, serif;
-$headingFont: 'Inter Latin', 'Noto Serif Greek', 'Noto Serif Hebrew', system-ui, serif;
-$headingTextShadow: 0 1px 2px rgba(0, 0, 0, 0.18);
-$headingLetterSpacing: 0.01em;
-$headingTextTransform: none;
-$headingFontWeight: 600;
-$linkColor: #1369b5;
-$linkColorHover: color.scale( $linkColor, $lightness: 15% );
-$selectionBackgroundColor: rgba( $linkColor, 0.75 );
-
-$heading1Size: 2.8em;
-$heading2Size: 2.4em;
-$heading3Size: 2.2em;
-$heading4Size: 2.0em;
-
 // Change text colors against light slide backgrounds
 @include light-bg-text-color(#14171c);
-
-@import 'reveal.js/css/theme/template/mixins';
 
 // Background generator
 @mixin bodyBackground() {
