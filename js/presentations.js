@@ -24,6 +24,7 @@ const isRemoteFollower = urlParams.has('remoteMultiplexId');
 const isRemote = window.location.protocol !== 'file:' &&
                  !['localhost', '127.0.0.1'].includes(window.location.hostname);
 const builderPreviewMode = urlParams.get('builderPreview') === '1';
+const builderPreviewPeerEnabled = builderPreviewMode && urlParams.get('builderPreviewPeer') === '1';
 const builderPreviewToken = urlParams.get('builderPreviewToken') || '';
 const PREVIEW_BRIDGE = 'revelation-builder-preview-bridge';
 const SAFE_MD_LINK_RE = /^(?:\.\/)?(?:[a-zA-Z0-9_.-]+\/)*[a-zA-Z0-9_.-]+\.md$/;
@@ -83,8 +84,48 @@ function setupBuilderPreviewBridge(deck) {
       deck.layout?.();
       window.setTimeout(() => deck.layout?.(), 120);
       postCurrentState('slidechanged');
+      return;
+    }
+
+    if (command === 'pauseRevealRemote') {
+      const remote = deck.getPlugin('RevealRemote');
+      if (remote && typeof remote.setMultiplexPaused === 'function') remote.setMultiplexPaused(true);
+      return;
+    }
+
+    if (command === 'resumeRevealRemote') {
+      const remote = deck.getPlugin('RevealRemote');
+      if (remote && typeof remote.setMultiplexPaused === 'function') {
+        remote.setMultiplexPaused(false);
+        if (typeof remote.sendCurrentState === 'function') remote.sendCurrentState();
+      }
+      return;
     }
   });
+
+  if (builderPreviewPeerEnabled) {
+    const pollForMultiplexId = () => {
+      // Try getMultiplexId() from patched remote.js first
+      const remote = deck.getPlugin('RevealRemote');
+      let id = remote && typeof remote.getMultiplexId === 'function' ? remote.getMultiplexId() : null;
+      // Fallback: unpatched remote.js stores multiplexId in localStorage after init
+      if (!id && window.localStorage) {
+        const urlKey = window.location.href.replace(/#.*/, '');
+        try {
+          const stored = JSON.parse(window.localStorage.getItem('presentations') || '{}');
+          id = stored[urlKey]?.multiplexId || null;
+        } catch (e) { /* ignore */ }
+      }
+      if (id) {
+        postPreviewEvent('revealRemoteReady', { multiplexId: id });
+        return;
+      }
+      setTimeout(pollForMultiplexId, 300);
+    };
+    deck.on('ready', () => {
+      setTimeout(pollForMultiplexId, 300);
+    });
+  }
 
   deck.on('ready', () => {
     postCurrentState('ready');
@@ -173,7 +214,7 @@ function setupInterPresentationLinkHandler() {
 pluginLoader('presentations',`/plugins_${key}`).then(async function() {
 
   const plugins = [Markdown, Notes, Zoom, Search];
-  const enableRevealRemote = !!window.revealRemoteServer && !builderPreviewMode;
+  const enableRevealRemote = !!window.revealRemoteServer && (!builderPreviewMode || builderPreviewPeerEnabled);
   if (enableRevealRemote) {
     plugins.push(RevealRemote);
   }
