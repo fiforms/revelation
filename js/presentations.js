@@ -243,7 +243,8 @@ pluginLoader('presentations',`/plugins_${key}`).then(async function() {
         remote: true,
         multiplex: true,
         server: window.revealRemoteServer,
-        path: "/socket.io"
+        path: "/socket.io",
+        suppressInOverview: true
       }
     })
   });
