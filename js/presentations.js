@@ -216,7 +216,15 @@ pluginLoader('presentations',`/plugins_${key}`).then(async function() {
   const plugins = [Markdown, Notes, Zoom, Search];
   const enableRevealRemote = !!window.revealRemoteServer && (!builderPreviewMode || builderPreviewPeerEnabled);
   if (enableRevealRemote) {
-    plugins.push(RevealRemote);
+    // Instantiate the plugin early so we can pre-pause before Reveal (and the
+    // socket) initialises. multiplexPaused is module-level in the plugin, so
+    // setting it here guarantees sendMultiplexState()'s guard fires before the
+    // initial msgInit call on socket connect.
+    const remotePlugin = RevealRemote();
+    if (builderPreviewPeerEnabled) {
+      remotePlugin.setMultiplexPaused(true);
+    }
+    plugins.push(remotePlugin);
   }
 
   for (const plugin of Object.values(window.RevelationPlugins)) {
