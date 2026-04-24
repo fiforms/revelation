@@ -1117,7 +1117,7 @@ async function selectPresentation(pres, cardElement) {
 function getPresentationActions(pres, details = null) {
   const options = [
     {
-      label: '🖥️ ' + tr('Slideshow (Full Screen)'),
+      label: '🖥️ ' + tr('Slideshow (Default)'),
       action: () => openPrimaryPresentation(pres)
     },
     {
