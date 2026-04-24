@@ -379,15 +379,41 @@ pluginLoader('presentations',`/plugins_${key}`).then(async function() {
         const onTouchMove = () => pauseForUserInteraction();
         const onTouchEnd = () => endUserHold();
         const onTouchCancel = () => endUserHold();
+        // Keyboard handler for when the notes pane has DOM focus (e.g. after the
+        // user clicks into it). Goal: every key still drives the presentation rather
+        // than operating on the notes pane as a scrollable text region.
         const onKeyDown = (event) => {
           if (!event) return;
+
+          // Keys that would normally scroll a focused div (arrows, page keys, space)
+          // are also the ones the presenter uses to pace the auto-scroll by hand.
+          // Treat them as a deliberate "I'm controlling the scroll" signal so the
+          // auto-scroll pauses and doesn't fight the manual position.
           if (isScrollKey(event.key)) {
             pauseForUserInteraction();
           }
+
+          // Forward every plain key (no modifier) to Reveal so slide navigation,
+          // fragment stepping, pause, etc. all keep working normally.
+          // Guard: modifier combos (Ctrl+C, Alt+Tab, …) are OS/browser actions that
+          // should not be hijacked, and a non-finite keyCode means an unrecognised
+          // synthetic event we can't safely forward.
           if (!event.metaKey && !event.ctrlKey && !event.altKey && Number.isFinite(event.keyCode)) {
-            deck.triggerKey?.(event.keyCode);
+            // Prevent the browser from scrolling the notes div and stop the event
+            // bubbling up to any other listeners before we re-dispatch it ourselves.
             event.preventDefault();
             event.stopPropagation();
+
+            // Reveal.js keyboard.js bails out early when document.activeElement has
+            // the class "speaker-notes" (intentional: prevents nav keys from firing
+            // while the operator is typing in a notes textarea). We must blur the
+            // pane synchronously *before* calling triggerKey so that check passes.
+            notesPane.blur();
+            deck.triggerKey?.(event.keyCode);
+
+            // After triggerKey the active element is still the body or nothing, so
+            // put focus back on the Reveal viewport so subsequent keys (including
+            // from a remote clicker) continue to work without another click.
             restorePresentationFocus();
           }
         };
@@ -792,19 +818,23 @@ pluginLoader('presentations',`/plugins_${key}`).then(async function() {
   deck.on('overviewshown', updateNotesPaneVisibility);
   deck.on('overviewhidden', updateNotesPaneVisibility);
 
-  // Refocus the viewport 2 seconds after clicking in the notes pane so
-  // keyboard controls don't get stuck on the scrollable notes element.
+  // When the notes pane has keyboard focus, intercept navigation keys and forward
+  // them to Reveal. This covers the gap before beginAnimation's keydown listener
+  // is active (3-second delay, no-overflow slides, etc.).
+  // Capture phase so we beat the browser's default scroll-the-focused-div behaviour.
   if (document.body.dataset.variant === 'notes') {
-    let notesFocusReturnTimer = null;
-    document.addEventListener('mousedown', (e) => {
-      if (!e.target.closest('.speaker-notes')) return;
-      if (notesFocusReturnTimer) window.clearTimeout(notesFocusReturnTimer);
-      notesFocusReturnTimer = window.setTimeout(() => {
-        notesFocusReturnTimer = null;
-        const viewport = document.querySelector('.reveal-viewport') || document.querySelector('.reveal') || document.body;
-        viewport.focus({ preventScroll: true });
-      }, 2000);
-    });
+    document.addEventListener('keydown', (e) => {
+      // Only act when the focused element is inside the notes pane.
+      if (!document.activeElement?.closest?.('.speaker-notes')) return;
+      // beginAnimation's own onKeyDown listener handles this case with finer control.
+      if (notesScrollDetachInteractionListeners) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (!Number.isFinite(e.keyCode)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      document.activeElement.blur();
+      deck.triggerKey?.(e.keyCode);
+    }, true);
   }
 
   window.addEventListener('resize', () => {
