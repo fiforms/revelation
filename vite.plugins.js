@@ -1147,6 +1147,9 @@ function initRevealRemotePresenter(socket, initialData, baseUrl) {
   const multiplexUrl = initialData.shareUrl.replace(/#.*/, '') +
     (initialData.shareUrl.indexOf('?') > 0 ? '&' : '?') + 'remoteMultiplexId=' + multiplexId;
 
+  if (!revealRemoteStates[remoteId]) revealRemoteStates[remoteId] = {};
+  revealRemoteStates[remoteId].multiplexUrl = multiplexUrl;
+
   socket.on('disconnect', () => {
     delete revealRemoteStates[remoteId];
     delete revealRemoteMultiplexes[multiplexId];
@@ -1188,6 +1191,7 @@ function initRevealRemoteControl(socket, data) {
   if (revealRemoteStates[id]) {
     if (revealRemoteStates[id].notes) socket.emit('notes_changed', revealRemoteStates[id].notes);
     if (revealRemoteStates[id].state) socket.emit('state_changed', revealRemoteStates[id].state);
+    if (revealRemoteStates[id].multiplexUrl) socket.emit('presentation_url', { url: revealRemoteStates[id].multiplexUrl });
   }
 
   socket.on('command', (cmd) => {
