@@ -247,10 +247,8 @@ pluginLoader('presentations',`/plugins_${key}`).then(async function() {
         suppressInOverview: true,
         normalizeShareUrl: (url) => {
           try {
-            console.log(`Normalizing shared URL for multiplex: ${url}`);
             const u = new URL(url);
             u.searchParams.delete('variant');
-            console.log(`Normalized URL: ${u.toString()}`);
             return u.toString();
           } catch { return url; }
         }
