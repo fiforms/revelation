@@ -287,9 +287,11 @@ export async function loadAndPreprocessMarkdown(deck, selectedFile = null) {
   }
   if (Object.prototype.hasOwnProperty.call(config, 'margin')) {
     const parsedMargin = Number(config.margin);
+    /*
     if (Number.isFinite(parsedMargin) && parsedMargin < 0.002) {
       config.margin = 0.002;
     }
+    */
   }
   if (variant === 'notes') {
     config.showNotes = true;
