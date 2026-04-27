@@ -527,7 +527,7 @@ cite:not(.attrib) {
 }
 
 /* If the citation is the first thing inside its parent AND it's not .attrib */
-cite:first-child:not(.attrib) {
+cite:first-child:not(:last-child):not(.attrib) {
   text-align: left;
   margin-bottom: 0.3em;
 }
