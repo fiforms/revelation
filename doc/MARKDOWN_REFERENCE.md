@@ -233,6 +233,26 @@ Optional title:
 
 ---
 
+#### Filenames with special characters
+
+If a filename contains spaces, parentheses, curly braces, or other characters that would break the standard `![alt](path)` syntax, wrap the path in angle brackets (CommonMark syntax):
+
+```markdown
+![fit](<1) The first picture.jpg>)
+![background](<my photo (original).jpg>)
+![](< sermon notes & slides.jpg>)
+```
+
+The angle-bracket form allows any character except `<` and `>` themselves. If the filename actually contains `<` or `>`, percent-encode those two characters only:
+
+```markdown
+![fit](<weird%3Cname%3E.jpg>)
+```
+
+The builder automatically applies this wrapping when importing or dragging media files whose names contain special characters.
+
+---
+
 ### 2.9 Tables
 
 ```markdown
@@ -543,6 +563,7 @@ media:
 3. Use fenced code blocks when showing syntax that contains `***`, `---`, `:note:`, or macros.
 4. Prefer explicit separators over heading-implied slide splitting for predictable behavior.
 5. Keep HTML blocks simple and static; unsafe tags/attributes are removed by sanitization.
+6. Filenames with spaces or parentheses break standard `![alt](path)` syntax — use angle brackets: `![alt](<file name (1).jpg>)`. See [section 2.8](#28-images).
 
 ---
 
