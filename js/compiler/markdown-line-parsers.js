@@ -169,9 +169,9 @@ export function createMarkdownLineParsers(context) {
       if (command === 'stop') {
         audioLine = `<!-- .slide: data-background-audio-stop -->`;
       } else if (command === 'play' && src) {
-        audioLine = `<!-- .slide: data-background-audio-start="${src}" -->`;
+        audioLine = `<!-- .slide: data-background-audio-start="${encodeURI(src)}" -->`;
       } else if ((command === 'playloop' || command === 'loop') && src) {
-        audioLine = `<!-- .slide: data-background-audio-loop="${src}" -->`;
+        audioLine = `<!-- .slide: data-background-audio-loop="${encodeURI(src)}" -->`;
       } else {
         console.log('Markdown Audio Inline Macro Not Found or Missing File: ' + paramString);
       }
@@ -238,9 +238,9 @@ export function createMarkdownLineParsers(context) {
       if (command === 'stop') {
         audioLine = `<!-- .slide: data-background-audio-stop -->`;
       } else if (command === 'play' && src) {
-        audioLine = `<!-- .slide: data-background-audio-start="${src}" -->`;
+        audioLine = `<!-- .slide: data-background-audio-start="${encodeURI(src)}" -->`;
       } else if ((command === 'playloop' || command === 'loop') && src) {
-        audioLine = `<!-- .slide: data-background-audio-loop="${src}" -->`;
+        audioLine = `<!-- .slide: data-background-audio-loop="${encodeURI(src)}" -->`;
       } else {
         console.log('Markdown Audio Macro Not Found or Missing File: ' + paramString);
       }
