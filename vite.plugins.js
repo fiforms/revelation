@@ -295,6 +295,49 @@ function ensureReadmeTemplate() {
   copyTemplateRecursiveSync(readmeTemplatePath, readmePresDir, new Set(['header.yaml']));
 }
 
+// --- Thumbnail generation helpers ---
+
+const _THUMB_VIDEO_EXTS = new Set(['.mp4', '.webm', '.mov', '.m4v', '.ogv']);
+const _THUMB_MAX_CONCURRENT = 2;
+let _thumbActiveCount = 0;
+const _thumbQueue = [];
+const _thumbInFlight = new Map();
+
+function _withThumbSlot(fn) {
+  return new Promise((resolve, reject) => {
+    function tryRun() {
+      if (_thumbActiveCount < _THUMB_MAX_CONCURRENT) {
+        _thumbActiveCount++;
+        fn().then(resolve, reject).finally(() => {
+          _thumbActiveCount--;
+          if (_thumbQueue.length) _thumbQueue.shift()();
+        });
+      } else {
+        _thumbQueue.push(tryRun);
+      }
+    }
+    tryRun();
+  });
+}
+
+function _runFfmpegThumb(ffmpegBin, sourceFile, thumbFile) {
+  const isVideo = _THUMB_VIDEO_EXTS.has(path.extname(sourceFile).toLowerCase());
+  const args = isVideo
+    ? ['-y', '-ss', '0', '-i', sourceFile, '-vf', 'scale=320:-2', '-frames:v', '1', thumbFile]
+    : ['-y', '-i', sourceFile, '-vf', 'scale=320:-2', '-frames:v', '1', thumbFile];
+  return _withThumbSlot(() => new Promise((resolve, reject) => {
+    console.log(`[thumbs] ffmpeg cmd: ${ffmpegBin} ${args.join(' ')}`);
+    const proc = require('child_process').spawn(ffmpegBin, args, { stdio: 'pipe' });
+    const stderr = [];
+    proc.stderr?.on('data', (d) => stderr.push(d));
+    proc.on('close', (code) => {
+      if (code === 0) return resolve();
+      reject(new Error(`ffmpeg exit ${code}: ${Buffer.concat(stderr).toString().slice(-300)}`));
+    });
+    proc.on('error', reject);
+  }));
+}
+
 function presentationIndexPlugin() {
   return {
     name: 'generate-presentation-index',
@@ -750,10 +793,71 @@ function presentationIndexPlugin() {
           );
           if(fs.existsSync(pluginsDir)) {
             console.log(`Serving ${pluginsWebPath} from plugins directory ${pluginsDir}`);
-            server.middlewares.use(pluginsWebPath, 
+            server.middlewares.use(pluginsWebPath,
               serveStatic(pluginsDir,{})
             );
           }
+
+          // Thumbnail service: /thumbs_<key>/<slug>/<file> → cached 320-wide JPEG
+          const thumbsPrefix = `/thumbs_${key}/`;
+          server.middlewares.use((req, res, next) => {
+            if (!req.url.startsWith(thumbsPrefix)) return next();
+
+            const ffmpegBin = process.env.FFMPEG_BIN;
+            if (!ffmpegBin) { res.statusCode = 503; return res.end('FFMPEG_BIN not set'); }
+
+            const rawPath = req.url.slice(thumbsPrefix.length).split('?')[0];
+            const decodedPath = rawPath.split('/').map(seg => {
+              try { return decodeURIComponent(seg); } catch { return seg; }
+            }).join('/');
+            if (!decodedPath || decodedPath.includes('..')) return next();
+
+            const sourceFile = path.join(presentationsDir, decodedPath);
+            if (!fs.existsSync(sourceFile)) {
+              console.warn(`[thumbs] 404 source not found: ${decodedPath}`);
+              res.statusCode = 404; return res.end();
+            }
+
+            const sourceStat = fs.statSync(sourceFile);
+            const thumbFile = path.join(
+              path.dirname(sourceFile), '.thumbs',
+              path.basename(sourceFile) + '.thumb.jpg'
+            );
+
+            function serveThumb() {
+              res.setHeader('Content-Type', 'image/jpeg');
+              res.setHeader('Cache-Control', 'public, max-age=86400');
+              fs.createReadStream(thumbFile).pipe(res);
+            }
+
+            if (fs.existsSync(thumbFile) && fs.statSync(thumbFile).mtimeMs >= sourceStat.mtimeMs) {
+              console.log(`[thumbs] cache hit: ${decodedPath}`);
+              return serveThumb();
+            }
+
+            console.log(`[thumbs] generating: ${decodedPath}`);
+            let pending = _thumbInFlight.get(thumbFile);
+            if (!pending) {
+              fs.mkdirSync(path.dirname(thumbFile), { recursive: true });
+              pending = _runFfmpegThumb(ffmpegBin, sourceFile, thumbFile)
+                .finally(() => _thumbInFlight.delete(thumbFile));
+              _thumbInFlight.set(thumbFile, pending);
+            }
+            pending
+              .then(() => {
+                if (fs.existsSync(thumbFile)) {
+                  console.log(`[thumbs] generated ok: ${decodedPath}`);
+                  serveThumb();
+                } else {
+                  console.warn(`[thumbs] generation produced no file: ${decodedPath}`);
+                  res.statusCode = 404; res.end();
+                }
+              })
+              .catch((err) => {
+                console.error(`[thumbs] ffmpeg failed for ${decodedPath}: ${err.message}`);
+                res.statusCode = 500; res.end();
+              });
+          });
         }
 
         // Middleware to serve files from revelation_electron-wrapper/http_admin
