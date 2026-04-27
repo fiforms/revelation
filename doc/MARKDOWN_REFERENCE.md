@@ -243,10 +243,11 @@ If a filename contains spaces, parentheses, curly braces, or other characters th
 ![](< sermon notes & slides.jpg>)
 ```
 
-The angle-bracket form allows any character except `<` and `>` themselves. If the filename actually contains `<` or `>`, percent-encode those two characters only:
+The angle-bracket form allows any character except `<`, `>`, and `%` themselves. Percent-encode those three characters when they appear in the filename (`%` → `%25`, `<` → `%3C`, `>` → `%3E`):
 
 ```markdown
 ![fit](<weird%3Cname%3E.jpg>)
+![fit](<This is 100%25 Right.jpg>)
 ```
 
 The builder automatically applies this wrapping when importing or dragging media files whose names contain special characters.
