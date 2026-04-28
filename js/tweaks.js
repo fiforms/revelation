@@ -398,7 +398,7 @@ function initCountdowns(deck) {
 
       const handler = window.revealCountdownHandlers?.[mode];
       if (typeof handler === 'function') {
-        handler(el, activeIntervals, formatTime);
+        handler(el, activeIntervals, deck);
       }
     });
   };
