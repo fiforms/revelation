@@ -393,6 +393,12 @@ function initCountdowns(deck) {
         };
         tickTo();
         activeIntervals.push(window.setInterval(tickTo, 250));
+        return;
+      }
+
+      const handler = window.revealCountdownHandlers?.[mode];
+      if (typeof handler === 'function') {
+        handler(el, activeIntervals, formatTime);
       }
     });
   };
