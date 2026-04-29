@@ -44,6 +44,7 @@ export function revealTweaks(deck) {
       initFitVideoControls(deck);
       deck.on('slidechanged', e => {
         e.currentSlide.querySelectorAll('video[data-imagefit]').forEach(v => {
+          v.currentTime = 0;
           v.play().catch(() => {});
         });
       });
