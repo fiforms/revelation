@@ -532,12 +532,14 @@ Append `++` to convert a line into a fragment:
 
 #### `fit:N` — percentage-height fit
 
-`![fit:60](image.jpg)` locks the element's height to **N % of the slide height** while preserving the aspect ratio and preventing horizontal overflow. Works for both images and videos. The number is clamped to the range 1–100.
+`![fit:60](image.jpg)` locks the element's height to **N % of the slide height** (`--slide-height`) while preserving the aspect ratio and preventing horizontal overflow. Works for both images and videos. The number is clamped to the range 1–100.
+
+Because the height is expressed as a fraction of `--slide-height` (Reveal's internal slide coordinate, not the viewport), the size is consistent regardless of window size or zoom level.
 
 ```markdown
-![fit:50](half-height.jpg)       <!-- 50 vh tall -->
-![fit:75](tall-chart.png)        <!-- 75 vh tall -->
-![fit:40](clip.mp4)              <!-- video, 40 vh tall -->
+![fit:50](half-height.jpg)       <!-- 50% of slide height -->
+![fit:75](tall-chart.png)        <!-- 75% of slide height -->
+![fit:40](clip.mp4)              <!-- video, 40% of slide height -->
 ```
 
 ---
