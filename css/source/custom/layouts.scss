@@ -195,6 +195,36 @@ body.reveal-ready {
     padding-left: 3rem;
   }
 
+  section[data-lightbg] cite.attrib {
+    background-color: rgba(255, 255, 255, 0.4); /* Keep this for the tint */
+    backdrop-filter: blur(10px);               /* This creates the soft blur */
+    -webkit-backdrop-filter: blur(10px);       /* Safari support */
+    
+    color: #000;
+    padding: 1rem;
+    border-radius: 8px;
+    width: fit-content;
+    margin: 1rem auto;
+    
+    /* Optional: a thin border helps the "glass" pop */
+    border: 1px solid rgba(255, 255, 255, 0.2); 
+  }
+
+  section[data-darkbg] cite.attrib {
+    background-color: rgba(0, 0, 0, 0.6); /* Keep this for the tint */
+    backdrop-filter: blur(10px);           /* This creates the soft blur */
+    -webkit-backdrop-filter: blur(10px);   /* Safari support */
+    
+    color: #fff;
+    padding: 1rem;
+    border-radius: 8px;
+    width: fit-content;
+    margin: 1rem auto;
+    
+    /* Optional: a thin border helps the "glass" pop */
+    border: 1px solid rgba(255, 255, 255, 0.15); 
+  } 
+
   section:has(img), 
   section:has(video),
   section:has(iframe) {
