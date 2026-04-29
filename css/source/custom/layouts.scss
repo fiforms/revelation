@@ -170,7 +170,7 @@ body.reveal-ready {
 
   // Only apply paragraph backgrounds on slides with backgrounds
 
-  section[data-darkbg] p,
+  section[data-darkbg] p:not(:has(img[data-imagefit])),
   section[data-darkbg] ul {
     background-color: rgba(0, 0, 0, 0.75);
     color: #fff;
@@ -180,7 +180,7 @@ body.reveal-ready {
     margin: 1rem auto;
   }
   
-  section[data-lightbg] p,
+  section[data-lightbg] p:not(:has(img[data-imagefit])),
   section[data-lightbg] ul {
     background-color: rgba(255, 255, 255, 0.4);
     color: #000;
