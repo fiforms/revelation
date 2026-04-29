@@ -378,9 +378,19 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
       }
       return tag;
     };
-    magicImageHandlers.fit = (src) => /\.(webm|mp4|mov|m4v)$/i.test(src)
-      ? `<video src="${src}" controls playsinline data-imagefit></video>`
-      : `![](${src})<!-- .element data-imagefit -->`;
+    magicImageHandlers.fit = (src, modifier) => {
+      const pct = Number.parseFloat(modifier);
+      const isVideo = /\.(webm|mp4|mov|m4v)$/i.test(src);
+      if (Number.isFinite(pct) && pct > 0) {
+        const h = Math.min(100, Math.max(1, Math.round(pct)));
+        return isVideo
+          ? `<video src="${src}" controls playsinline style="height:${h}vh;width:auto;max-width:100%"></video>`
+          : `<img src="${src}" alt="" style="height:${h}vh;width:auto;max-width:100%">`;
+      }
+      return isVideo
+        ? `<video src="${src}" controls playsinline data-imagefit></video>`
+        : `![](${src})<!-- .element data-imagefit -->`;
+    };
     magicImageHandlers.youtube = (src, modifier) => {
       const match = src.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|watch\?v=))([\w-]+)/);
       const id = match ? match[1] : null;

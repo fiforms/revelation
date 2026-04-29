@@ -517,11 +517,27 @@ Append `++` to convert a line into a fragment:
 ![background:noloop](bg.mp4)
 ![background:sticky](bg.mp4)
 ![fit](chart.png)
+![fit:60](chart.png)
+![fit:60](clip.mp4)
 ![caption:Figure caption](chart.png)
 ![youtube](https://youtu.be/VIDEO_ID)
 ![youtube:fit](https://youtu.be/VIDEO_ID)
 ![web](https://example.com)
 ![web:scrollY=500](https://example.com)
+```
+
+#### `fit` — full-slide fit
+
+`![fit](image.jpg)` scales the image or video to fill the slide area (honouring theme margins) using the `data-imagefit` attribute.
+
+#### `fit:N` — percentage-height fit
+
+`![fit:60](image.jpg)` locks the element's height to **N % of the slide height** while preserving the aspect ratio and preventing horizontal overflow. Works for both images and videos. The number is clamped to the range 1–100.
+
+```markdown
+![fit:50](half-height.jpg)       <!-- 50 vh tall -->
+![fit:75](tall-chart.png)        <!-- 75 vh tall -->
+![fit:40](clip.mp4)              <!-- video, 40 vh tall -->
 ```
 
 ---
