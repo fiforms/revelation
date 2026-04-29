@@ -2,6 +2,7 @@
 export function revealTweaks(deck) {
 
     const isThumbnail = window.location.href.includes('backgroundTransition=none');
+    const isFollower = !!new URLSearchParams(window.location.search).get('remoteMultiplexId');
 
     const readyTweaks = () => {
       applyStackAttributes(deck);
@@ -41,7 +42,7 @@ export function revealTweaks(deck) {
     if (!isThumbnail) {
       initBackgroundAudio(deck);
       initCountdowns(deck);
-      initFitVideoControls(deck);
+      if (!isFollower) initFitVideoControls(deck);
       deck.on('slidechanged', e => {
         e.currentSlide.querySelectorAll('video[data-imagefit]').forEach(v => {
           v.currentTime = 0;
@@ -634,6 +635,67 @@ function ensureTintLayers(tint, tintFadeMs) {
 
 function tintStyleSignature(tintStyle) {
   return tintStyle ? `${tintStyle.type}:${tintStyle.value}` : '';
+}
+
+export function initVideoSync(deck, remotePlugin) {
+  const isFollower = !!new URLSearchParams(window.location.search).get('remoteMultiplexId');
+
+  if (isFollower) {
+    const stripControls = (slide) => {
+      slide?.querySelectorAll('video').forEach(v => {
+        v.controls = false;
+        v.removeAttribute('controls');
+      });
+    };
+    deck.on('ready', e => stripControls(e.currentSlide));
+    deck.on('slidechanged', e => stripControls(e.currentSlide));
+
+    remotePlugin.onMessage('video-command', (data) => {
+      const indices = deck.getIndices();
+      if (indices.h !== data.h || (indices.v ?? 0) !== (data.v ?? 0)) return;
+      const slide = deck.getCurrentSlide();
+      if (!slide) return;
+      const videos = [...slide.querySelectorAll('video')];
+      const video = videos[data.videoIndex];
+      if (!video) return;
+      if (Math.abs(video.currentTime - data.currentTime) > 0.3) {
+        video.currentTime = data.currentTime;
+      }
+      if (data.paused) {
+        video.pause();
+      } else {
+        video.play().catch(() => {});
+      }
+    });
+
+  } else {
+    const wireVideoSync = (slide) => {
+      if (!slide) return;
+      const videos = [...slide.querySelectorAll('video')];
+      videos.forEach((video, videoIndex) => {
+        if (video.dataset.videoSyncWired === '1') return;
+        video.dataset.videoSyncWired = '1';
+
+        const sendCmd = () => {
+          const indices = deck.getIndices();
+          remotePlugin.sendMessage('video-command', {
+            h: indices.h,
+            v: indices.v ?? 0,
+            videoIndex,
+            currentTime: video.currentTime,
+            paused: video.paused,
+          });
+        };
+
+        video.addEventListener('play', sendCmd);
+        video.addEventListener('pause', sendCmd);
+        video.addEventListener('seeked', sendCmd);
+      });
+    };
+
+    deck.on('ready', e => wireVideoSync(e.currentSlide));
+    deck.on('slidechanged', e => wireVideoSync(e.currentSlide));
+  }
 }
 
 function applyTintStyleToLayer(layer, tintStyle) {

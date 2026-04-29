@@ -7,7 +7,7 @@ import Search from 'reveal.js/plugin/search';
 import RevealRemote from 'reveal.js-remote/plugin/remote.js';
 
 import { loadAndPreprocessMarkdown } from './presentation-bootstrap.js';
-import { revealTweaks } from './tweaks.js';
+import { revealTweaks, initVideoSync } from './tweaks.js';
 import { contextMenu, sendPresentationToPeers, closePresentationsOnPeers } from './contextmenu.js';
 import { pluginLoader } from './pluginloader.js';
 
@@ -257,6 +257,14 @@ pluginLoader('presentations',`/plugins_${key}`).then(async function() {
   });
   
   window.deck = deck;
+
+  if (enableRevealRemote) {
+    deck.on('ready', () => {
+      const remotePlugin = deck.getPlugin('RevealRemote');
+      if (remotePlugin) initVideoSync(deck, remotePlugin);
+    });
+  }
+
   setupBuilderPreviewBridge(deck);
   setupInterPresentationLinkHandler();
   setHotReloading();

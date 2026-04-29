@@ -1285,6 +1285,10 @@ function initRevealRemotePresenter(socket, initialData, baseUrl) {
     revealRemoteMultiplexes[multiplexId] = data;
     socket.to('multiplex-' + multiplexId).emit('multiplex', data);
   });
+
+  socket.on('video-command', (data) => {
+    socket.to('multiplex-' + multiplexId).emit('video-command', data);
+  });
 }
 
 function initRevealRemoteControl(socket, data) {
