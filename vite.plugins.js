@@ -37,6 +37,28 @@ let customPath = false;
 let pluginsDir = '';
 let pluginsWebPath = '';
 
+// Token-keyed registry for dynamically shared media files.
+// Entries are added/removed via postMessage from the Electron main process.
+const dynamicMediaFiles = new Map(); // token (48-char hex) → { absolutePath, mimeType }
+const _MEDIA_TOKEN_RE = /^[a-f0-9]{48}$/;
+
+if (process.parentPort) {
+  process.parentPort.on('message', ({ data }) => {
+    if (!data || typeof data !== 'object') return;
+    if (data.type === 'register-media-token') {
+      const { token, absolutePath, mimeType } = data;
+      if (_MEDIA_TOKEN_RE.test(token) && typeof absolutePath === 'string') {
+        dynamicMediaFiles.set(token, {
+          absolutePath,
+          mimeType: typeof mimeType === 'string' ? mimeType : 'application/octet-stream'
+        });
+      }
+    } else if (data.type === 'revoke-media-token') {
+      if (typeof data.token === 'string') dynamicMediaFiles.delete(data.token);
+    }
+  });
+}
+
 if(process.env.PRESENTATIONS_DIR_OVERRIDE && process.env.PRESENTATIONS_KEY_OVERRIDE) {
     presentationsDir = process.env.PRESENTATIONS_DIR_OVERRIDE;
     key = process.env.PRESENTATIONS_KEY_OVERRIDE;
@@ -373,6 +395,50 @@ function presentationIndexPlugin() {
           return;
         }
         next();
+      });
+
+      // Serve dynamically registered media files via opaque tokens.
+      // The real file path is never exposed to clients — only the 48-char hex token.
+      // Range requests are supported so video scrubbing works correctly.
+      server.middlewares.use((req, res, next) => {
+        const PREFIX = '/media-share/';
+        if (!req.url.startsWith(PREFIX)) return next();
+        const rawToken = req.url.slice(PREFIX.length).split('?')[0];
+        if (!_MEDIA_TOKEN_RE.test(rawToken)) { res.writeHead(404); return res.end(); }
+        const entry = dynamicMediaFiles.get(rawToken);
+        if (!entry) { res.writeHead(404); return res.end(); }
+        let stat;
+        try { stat = fs.statSync(entry.absolutePath); }
+        catch { res.writeHead(404); return res.end(); }
+        const total = stat.size;
+        const range = req.headers['range'];
+        if (range) {
+          const m = range.match(/bytes=(\d*)-(\d*)/);
+          if (!m) {
+            res.writeHead(416, { 'Content-Range': `bytes */${total}` });
+            return res.end();
+          }
+          const start = m[1] ? parseInt(m[1], 10) : 0;
+          const end   = m[2] ? parseInt(m[2], 10) : total - 1;
+          if (start > end || end >= total) {
+            res.writeHead(416, { 'Content-Range': `bytes */${total}` });
+            return res.end();
+          }
+          res.writeHead(206, {
+            'Content-Range': `bytes ${start}-${end}/${total}`,
+            'Accept-Ranges': 'bytes',
+            'Content-Length': end - start + 1,
+            'Content-Type': entry.mimeType
+          });
+          fs.createReadStream(entry.absolutePath, { start, end }).pipe(res);
+        } else {
+          res.writeHead(200, {
+            'Content-Length': total,
+            'Content-Type': entry.mimeType,
+            'Accept-Ranges': 'bytes'
+          });
+          fs.createReadStream(entry.absolutePath).pipe(res);
+        }
       });
 
       if (fs.existsSync(revealDistDir)) {
