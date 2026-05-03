@@ -103,10 +103,10 @@ body.has-next-preview:not(.notes-pane-hidden) .notes-next-preview {
 }
 
 /* Wide mode, notes pane open: shrink slide area by preview height */
-body.has-next-preview:not(.notes-pane-hidden) .reveal.show-notes {
+/* body.has-next-preview:not(.notes-pane-hidden) .reveal.show-notes {
   max-height: calc(100vh - var(--notes-preview-height)) !important;
   max-height: calc(100dvh - var(--notes-preview-height)) !important;
-}
+} */
 
 /* Wide mode, notes pane hidden: compact 30×30 in lower-left */
 body.has-next-preview.notes-pane-hidden .notes-next-preview {
@@ -116,15 +116,15 @@ body.has-next-preview.notes-pane-hidden .notes-next-preview {
 }
 
 /* Wide mode, notes pane hidden: shrink slide to keep preview clear */
-body.has-next-preview.notes-pane-hidden .reveal.show-notes {
-  max-height: calc(100vh - var(--notes-preview-height)) !important;
+body.has-next-preview .reveal {
+  /* max-height: calc(100vh - var(--notes-preview-height)) !important; */
   max-height: calc(100dvh - var(--notes-preview-height)) !important;
 }
 
 @media screen and (max-width: 1024px) {
   .reveal.show-notes {
     max-width: none !important;
-    max-height: calc(100vh - var(--notes-mobile-pane-height)) !important;
+    /* max-height: calc(100vh - var(--notes-mobile-pane-height)) !important; */
     max-height: calc(100dvh - var(--notes-mobile-pane-height)) !important;
     margin-top: var(--notes-mobile-pane-height);
     transition: margin-top 260ms ease, max-height 260ms ease;
