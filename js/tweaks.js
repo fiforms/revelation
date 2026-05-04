@@ -21,6 +21,20 @@ export function revealTweaks(deck) {
     });
     deck.on('overviewshown', () => updateFixedOverlayVisibility(deck));
     deck.on('overviewhidden', () => {
+      // With the fade transition, overview forces opacity:1 on every slide.
+      // When overview closes, all non-present slides would normally fade from
+      // opacity:1 → 0 simultaneously, causing a brief scramble. Suppress
+      // transitions for two frames so they snap to their target opacity instead.
+      const config = deck.getConfig?.() || {};
+      if (config.transition === 'fade') {
+        const slides = deck.getRevealElement?.()?.querySelectorAll?.('.slides section');
+        if (slides?.length) {
+          slides.forEach(s => { s.style.transition = 'none'; });
+          requestAnimationFrame(() => requestAnimationFrame(() => {
+            slides.forEach(s => { s.style.transition = ''; });
+          }));
+        }
+      }
       updateAttributionFromCurrentSlide(deck);
       updateHiddenPreviewOverlay(deck);
       updateFixedOverlayVisibility(deck);
