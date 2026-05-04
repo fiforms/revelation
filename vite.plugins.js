@@ -345,8 +345,8 @@ function _withThumbSlot(fn) {
 function _runFfmpegThumb(ffmpegBin, sourceFile, thumbFile) {
   const isVideo = _THUMB_VIDEO_EXTS.has(path.extname(sourceFile).toLowerCase());
   const args = isVideo
-    ? ['-y', '-ss', '0', '-i', sourceFile, '-vf', 'scale=320:-2', '-frames:v', '1', thumbFile]
-    : ['-y', '-i', sourceFile, '-vf', 'scale=320:-2', '-frames:v', '1', thumbFile];
+    ? ['-y', '-ss', '0', '-i', sourceFile, '-vf', 'scale=320:-2', '-frames:v', '1', '-update', '1', thumbFile]
+    : ['-y', '-i', sourceFile, '-vf', 'scale=320:-2', '-frames:v', '1', '-update', '1', thumbFile];
   return _withThumbSlot(() => new Promise((resolve, reject) => {
     console.log(`[thumbs] ffmpeg cmd: ${ffmpegBin} ${args.join(' ')}`);
     const proc = require('child_process').spawn(ffmpegBin, args, { stdio: 'pipe' });
