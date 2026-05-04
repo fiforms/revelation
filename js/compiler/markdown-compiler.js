@@ -390,7 +390,7 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
       }
       return isVideo
         ? `<video src="${src}" controls playsinline data-imagefit data-imagefill></video>`
-        : `![](${src})<!-- .element data-imagefit data-imagefill-->`;
+        : `![](<${src}>)<!-- .element data-imagefit data-imagefill-->`;
     };
     magicImageHandlers.youtube = (src, modifier) => {
       const match = src.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|watch\?v=))([\w-]+)/);

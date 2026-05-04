@@ -88,7 +88,8 @@ export function createMediaLineParsers(context) {
 
     const keyword = magicImageMatch[1].toLowerCase();
     const modifier = magicImageMatch[2]?.trim() || '';
-    const src = magicImageMatch[3];
+    const rawSrc = magicImageMatch[3];
+    const src = rawSrc.startsWith('<') && rawSrc.endsWith('>') ? rawSrc.slice(1, -1) : rawSrc;
     if (forHandout && isVideoSource(src)) {
       return true;
     }
@@ -113,7 +114,8 @@ export function createMediaLineParsers(context) {
     }
 
     const altText = plainMediaMatch[1].trim();
-    const src = plainMediaMatch[2].trim();
+    const rawSrc = plainMediaMatch[2].trim();
+    const src = rawSrc.startsWith('<') && rawSrc.endsWith('>') ? rawSrc.slice(1, -1) : rawSrc;
     if (forHandout && isVideoSource(src)) {
       return true;
     }
