@@ -5,6 +5,7 @@ import Notes from 'reveal.js/plugin/notes';
 import Zoom from 'reveal.js/plugin/zoom';
 import Search from 'reveal.js/plugin/search';
 import RevealRemote from 'reveal.js-remote/plugin/remote.js';
+import SlideLabels from './slide-labels/plugin.js';
 
 import { loadAndPreprocessMarkdown } from './presentation-bootstrap.js';
 import { revealTweaks, initVideoSync } from './tweaks.js';
@@ -213,7 +214,7 @@ function setupInterPresentationLinkHandler() {
 
 pluginLoader('presentations',`/plugins_${key}`).then(async function() {
 
-  const plugins = [Markdown, Notes, Zoom, Search];
+  const plugins = [Markdown, Notes, Zoom, Search, SlideLabels()];
   const enableRevealRemote = !!window.revealRemoteServer && (!builderPreviewMode || builderPreviewPeerEnabled);
   if (enableRevealRemote) {
     // Instantiate the plugin early so we can pre-pause before Reveal (and the
