@@ -298,8 +298,11 @@ export async function loadAndPreprocessMarkdown(deck, selectedFile = null) {
   const processedMarkdown = metadata.convertSmartQuotes === false ? partProcessedMarkdown : convertSmartQuotes(partProcessedMarkdown);
 
   // Remove transitions for variants that need hard cuts only, such as lower-thirds video output.
+  // For confidence monitor, replace all transitions with 'none' instead.
   const transitionSafeMarkdown = forceNoTransitions
     ? processedMarkdown.replace(/\sdata-transition="[^"]*"/gi, '').replace(/\sdata-transition-speed="[^"]*"/gi, '')
+    : variant === 'confidencemonitor'
+    ? processedMarkdown.replace(/\sdata-transition="[^"]*"/gi, ' data-transition="none"').replace(/\sdata-transition-speed="[^"]*"/gi, '')
     : processedMarkdown;
 
   // Sanitize embedded HTML before handing the markdown off to Reveal's markdown plugin.
@@ -346,11 +349,14 @@ export async function loadAndPreprocessMarkdown(deck, selectedFile = null) {
     config.transition = 'none';
     config.backgroundTransition = 'none';
   }
-  if (variant === 'confidencemonitor' && metadata.confidence && typeof metadata.confidence === 'object') {
-    const confWidth = Number(metadata.confidence.width);
-    const confHeight = Number(metadata.confidence.height);
-    if (Number.isFinite(confWidth) && confWidth > 0) config.width = confWidth;
-    if (Number.isFinite(confHeight) && confHeight > 0) config.height = confHeight;
+  if (variant === 'confidencemonitor') {
+    config.transition = 'none';
+    if (metadata.confidence && typeof metadata.confidence === 'object') {
+      const confWidth = Number(metadata.confidence.width);
+      const confHeight = Number(metadata.confidence.height);
+      if (Number.isFinite(confWidth) && confWidth > 0) config.width = confWidth;
+      if (Number.isFinite(confHeight) && confHeight > 0) config.height = confHeight;
+    }
   }
 
   // After Reveal applies <!-- .element: --> attributes, lift data-parentfragment
