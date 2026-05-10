@@ -201,34 +201,49 @@ function initConfidenceMonitorVideoTimer(deck) {
 
   let updateInterval = null;
   let currentVideo = null;
+  const audioEl = document.getElementById('background-audio-player');
+
+  const formatTime = (seconds) => {
+    const minutes = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  };
 
   const updateTimer = () => {
-    if (!currentVideo) {
+    const isVideoPlaying = currentVideo && !currentVideo.paused && !currentVideo.ended;
+    const isAudioPlaying = audioEl && !audioEl.paused && !audioEl.ended && audioEl.duration > 0;
+
+    if (isVideoPlaying) {
+      const duration = currentVideo.duration;
+      const currentTime = currentVideo.currentTime;
+      const remaining = Math.max(0, duration - currentTime);
+
+      timeLabel.textContent = formatTime(remaining);
+      const percentPlayed = duration > 0 ? (currentTime / duration) * 100 : 0;
+      playedBar.style.width = `${percentPlayed}%`;
+      overlay.style.display = 'block';
+    } else if (isAudioPlaying) {
+      const duration = audioEl.duration;
+      const currentTime = audioEl.currentTime;
+      const remaining = Math.max(0, duration - currentTime);
+
+      timeLabel.textContent = `(audio) ${formatTime(remaining)}`;
+      const percentPlayed = duration > 0 ? (currentTime / duration) * 100 : 0;
+      playedBar.style.width = `${percentPlayed}%`;
+      overlay.style.display = 'block';
+    } else {
       overlay.style.display = 'none';
       if (updateInterval) {
         clearInterval(updateInterval);
         updateInterval = null;
       }
-      return;
     }
+  };
 
-    const duration = currentVideo.duration;
-    const currentTime = currentVideo.currentTime;
-    const remaining = Math.max(0, duration - currentTime);
-
-    const minutes = Math.floor(remaining / 60);
-    const seconds = Math.floor(remaining % 60);
-    timeLabel.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-
-    const percentPlayed = duration > 0 ? (currentTime / duration) * 100 : 0;
-    playedBar.style.width = `${percentPlayed}%`;
-
-    if (currentVideo.paused || currentVideo.ended) {
-      overlay.style.display = 'none';
-      if (updateInterval) {
-        clearInterval(updateInterval);
-        updateInterval = null;
-      }
+  const startInterval = () => {
+    if (!updateInterval) {
+      updateTimer();
+      updateInterval = setInterval(updateTimer, 100);
     }
   };
 
@@ -240,27 +255,17 @@ function initConfidenceMonitorVideoTimer(deck) {
 
     const onPlay = () => {
       currentVideo = video;
-      overlay.style.display = 'block';
-      if (!updateInterval) {
-        updateTimer();
-        updateInterval = setInterval(updateTimer, 100);
-      }
+      startInterval();
     };
 
     const onPause = () => {
-      overlay.style.display = 'none';
-      if (updateInterval) {
-        clearInterval(updateInterval);
-        updateInterval = null;
-      }
+      currentVideo = null;
+      updateTimer();
     };
 
     const onEnded = () => {
-      overlay.style.display = 'none';
-      if (updateInterval) {
-        clearInterval(updateInterval);
-        updateInterval = null;
-      }
+      currentVideo = null;
+      updateTimer();
     };
 
     video.addEventListener('play', onPlay);
@@ -275,15 +280,33 @@ function initConfidenceMonitorVideoTimer(deck) {
     slide.querySelectorAll('video[data-imagefit]').forEach(wireVideoTimer);
   };
 
-  deck.on('ready', (e) => wireSlideVideos(e.currentSlide));
+  if (audioEl) {
+    const onAudioPlay = () => {
+      startInterval();
+    };
+
+    const onAudioPause = () => {
+      updateTimer();
+    };
+
+    const onAudioEnded = () => {
+      updateTimer();
+    };
+
+    audioEl.addEventListener('play', onAudioPlay);
+    audioEl.addEventListener('pause', onAudioPause);
+    audioEl.addEventListener('ended', onAudioEnded);
+  }
+
+  deck.on('ready', (e) => {
+    wireSlideVideos(e.currentSlide);
+    updateTimer();
+  });
+
   deck.on('slidechanged', (e) => {
     currentVideo = null;
-    overlay.style.display = 'none';
-    if (updateInterval) {
-      clearInterval(updateInterval);
-      updateInterval = null;
-    }
     wireSlideVideos(e.currentSlide);
+    updateTimer();
   });
 }
 
