@@ -32,3 +32,20 @@
     background-color: rgba(48, 48, 48, 0.5);
     padding: 1rem;
 }
+
+.speaker-note-heading {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: #f0f0f0;
+    color: #1a1a1a;
+    font-size: 4.5vw;
+    font-weight: bold;
+    text-transform: uppercase;
+    padding: 0.6em 1em;
+    text-align: center;
+    z-index: 100;
+    letter-spacing: 0.05em;
+    font-family: sans-serif;
+}

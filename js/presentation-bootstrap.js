@@ -364,6 +364,38 @@ export async function loadAndPreprocessMarkdown(deck, selectedFile = null) {
       if (classes.length) parent.classList.add(...classes);
       el.removeAttribute('data-parentfragment');
     });
+
+    // In confidence monitor mode, extract and display speaker note headings
+    if (variant === 'confidencemonitor') {
+      const updateSpeakerNoteHeading = () => {
+        const currentSlide = deck.getCurrentSlide();
+        if (!currentSlide) return;
+        const notesSection = currentSlide.querySelector('aside.notes');
+        let headingText = '';
+        if (notesSection) {
+          const heading = notesSection.querySelector('h1, h2, h3');
+          if (heading) {
+            headingText = heading.textContent.trim();
+          }
+        }
+        let headingDiv = document.getElementById('speaker-note-heading-display');
+        if (headingText) {
+          if (!headingDiv) {
+            headingDiv = document.createElement('div');
+            headingDiv.id = 'speaker-note-heading-display';
+            headingDiv.className = 'speaker-note-heading';
+            document.body.appendChild(headingDiv);
+          }
+          headingDiv.textContent = headingText.toUpperCase();
+          headingDiv.style.display = 'block';
+        } else if (headingDiv) {
+          headingDiv.style.display = 'none';
+        }
+      };
+
+      updateSpeakerNoteHeading();
+      deck.on('slidechanged', updateSpeakerNoteHeading);
+    }
   });
 
   // Hand off to Reveal after all markdown, DOM, and runtime config preparation is complete.
