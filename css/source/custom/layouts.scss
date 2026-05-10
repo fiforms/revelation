@@ -693,3 +693,51 @@ cite.attrib {
 .reveal table.datatable.darktable tbody tr:hover {
   background: rgba(86, 151, 255, 0.22);
 }
+
+#video-timer-overlay {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 80px;
+    z-index: 999;
+    display: none;
+    pointer-events: none;
+    font-family: monospace;
+    font-size: 70px;
+    font-weight: bold;
+    color: black;
+    line-height: 80px;
+    padding-right: 20px;
+    box-sizing: border-box;
+
+    .video-timer-remaining {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.2);
+    }
+
+    .video-timer-played {
+        position: absolute;
+        left: 0;
+        top: 0;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.6);
+        transition: width 0.1s linear;
+        width: 0%;
+    }
+
+    .video-timer-label {
+        position: absolute;
+        right: 20px;
+        top: 0;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        z-index: 1;
+        pointer-events: none;
+    }
+}

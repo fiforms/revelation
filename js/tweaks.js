@@ -57,8 +57,11 @@ export function revealTweaks(deck) {
       initBackgroundAudio(deck);
       initCountdowns(deck);
       if (!isFollower) initFitVideoControls(deck);
-      const isConfidenceMonitor = new URLSearchParams(window.location.search).get('variant') === 'confidencemonitor';
-      if (isConfidenceMonitor) {
+      const params = new URLSearchParams(window.location.search);
+      const shouldShowTimer = params.get('variant') === 'confidencemonitor' ||
+                             params.get('variant') === 'notes' ||
+                             params.get('builderPreview') === '1';
+      if (shouldShowTimer) {
         initConfidenceMonitorVideoTimer(deck);
       }
       deck.on('slidechanged', e => {
