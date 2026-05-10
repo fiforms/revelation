@@ -209,6 +209,19 @@ function initConfidenceMonitorVideoTimer(deck) {
     return `${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   };
 
+  const updateOverlayPosition = () => {
+    const speakerNoteHeading = document.querySelector('.speaker-note-heading');
+    if (speakerNoteHeading) {
+      const isVisible = getComputedStyle(speakerNoteHeading).display !== 'none';
+      if (isVisible) {
+        const height = speakerNoteHeading.offsetHeight;
+        overlay.style.bottom = `${height}px`;
+      } else {
+        overlay.style.bottom = '0';
+      }
+    }
+  };
+
   const updateTimer = () => {
     const isVideoPlaying = currentVideo && !currentVideo.paused && !currentVideo.ended;
     const isAudioPlaying = audioEl && !audioEl.paused && !audioEl.ended && audioEl.duration > 0;
@@ -222,6 +235,7 @@ function initConfidenceMonitorVideoTimer(deck) {
       const percentPlayed = duration > 0 ? (currentTime / duration) * 100 : 0;
       playedBar.style.width = `${percentPlayed}%`;
       overlay.style.display = 'block';
+      updateOverlayPosition();
     } else if (isAudioPlaying) {
       const duration = audioEl.duration;
       const currentTime = audioEl.currentTime;
@@ -231,6 +245,7 @@ function initConfidenceMonitorVideoTimer(deck) {
       const percentPlayed = duration > 0 ? (currentTime / duration) * 100 : 0;
       playedBar.style.width = `${percentPlayed}%`;
       overlay.style.display = 'block';
+      updateOverlayPosition();
     } else {
       overlay.style.display = 'none';
       if (updateInterval) {
