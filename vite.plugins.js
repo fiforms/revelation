@@ -1370,7 +1370,7 @@ function initRevealRemoteControl(socket, data) {
 
   socket.on('command', (cmd) => {
     if (typeof cmd?.command === 'string') {
-      socket.to('presenter-' + id).emit('command', { command: cmd.command });
+      socket.to('presenter-' + id).emit('command', cmd);
     }
   });
 }
