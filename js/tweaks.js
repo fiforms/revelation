@@ -57,6 +57,10 @@ export function revealTweaks(deck) {
       initBackgroundAudio(deck);
       initCountdowns(deck);
       if (!isFollower) initFitVideoControls(deck);
+      const isConfidenceMonitor = new URLSearchParams(window.location.search).get('variant') === 'confidencemonitor';
+      if (isConfidenceMonitor) {
+        initConfidenceMonitorVideoTimer(deck);
+      }
       deck.on('slidechanged', e => {
         e.currentSlide.querySelectorAll('video[data-imagefit]').forEach(v => {
           v.currentTime = 0;
@@ -174,6 +178,113 @@ function initFitVideoControls(deck) {
 
   deck.on('ready', (e) => wireSlideFitVideos(e.currentSlide));
   deck.on('slidechanged', (e) => wireSlideFitVideos(e.currentSlide));
+}
+
+function initConfidenceMonitorVideoTimer(deck) {
+  const overlay = document.createElement('div');
+  overlay.id = 'video-timer-overlay';
+
+  const remainingBar = document.createElement('div');
+  remainingBar.className = 'video-timer-remaining';
+
+  const playedBar = document.createElement('div');
+  playedBar.className = 'video-timer-played';
+
+  const timeLabel = document.createElement('div');
+  timeLabel.className = 'video-timer-label';
+  timeLabel.textContent = '00:00';
+
+  overlay.appendChild(remainingBar);
+  overlay.appendChild(playedBar);
+  overlay.appendChild(timeLabel);
+  document.body.appendChild(overlay);
+
+  let updateInterval = null;
+  let currentVideo = null;
+
+  const updateTimer = () => {
+    if (!currentVideo) {
+      overlay.style.display = 'none';
+      if (updateInterval) {
+        clearInterval(updateInterval);
+        updateInterval = null;
+      }
+      return;
+    }
+
+    const duration = currentVideo.duration;
+    const currentTime = currentVideo.currentTime;
+    const remaining = Math.max(0, duration - currentTime);
+
+    const minutes = Math.floor(remaining / 60);
+    const seconds = Math.floor(remaining % 60);
+    timeLabel.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+
+    const percentPlayed = duration > 0 ? (currentTime / duration) * 100 : 0;
+    playedBar.style.width = `${percentPlayed}%`;
+
+    if (currentVideo.paused || currentVideo.ended) {
+      overlay.style.display = 'none';
+      if (updateInterval) {
+        clearInterval(updateInterval);
+        updateInterval = null;
+      }
+    }
+  };
+
+  const wireVideoTimer = (video) => {
+    if (video.dataset.timerWired === '1') {
+      return;
+    }
+    video.dataset.timerWired = '1';
+
+    const onPlay = () => {
+      currentVideo = video;
+      overlay.style.display = 'block';
+      if (!updateInterval) {
+        updateTimer();
+        updateInterval = setInterval(updateTimer, 100);
+      }
+    };
+
+    const onPause = () => {
+      overlay.style.display = 'none';
+      if (updateInterval) {
+        clearInterval(updateInterval);
+        updateInterval = null;
+      }
+    };
+
+    const onEnded = () => {
+      overlay.style.display = 'none';
+      if (updateInterval) {
+        clearInterval(updateInterval);
+        updateInterval = null;
+      }
+    };
+
+    video.addEventListener('play', onPlay);
+    video.addEventListener('pause', onPause);
+    video.addEventListener('ended', onEnded);
+  };
+
+  const wireSlideVideos = (slide) => {
+    if (!slide) {
+      return;
+    }
+    slide.querySelectorAll('video[data-imagefit]').forEach(wireVideoTimer);
+  };
+
+  deck.on('ready', (e) => wireSlideVideos(e.currentSlide));
+  deck.on('slidechanged', (e) => {
+    currentVideo = null;
+    overlay.style.display = 'none';
+    if (updateInterval) {
+      clearInterval(updateInterval);
+      updateInterval = null;
+    }
+    wireSlideVideos(e.currentSlide);
+  });
 }
 
 function ensureLinksOpenExternally(deck) {
