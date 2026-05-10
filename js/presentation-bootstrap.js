@@ -309,6 +309,12 @@ export async function loadAndPreprocessMarkdown(deck, selectedFile = null) {
     config.transition = 'none';
     config.backgroundTransition = 'none';
   }
+  if (variant === 'confidencemonitor' && metadata.confidence && typeof metadata.confidence === 'object') {
+    const confWidth = Number(metadata.confidence.width);
+    const confHeight = Number(metadata.confidence.height);
+    if (Number.isFinite(confWidth) && confWidth > 0) config.width = confWidth;
+    if (Number.isFinite(confHeight) && confHeight > 0) config.height = confHeight;
+  }
 
   // After Reveal applies <!-- .element: --> attributes, lift data-parentfragment
   // values onto the nearest block-level parent (<li> or <p>) so the whole item

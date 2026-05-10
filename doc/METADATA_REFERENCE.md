@@ -118,6 +118,12 @@ config:
   controls: false
   slideNumber: c
   hash: true
+  width: 960
+  height: 540
+
+confidence:
+  width: 640
+  height: 480
 
 stylesheet: style.css
 
@@ -146,6 +152,7 @@ scrollspeed: 2.1
 | Field          | Type     | Description |
 | -------------- | -------- | ----------- |
 | `config`       | `object` | Reveal.js configuration values. See https://revealjs.com/config/ |
+| `confidence`   | `object` | Per-variant dimensions for confidence monitor view. When rendered as `?variant=confidencemonitor`, overrides the `width` and `height` values from `config`. Useful for displaying slides at different canvas sizes on confidence monitor screens. |
 | `stylesheet`   | `string` | Custom CSS file relative to the presentation folder. |
 | `alternatives` | `object` | Alternate markdown files keyed by filename/path with language code; supports `self: hidden` to hide the current file from listing. |
 | `media`        | `object` | Named media aliases used by markdown and macros. |
