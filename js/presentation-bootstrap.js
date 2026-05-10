@@ -33,6 +33,36 @@ import { ensureHiddenSlidePreviewStyles, createAlternativeSelector } from './loa
 
 let style_path = '/css/';
 
+function computeSuppressedSlides(content) {
+  const STICKY_MACRO = /^\s*\{\{[^}]+\}\}\s*$/;
+  const HTML_COMMENT = /^\s*<!--/;
+  const MD_IMAGE     = /!\[[^\]]*\]\([^)]*\)/;
+  const HTML_VISUAL  = /<\s*(img|video|iframe|figure)\b/i;
+  const BG_DATA      = /data-background-(image|video|audio)/i;
+
+  const lines = content.split('\n');
+  let inFence = false;
+  let slideIdx = 0;
+  const slidesWithText = new Set();
+
+  for (const line of lines) {
+    if (/^```/.test(line.trim())) { inFence = !inFence; }
+    if (inFence) { slidesWithText.add(slideIdx); continue; }
+
+    const t = line.trim();
+    if (t === '---' || t === '***') { slideIdx++; continue; }
+    if (!t) continue;
+
+    // Skip lines that are purely visual; inline macros :...: count as text
+    if (STICKY_MACRO.test(line) || HTML_COMMENT.test(line) ||
+        MD_IMAGE.test(line) || HTML_VISUAL.test(line) || BG_DATA.test(line)) continue;
+
+    slidesWithText.add(slideIdx);
+  }
+
+  return slidesWithText;
+}
+
 /**
  * Loads a presentation source file, compiles it, injects the result into the
  * Reveal markdown container, and initializes the deck with runtime config.
@@ -106,6 +136,12 @@ export async function loadAndPreprocessMarkdown(deck, selectedFile = null) {
   const normalizedMarkdown = String(rawMarkdown ?? '').replace(/\r\n?/g, '\n');
   const { metadata, content } = extractFrontMatter(normalizedMarkdown);
   const contentWithBlankSlide = `${content}\n\n---\n\n`;
+
+  // For confidence monitor, analyze which slides have text so we can suppress visuals selectively.
+  const perSlideSuppress = (variant === 'confidencemonitor')
+    ? computeSuppressedSlides(content)
+    : null;
+
   const forceControls = urlParams.get('forceControls') === '1';
   const yamlScrollSpeed = Number.parseFloat(metadata.scrollspeed);
 
@@ -251,7 +287,8 @@ export async function loadAndPreprocessMarkdown(deck, selectedFile = null) {
     prefersHigh,
     suppressVisualElements,
     appConfig,
-    forceControls
+    forceControls,
+    perSlideSuppress
   );
   if (forceControls) {
     ensureHiddenSlidePreviewStyles();

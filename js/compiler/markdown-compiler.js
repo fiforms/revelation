@@ -130,7 +130,7 @@ function runPluginMarkdownPreprocessors(md, context = {}) {
  * slide compiler to assemble final per-slide output with sticky state and
  * boundary behavior preserved.
  */
-export function preprocessMarkdown(md, userMacros = {}, forHandout = false, media = {}, newSlideOnHeading = true, mediaIndex = null, preferHigh = null, suppressVisualElements = false, appConfig = null, showHiddenSlidesInPreview = false) {
+export function preprocessMarkdown(md, userMacros = {}, forHandout = false, media = {}, newSlideOnHeading = true, mediaIndex = null, preferHigh = null, suppressVisualElements = false, appConfig = null, showHiddenSlidesInPreview = false, perSlideSuppress = null) {
   // Give plugins first pass over the raw markdown so custom transforms happen before built-ins.
   md = runPluginMarkdownPreprocessors(md, {
     forHandout,
@@ -432,9 +432,16 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
   });
 
   // Main compiler scan: process one source line at a time while preserving fence and slide state.
+  let slideIdx = 0;
   let skipNextLine = false;
   for (let line of lines) {
     index += 1;
+
+    // Compute suppression status early so we can disable sticky macros at slide boundaries.
+    const suppressThisSlide = perSlideSuppress !== null
+      ? perSlideSuppress.has(slideIdx)
+      : suppressVisualElements;
+
     // Caption lookahead consumes the :caption: line in the previous iteration — skip it here.
     if (skipNextLine) {
       skipNextLine = false;
@@ -473,17 +480,23 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
       continue;
     }
     // Some runtime variants strip purely visual authoring syntax while keeping notes and hide logic.
-    if (suppressVisualElements) {
-      const trimmedLine = line.trim();
-      const isNoteSeparator = trimmedLine.toLowerCase() === NOTE_SEPARATOR_CURRENT || trimmedLine.toLowerCase() === NOTE_SEPARATOR_LEGACY.toLowerCase();
-      const isMacroUse = /^\s*\{\{[^}]+\}\}\s*$/.test(line);
-      const isInlineMacro = /^\s*:[A-Za-z0-9_]+(?::.*)?:\s*$/.test(line);
-      const isHideMacro = /^\s*\{\{hide(?::(?:handout|slideshow))?\}\}\s*$/i.test(line) || /^\s*:hide(?::(?:handout|slideshow))?:\s*$/i.test(line);
+    const trimmedLine = line.trim();
+    const isNoteSeparator = trimmedLine.toLowerCase() === NOTE_SEPARATOR_CURRENT || trimmedLine.toLowerCase() === NOTE_SEPARATOR_LEGACY.toLowerCase();
+    const isStickyMacro = /^\s*\{\{[^}]+\}\}\s*$/.test(line);
+    const isHideMacro = /^\s*\{\{hide(?::(?:handout|slideshow))?\}\}\s*$/i.test(line) || /^\s*:hide(?::(?:handout|slideshow))?:\s*$/i.test(line);
+
+    // In confidence monitor, always suppress sticky macros and sticky background images
+    const isStickyBackgroundImage = /!\[background:sticky\]\([^)]*\)/.test(line);
+    if (perSlideSuppress !== null && !isNoteSeparator && !isHideMacro && (isStickyMacro || isStickyBackgroundImage)) {
+      continue;
+    }
+
+    if (suppressThisSlide) {
       const isAttribLine = /^\s*:ATTRIB:.*$/i.test(line) || /^\s*:AI:\s*$/i.test(line);
       const hasMarkdownImage = /!\[[^\]]*]\([^)]*\)/.test(line);
       const hasHtmlVisual = /<\s*(img|video|iframe|figure)\b/i.test(line);
       const hasBackgroundData = /data-background-(image|video|audio|audio-start|audio-loop|audio-stop)/i.test(line);
-      if (!isNoteSeparator && !isHideMacro && (isMacroUse || isInlineMacro || isAttribLine || hasMarkdownImage || hasHtmlVisual || hasBackgroundData)) {
+      if (!isNoteSeparator && !isHideMacro && (isStickyMacro || isAttribLine || hasMarkdownImage || hasHtmlVisual || hasBackgroundData)) {
         // If this image line would have triggered caption lookahead, skip the caption line too.
         if (hasMarkdownImage && lines[index + 1] && /^:caption:.*:\s*$/.test(lines[index + 1])) {
           skipNextLine = true;
@@ -517,8 +530,8 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
     if (tryHandlePlainMediaLine(line)) continue;
 
     // After media processing, determine note separators and heading-driven auto-slide boundaries.
-    const trimmedLine = line.trim();
-    const isNoteSeparatorLine = trimmedLine.toLowerCase() === NOTE_SEPARATOR_CURRENT || trimmedLine.toLowerCase() === NOTE_SEPARATOR_LEGACY.toLowerCase();
+    const trimmedMediaLine = line.trim();
+    const isNoteSeparatorLine = trimmedMediaLine.toLowerCase() === NOTE_SEPARATOR_CURRENT || trimmedMediaLine.toLowerCase() === NOTE_SEPARATOR_LEGACY.toLowerCase();
     const autoSlide = compiler.detectAutoSlide(line);
     const hiddenResult = compiler.handleHiddenSlide(line, index, lines.length, autoSlide);
     if (hiddenResult.skipLine) continue;
@@ -583,6 +596,7 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
     if (compiler.shouldFinalize(line, index, lines.length, autoSlide)) {
       const finalizeResult = compiler.finalizeSlide(line, autoSlide, columnPipeState);
       columnPipeState = finalizeResult.nextColumnPipeState;
+      slideIdx++;
       continue;
     }
     // Fallback path: treat the line as ordinary markdown content plus fragment/cite transforms.
