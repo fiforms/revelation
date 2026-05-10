@@ -5,6 +5,7 @@ import Notes from 'reveal.js/plugin/notes';
 import Zoom from 'reveal.js/plugin/zoom';
 import Search from 'reveal.js/plugin/search';
 import RevealRemote from 'reveal.js-remote/plugin/remote.js';
+import RevealRemoteZoomSync from 'reveal.js-remote/plugin/remotezoomsync.js';
 import SlideLabels from './slide-labels/plugin.js';
 
 import { loadAndPreprocessMarkdown } from './presentation-bootstrap.js';
@@ -216,6 +217,7 @@ pluginLoader('presentations',`/plugins_${key}`).then(async function() {
 
   const plugins = [Markdown, Notes, Zoom, Search, SlideLabels()];
   const enableRevealRemote = !!window.revealRemoteServer && (!builderPreviewMode || builderPreviewPeerEnabled);
+  const isFollower = enableRevealRemote && !!window.location.search.match(/remoteMultiplexId=/);
   if (enableRevealRemote) {
     // Instantiate the plugin early so we can pre-pause before Reveal (and the
     // socket) initialises. multiplexPaused is module-level in the plugin, so
@@ -226,6 +228,10 @@ pluginLoader('presentations',`/plugins_${key}`).then(async function() {
       remotePlugin.setMultiplexPaused(true);
     }
     plugins.push(remotePlugin);
+    // Always add remote zoom to track/apply zoom state
+    // On presenter: extracts zoom state from standard Zoom plugin, sends to followers
+    // On followers: receives and applies zoom state with smooth animation
+    plugins.push(RevealRemoteZoomSync({ isFollower }));
   }
 
   for (const plugin of Object.values(window.RevelationPlugins)) {
