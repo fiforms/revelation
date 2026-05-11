@@ -164,6 +164,39 @@ Use search API if the user gives a name but not a number, confirm with the user 
 
 ---
 
+### Presentation Validator API
+
+Base URL: `http://127.0.0.1:<port>/api/mdvalidate`
+
+All requests require `?key=<access-key>` or the `X-Api-Key: <access-key>` header.
+
+Use this API to validate presentation markdown files and receive a human-readable report of any issues found.
+
+| Endpoint | Parameters | Description |
+|---|---|---|
+| `GET /api/mdvalidate/report` | `slug` (required), `mdFile` (optional, default: `presentation.md`) | Returns a `text/plain` validation report for the specified presentation, checking YAML header validity, slide separators, code blocks, media files, and media aliases. |
+
+**Report Sections:**
+
+The validation report includes checks for:
+- **YAML header validity** — valid YAML syntax and required fields (`title`, `theme`)
+- **YAML delimiters** — proper `---` delimiters with correct formatting
+- **Slide separators** — blank lines before/after `---` and `***` separators
+- **Code blocks** — properly closed fenced code blocks
+- **Media files** — linked media files exist and paths are valid
+- **Media aliases** — `media:alias` references match YAML entries
+- **Media library files** — YAML media aliases point to files in `_media/`
+- **Unused aliases** — identifies defined media aliases that are never referenced (warnings only)
+
+**Example usage:**
+
+```
+GET /api/mdvalidate/report?slug=sunday-morning&key=your-api-key
+GET /api/mdvalidate/report?slug=advent-week-3&mdFile=presentation_es.md&key=your-api-key
+```
+
+---
+
 ## What the App Manages Automatically — Do Not Create These
 
 | File/Folder | Why to leave it alone |
