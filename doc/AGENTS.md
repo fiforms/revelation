@@ -58,6 +58,11 @@ REVELation Presentations/          ← this folder (presentationsDir)
 
 ---
 
+## Images and Videos
+
+Images and videos are added using normal markdown image syntax. Alt text is used to trigger special formatting (or create a macro with background:sticky)
+CommonMark syntax (<>) can be used to enclose filenames that contain spaces or special characters. Do not URL encode filenames.
+
 ## Media
 
 Shared media files (video, audio, images) live in `_media/` at the **presentations root**. Generally do not modify media or resources in this folder, but you can utilize media here if appropriate. Reference them from slide content via their filename or a named alias defined in the presentation's YAML front matter.
