@@ -11,7 +11,7 @@ This slide should not appear in handout output.
 
 Slide after hidden.
 
-<video src="clip.mp4" controls playsinline data-imagefit></video>
+<video src="clip.mp4" controls playsinline data-imagefit data-imagefill></video>
 <figure class="captioned-image">
   <img src="image.jpg" alt="">
   <figcaption>A caption</figcaption>

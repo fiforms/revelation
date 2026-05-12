@@ -2,7 +2,7 @@
 <!-- .slide: data-background-image="hero.jpg" -->
 
 
-<video src="clip.mp4" controls playsinline data-imagefit></video>
+<video src="clip.mp4" controls playsinline data-imagefit data-imagefill></video>
 <figure class="captioned-image">
   <img src="image.jpg" alt="">
   <figcaption>Shown caption</figcaption>
