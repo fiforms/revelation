@@ -14,6 +14,10 @@ This guide explains how to write REVELation presentations based on the current l
    - [Language Variants Reference](VARIANTS_REFERENCE.md)
 
 5. [Top Matter (Top Section)](#5-top-matter-top-section)
+   - [Macros and Stickiness](#51-macros-and-stickiness)
+   - [Sticky Backgrounds](#52-sticky-backgrounds)
+   - [No Hard Boundary Rule](#53-no-hard-boundary-rule)
+   - [Custom Macro Definitions and Chaining](#54-custom-macro-definitions-and-chaining)
 6. Other
    - [Heading-Based Slide Breaks](#6-footnote-heading-based-slide-breaks)
 
@@ -424,6 +428,152 @@ In practice:
 - Use `:note:` to begin notes.
 
 This keeps files predictable in both the markdown source and builder UI.
+
+---
+
+### 5.4 Custom Macro Definitions and Chaining
+
+Custom macros are defined in the YAML front matter `macros` section and can expand to built-in macros, plugin-defined syntax, or multi-line content. This enables reusable "template" macros that reduce duplication.
+
+#### Defining Custom Macros
+
+Use the `macros` section in YAML front matter:
+
+```yaml
+---
+macros:
+  myname: |-
+    :lt:
+      name: John Doe
+      title: President, No Place In Particular
+  my_theme: |-
+    {{darkbg}}
+    {{lighttext}}
+    {{lowerthird}}
+---
+```
+
+#### Inline Macros (`:name:` syntax)
+
+Inline macros expand **before** plugins run, allowing them to chain to plugin-defined syntax:
+
+```markdown
+:myname:
+```
+
+Expands to the multiline `:lt:` block, which the lowerthirds plugin then processes.
+
+With parameters using `$1`, `$2`, etc.:
+
+```yaml
+macros:
+  mytint: |-
+    {{bgtint:$1}}
+```
+
+Usage:
+
+```markdown
+:mytint:rgba(100,0,0,0.5):
+```
+
+Substitutes `$1` with `rgba(100,0,0,0.5)`.
+
+---
+
+#### Sticky Macros (`{{name}}` syntax)
+
+Sticky macros expand **within the line-by-line compiler** and can chain to built-in macros or other sticky macros:
+
+```yaml
+macros:
+  my_lovely_theme: |-
+    ![background:sticky](theme-bg.mp4)
+    {{darkbg}}
+    {{lighttext}}
+    {{lowerthird}}
+```
+
+Usage:
+
+```markdown
+{{my_lovely_theme}}
+```
+
+Each nested macro (`{{darkbg}}`, `{{lighttext}}`, etc.) is expanded recursively. The `![background:sticky](...)` is processed into a reveal.js background directive.
+
+With parameters:
+
+```yaml
+macros:
+  bg_with_tint: |-
+    ![background:sticky](fancy_background.jpg)
+    {{bgtint:$1}}
+```
+
+Usage:
+
+```markdown
+{{bg_with_tint:rgba(0,0,0,0.4)}}
+```
+
+---
+
+#### Media Alias Resolution
+
+Custom macros can reference media aliases defined in the `media` section. These are resolved during macro expansion:
+
+```yaml
+---
+media:
+  intro:
+    filename: clouds.mp4
+macros:
+  title_bg: |-
+    ![background:sticky](media:intro)
+---
+```
+
+---
+
+#### ⚠️ Caveat: Sticky Macros in Non-Sticky Contexts
+
+If a custom macro definition contains sticky macros (like `{{darkbg}}`), and you use it with **inline syntax** (`:name:`), those macros will still persist because expansion happens before the distinction is enforced.
+
+**Not recommended:**
+
+```yaml
+macros:
+  # Contains {{sticky}} — don't use as inline macro
+  bad_macro: |-
+    {{darkbg}}
+    Some content
+```
+
+```markdown
+:bad_macro:   # ⚠️ darkbg will persist, defeating inline semantics
+```
+
+**Recommended instead:**
+
+```yaml
+macros:
+  # Use consistent syntax
+  good_sticky: |-
+    {{darkbg}}
+    Some content
+  good_inline: |-
+    :lt:
+      name: Example
+      title: Title
+```
+
+```markdown
+{{good_sticky}}  # Sticky usage of sticky macro
+:good_inline:    # Inline usage of inline macro
+```
+
+This behavior may be flagged or prevented in future versions. Define macros with syntax consistent to their intended use.
 
 ---
 
