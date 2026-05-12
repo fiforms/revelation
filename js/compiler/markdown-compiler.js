@@ -123,6 +123,23 @@ function runPluginMarkdownPreprocessors(md, context = {}) {
 }
 
 /**
+ * Pre-expands user macros in raw markdown before plugin preprocessors run.
+ * This enables user macros to chain into plugin-defined macros (like :lt:).
+ */
+function preExpandUserMacros(md, userMacros) {
+  if (!userMacros || Object.keys(userMacros).length === 0) return md;
+  const mdStr = String(md ?? '');
+  if (!mdStr.includes(':')) return mdStr;
+  return mdStr.replace(/^:([A-Za-z0-9_]+)(?::(.*))?:\s*$/gm, (match, key, paramStr) => {
+    const normalizedKey = key.trim().toLowerCase();
+    if (!(normalizedKey in userMacros)) return match;
+    const template = userMacros[normalizedKey];
+    const params = paramStr ? paramStr.split(':') : [];
+    return template.replace(/\$(\d+)/g, (_, n) => params[+n - 1] ?? '');
+  });
+}
+
+/**
  * Compiles REVELation-flavored markdown into Reveal-compatible markdown.
  *
  * This is the main compiler entry point. It scans the source, recognizes
@@ -131,6 +148,9 @@ function runPluginMarkdownPreprocessors(md, context = {}) {
  * boundary behavior preserved.
  */
 export function preprocessMarkdown(md, userMacros = {}, forHandout = false, media = {}, newSlideOnHeading = true, mediaIndex = null, preferHigh = null, suppressVisualElements = false, appConfig = null, showHiddenSlidesInPreview = false, perSlideSuppress = null) {
+  // Pre-expand user macros before plugins run, so user macros can chain into plugin-defined syntax.
+  md = preExpandUserMacros(md, userMacros);
+
   // Give plugins first pass over the raw markdown so custom transforms happen before built-ins.
   md = runPluginMarkdownPreprocessors(md, {
     forHandout,
