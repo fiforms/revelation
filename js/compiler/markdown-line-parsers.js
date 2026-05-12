@@ -54,6 +54,38 @@ export function createMarkdownLineParsers(context) {
     .replace(/\$(\d+)/g, (_, n) => resolveMediaAlias(params[+n - 1] ?? ''))
     .split('\n');
 
+  // Recursively expand sticky macros with nesting support (e.g., user macros that contain built-in macros).
+  // Prevents infinite recursion via cycle detection (visited set) and depth limit.
+  // Macros without templates are left as-is for the compiler to handle.
+  const expandStickyMacroWithNesting = (key, params, depth = 0, visited = new Set()) => {
+    const MAX_DEPTH = 10;
+    if (depth > MAX_DEPTH) return [];
+    if (visited.has(key)) return [];
+
+    const template = macros[key];
+    if (!template) return [];
+
+    const expandedLines = expandMacroTemplateLines(template, params);
+    const visited2 = new Set(visited);
+    visited2.add(key);
+
+    const result = [];
+    for (const line of expandedLines) {
+      const nestedMatch = line.match(/^\{\{([A-Za-z0-9_]+)(?::([^}]+))?\}\}$/);
+      if (nestedMatch && macros[nestedMatch[1].trim().toLowerCase()]) {
+        const nestedKey = nestedMatch[1].trim().toLowerCase();
+        const nestedParamString = nestedMatch[2];
+        const nestedParams = parseMacroParams(nestedKey, nestedParamString);
+        const nestedExpanded = expandStickyMacroWithNesting(nestedKey, nestedParams, depth + 1, visited2);
+        result.push(...nestedExpanded);
+      } else {
+        result.push(line);
+      }
+    }
+
+    return result;
+  };
+
   // Apply expanded inline macros that affect only the current slide.
   const applyExpandedInlineMacro = (expandedLines) => {
     for (const mline of expandedLines) {
@@ -264,7 +296,7 @@ export function createMarkdownLineParsers(context) {
       console.log('Markdown Macro Not Found: ' + key);
       return false;
     }
-    applyExpandedStickyMacro(expandMacroTemplateLines(template, params));
+    applyExpandedStickyMacro(expandStickyMacroWithNesting(key, params));
     applyOperations([resetStickyMacrosOp()]);
     return true;
   };
