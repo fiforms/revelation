@@ -4,14 +4,12 @@
 
 ***
 
-{{audio:loop:intro.mp3}}
+<!-- .slide: data-background-audio-loop="intro.mp3" -->
 
 
 ***
 
 <!-- .slide: data-background-audio-stop -->
-
-{{audio:loop:intro.mp3}}
 
 
 ***
@@ -21,11 +19,7 @@
 Broken command should not emit markup.
 
 
-{{audio:loop:intro.mp3}}
-
 
 ---
-
-{{audio:loop:intro.mp3}}
 
 

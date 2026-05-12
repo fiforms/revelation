@@ -6,14 +6,14 @@ newSlideOnHeading: false
 alternatives: hidden
 macros:
   loopaudio: |
-    {{audio:loop:intro.mp3}}
+    :audio:loop:intro.mp3:
 ---
 
 :audio:play:intro.mp3:
 
 ***
 
-{{loopaudio}}
+:loopaudio:
 
 ***
 
