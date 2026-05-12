@@ -1,0 +1,105 @@
+<section class="slide">
+<div class="slide-number slide-number-link"><a data-handout-skip-intercept="1" href="index.html?p=presentation.md#1/1" target="_blank">1.1</a></div>
+<div class="slide-number slide-number-nolink" style="display: none">1.1</div>
+<h1>Slide 1: Inline Macro to Plugin Syntax</h1>
+<p>:lt:
+  name: Daniel McFeeters
+  title: President, No Place In Particular
+This slide should show a lower-third with Daniel McFeeters as presenter.</p>
+
+</section>
+<section class="slide">
+<div class="slide-number slide-number-link"><a data-handout-skip-intercept="1" href="index.html?p=presentation.md#1/2" target="_blank">1.2</a></div>
+<div class="slide-number slide-number-nolink" style="display: none">1.2</div>
+<h1>Slide 2: Inline Macro with Parameters</h1>
+<!-- .slide: data-background-image="fancy_background.jpg" -->
+<!-- .slide: data-tint-color="rgba(0,0,40,0.5)" --><p>This slide should have a dark tint applied via the tint color parameter.</p>
+
+</section>
+<section class="slide">
+<div class="slide-number slide-number-link"><a data-handout-skip-intercept="1" href="index.html?p=presentation.md#1/3" target="_blank">1.3</a></div>
+<div class="slide-number slide-number-nolink" style="display: none">1.3</div>
+<p>This slide has the same background as previous one</p>
+<!-- .slide: data-background-image="fancy_background.jpg" -->
+<!-- .slide: data-tint-color="rgba(0,0,40,0.5)" -->
+</section>
+<section class="slide">
+<div class="slide-number slide-number-link"><a data-handout-skip-intercept="1" href="index.html?p=presentation.md#1/4" target="_blank">1.4</a></div>
+<div class="slide-number slide-number-nolink" style="display: none">1.4</div>
+<h1>Slide 3: Sticky Macro to HTML Comments (Theme)</h1>
+<!-- .slide: data-background-video="somevideo.mp4" data-background-video-loop data-background-video-muted -->
+<!-- .slide: data-darkbg -->
+<!-- .slide: data-lighttext -->
+<!-- .slide: data-lower-third -->
+<!-- .slide: data-user-lovely-theme --><h2>Dark Theme Applied</h2>
+<p>This slide should have dark background and light text applied as a sticky macro that expands to HTML comments.</p>
+
+</section>
+<section class="slide">
+<div class="slide-number slide-number-link"><a data-handout-skip-intercept="1" href="index.html?p=presentation.md#1/5" target="_blank">1.5</a></div>
+<div class="slide-number slide-number-nolink" style="display: none">1.5</div>
+<h1>Slide 4: Built-in Macros Still Work</h1>
+<!-- .slide: data-darkbg -->
+<!-- .slide: data-lighttext --><h2>Direct Built-in Macros</h2>
+<p>This slide uses built-in macros directly (not through custom macros) to verify we didn&#39;t break existing functionality.</p>
+
+</section>
+<section class="slide">
+<div class="slide-number slide-number-link"><a data-handout-skip-intercept="1" href="index.html?p=presentation.md#1/6" target="_blank">1.6</a></div>
+<div class="slide-number slide-number-nolink" style="display: none">1.6</div>
+<h1>Slide 5: Mixed Inline and Sticky Macros</h1>
+<!-- .slide: data-tint-color="" --><p>:lt:
+  name: Daniel McFeeters
+  title: President, No Place In Particular</p>
+<h2>Mixed Macro Types</h2>
+<p>This slide tests both sticky macros (dark background via HTML comments) and inline macros (lower-third via plugin).</p>
+
+</section>
+<section class="slide">
+<div class="slide-number slide-number-link"><a data-handout-skip-intercept="1" href="index.html?p=presentation.md#1/7" target="_blank">1.7</a></div>
+<div class="slide-number slide-number-nolink" style="display: none">1.7</div>
+<h1>Slide 6: Multiple Macro Expansions</h1>
+<p>:lt:
+  name: Daniel McFeeters
+  title: President, No Place In Particular</p>
+<!-- .slide: data-background-video="somevideo.mp4" data-background-video-loop data-background-video-muted -->
+<!-- .slide: data-darkbg -->
+<!-- .slide: data-lighttext -->
+<!-- .slide: data-lower-third -->
+<!-- .slide: data-user-lovely-theme --><p>More content with both macro types on same slide.</p>
+
+</section>
+<section class="slide">
+<div class="slide-number slide-number-link"><a data-handout-skip-intercept="1" href="index.html?p=presentation.md#1/8" target="_blank">1.8</a></div>
+<div class="slide-number slide-number-nolink" style="display: none">1.8</div>
+<h1>Slide 7: Undefined Macros Pass Through</h1>
+<p>:undefined_inline:</p>
+<p>{{undefined_sticky}}</p>
+<p>This slide references macros that don&#39;t exist in the front matter—they should pass through unchanged.</p>
+<!-- .slide: data-background-video="somevideo.mp4" data-background-video-loop data-background-video-muted -->
+<!-- .slide: data-darkbg -->
+<!-- .slide: data-lighttext -->
+<!-- .slide: data-lower-third -->
+<!-- .slide: data-user-lovely-theme -->
+</section>
+<section class="slide">
+<div class="slide-number slide-number-link"><a data-handout-skip-intercept="1" href="index.html?p=presentation.md#1/9" target="_blank">1.9</a></div>
+<div class="slide-number slide-number-nolink" style="display: none">1.9</div>
+<h1>Slide 8: Test Complete</h1>
+<p>All macro chaining tests complete.</p>
+<p>Test expects:</p>
+<ul>
+<li>Slide 1: Inline macro <code>:myname:</code> expands to <code>:lt:</code> plugin syntax</li>
+<li>Slide 2: Sticky macro <code>{{bg_customtint:rgba(...)}}</code> expands to background image + <code>{{bgtint:...}}</code> which further expands</li>
+<li>Slide 3: Sticky macro <code>{{my_lovely_theme}}</code> expands to multiple lines including other macros that further expand</li>
+<li>Slide 4: Built-in macros like <code>{{darkbg}}</code> still work</li>
+<li>Slide 5-6: Mixed inline and sticky macros work together</li>
+<li>Slide 7: Undefined macros pass through safely</li>
+<li>No breaks to existing functionality</li>
+</ul>
+<!-- .slide: data-background-video="somevideo.mp4" data-background-video-loop data-background-video-muted -->
+<!-- .slide: data-darkbg -->
+<!-- .slide: data-lighttext -->
+<!-- .slide: data-lower-third -->
+<!-- .slide: data-user-lovely-theme -->
+</section>

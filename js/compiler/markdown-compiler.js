@@ -356,6 +356,18 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
   const enterHiddenSlideOp = () => ({ type: 'enter_hidden_slide' });
   const markHiddenPreviewOp = () => ({ type: 'mark_hidden_preview' });
 
+  // Process ![background:sticky](url) syntax within expanded macros.
+  // Returns the reveal.js directive or null if not a background:sticky image.
+  const processBackgroundStickyImage = (src) => {
+    if (!src) return null;
+    const resolvedSrc = resolveMediaAlias(src);
+    const isVideo = /\.(webm|mp4|mov|m4v)$/i.test(resolvedSrc);
+    const shouldLoop = true; // background:sticky defaults to looping
+    return isVideo
+      ? `<!-- .slide: data-background-video="${resolvedSrc}" data-background-video-loop data-background-video-muted -->`
+      : `<!-- .slide: data-background-image="${resolvedSrc}" -->`;
+  };
+
   // Non-media line parsers handle macros, directives, attributions, and sticky metadata.
   const { tryHandleInlineMacroLine, tryHandleMacroUseLine, tryHandleStickyMetaLine } = createMarkdownLineParsers({
     macros,
@@ -369,6 +381,7 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
     convertStackDirectiveLine,
     extractSlideTransitionValue,
     applyOperations,
+    processBackgroundStickyImage,
     ops: {
       appendLineOp,
       rememberSuppressionsOp,

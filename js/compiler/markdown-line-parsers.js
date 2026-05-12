@@ -17,6 +17,7 @@ export function createMarkdownLineParsers(context) {
     convertStackDirectiveLine,
     extractSlideTransitionValue,
     applyOperations,
+    processBackgroundStickyImage,
     ops
   } = context;
 
@@ -109,7 +110,13 @@ export function createMarkdownLineParsers(context) {
   // Apply expanded sticky macros that persist into future slides until reset.
   const applyExpandedStickyMacro = (expandedLines) => {
     for (const mline of expandedLines) {
-      const normalizedLine = convertStackDirectiveLine(mline);
+      // Process ![background:sticky](url) syntax into reveal.js directives
+      const bgStickyMatch = mline.match(/^!\[background:sticky\]\(([^)]+)\)\s*$/);
+      const processedLine = bgStickyMatch && processBackgroundStickyImage
+        ? processBackgroundStickyImage(bgStickyMatch[1])
+        : mline;
+
+      const normalizedLine = processedLine ? convertStackDirectiveLine(processedLine) : mline;
       const lineOps = [addStickyMacroOp(normalizedLine), rememberSuppressionsOp(normalizedLine)];
       const attribMatch = normalizedLine.match(/^\{\{attrib:(.*)}}\s*$/i);
       if (attribMatch) {

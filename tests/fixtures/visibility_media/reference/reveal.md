@@ -1,5 +1,5 @@
 
-![background:sticky](media:loop)
+<!-- .slide: data-background-video="../_media/clouds.mp4" data-background-video-loop data-background-video-muted -->
 
 
 Visible opening.
@@ -22,11 +22,11 @@ Slide after hidden.
 <a href="https://example.com" target="_blank">good</a>
 
 
-![background:sticky](media:loop)
+<!-- .slide: data-background-video="../_media/clouds.mp4" data-background-video-loop data-background-video-muted -->
 
 
 ---
 
-![background:sticky](media:loop)
+<!-- .slide: data-background-video="../_media/clouds.mp4" data-background-video-loop data-background-video-muted -->
 
 
