@@ -27,6 +27,7 @@ import {
   getNoteSeparator,
   sanitizeMarkdownFilename,
   resolveLegacyCssFolder,
+  resolveExternalFilePath,
   NOTE_SEPARATOR_CURRENT
 } from './compiler/compiler-utils.js';
 import { ensureHiddenSlidePreviewStyles, createAlternativeSelector } from './loader-dom.js';
@@ -113,6 +114,7 @@ export async function loadAndPreprocessMarkdown(deck, selectedFile = null) {
   let mediaIndex = null;
   let prefersHigh = false;
   let appConfig = window.AppConfig || null;
+  let markdownFile = defaultFile;
 
   // Load markdown from an injected offline payload or fetch the requested `.md` file from disk/server.
   if (typeof window.offlineMarkdown === 'string') {
@@ -121,7 +123,7 @@ export async function loadAndPreprocessMarkdown(deck, selectedFile = null) {
   } else {
     const sanitizedSelected = sanitizeMarkdownFilename(selectedFile);
     const customFile = sanitizeMarkdownFilename(urlParams.get('p'));
-    const markdownFile = sanitizedSelected || customFile || defaultFile;
+    markdownFile = sanitizedSelected || customFile || defaultFile;
     let response = await fetch(markdownFile);
     if (!response.ok) {
       console.warn(`Could not load ${markdownFile}, falling back to ${defaultFile}`);
@@ -219,6 +221,31 @@ export async function loadAndPreprocessMarkdown(deck, selectedFile = null) {
   // Merge user-defined YAML macros into the compiler macro table before compilation starts.
   if (metadata.macros && typeof metadata.macros === 'object') {
     Object.assign(macros, metadata.macros);
+  }
+
+  // Load external macros if specified
+  if (metadata.macros_external && typeof metadata.macros_external === 'string') {
+    try {
+      const presentationDir = markdownFile.includes('/')
+        ? markdownFile.substring(0, markdownFile.lastIndexOf('/'))
+        : '';
+      const externalPath = resolveExternalFilePath(metadata.macros_external, presentationDir);
+
+      if (externalPath) {
+        const res = await fetch(externalPath);
+        if (res.ok) {
+          const yaml = await import('js-yaml');
+          const externalMacros = yaml.default.load(await res.text()) || {};
+          if (typeof externalMacros === 'object' && !Array.isArray(externalMacros)) {
+            Object.assign(macros, externalMacros);
+          }
+        } else {
+          console.warn(`Failed to fetch external macros (${externalPath}): ${res.status}`);
+        }
+      }
+    } catch (err) {
+      console.warn(`Error loading external macros:`, err);
+    }
   }
 
   // Resolve media quality preference from URL first, then local storage for non-Electron browser usage.

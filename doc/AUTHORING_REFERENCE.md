@@ -577,6 +577,70 @@ This behavior may be flagged or prevented in future versions. Define macros with
 
 ---
 
+#### Loading Macros from External Files
+
+For presentations that reuse macros across multiple decks, you can load macro definitions from a separate YAML file using the `macros_external` field in the front matter:
+
+```yaml
+---
+title: My Presentation
+macros_external: shared_macros.yaml
+---
+```
+
+The external file path is **relative to the presentation directory** and must be a simple filename or relative path (no absolute paths or `..` traversal). For example:
+
+```
+presentations/
+├── slides.md                  # Front matter: macros_external: macros.yaml
+├── macros.yaml                # Loaded from same directory
+└── themes/
+    └── presentation_dark.md   # Front matter: macros_external: ../macros.yaml
+```
+
+The external YAML file should contain a `macros` section (or map the macros directly at the root):
+
+```yaml
+# macros.yaml
+custom_theme: |-
+  ![background:sticky](theme-bg.jpg)
+  {{darkbg}}
+  {{lighttext}}
+
+highlight_red: |-
+  {{bgtint:rgba(255,0,0,0.3)}}
+
+section_title: |-
+  ![background:sticky](section.jpg)
+```
+
+Then use them in your presentation:
+
+```markdown
+{{custom_theme}}
+# Slide with custom theme
+
+---
+
+{{highlight_red}}
+Important point
+```
+
+**Merging behavior:** If both `macros` (inline) and `macros_external` are present in the front matter, inline macros take precedence in case of name conflicts. This allows you to override shared macros on a per-deck basis.
+
+```yaml
+---
+title: My Presentation
+macros_external: shared_macros.yaml
+macros:
+  custom_theme: |-
+    # This overrides the custom_theme from shared_macros.yaml
+    ![background:sticky](override.jpg)
+---
+```
+
+---
+
 <a id="6-footnote-heading-based-slide-breaks"></a>
 
 ## 6. Footnote: Heading-Based Slide Breaks

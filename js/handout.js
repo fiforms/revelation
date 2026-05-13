@@ -8,6 +8,7 @@ import {
   segmentPresentation,
   stripSlideSeparatorsOutsideCodeBlocks
 } from './compiler/presentation-segments.js';
+import { resolveExternalFilePath } from './compiler/compiler-utils.js';
 import { marked } from 'marked';
 
 const urlParams = new URLSearchParams(window.location.search);
@@ -192,9 +193,35 @@ if (!mdFile) {
       document.title = metadata.title || "Presentation Handout";
       const noteSeparator = getNoteSeparator(metadata);
 
+      // Merge inline and external macros
+      let macros = { ...(metadata.macros || {}) };
+      if (metadata.macros_external && typeof metadata.macros_external === 'string') {
+        try {
+          const presentationDir = resolvedMdFile.includes('/')
+            ? resolvedMdFile.substring(0, resolvedMdFile.lastIndexOf('/'))
+            : '';
+          const externalPath = resolveExternalFilePath(metadata.macros_external, presentationDir);
+
+          if (externalPath) {
+            const res = await fetch(externalPath);
+            if (res.ok) {
+              const yaml = await import('js-yaml');
+              const externalMacros = yaml.default.load(await res.text()) || {};
+              if (typeof externalMacros === 'object' && !Array.isArray(externalMacros)) {
+                Object.assign(macros, externalMacros);
+              }
+            } else {
+              console.warn(`Failed to fetch external macros (${externalPath}): ${res.status}`);
+            }
+          }
+        } catch (err) {
+          console.warn(`Error loading external macros:`, err);
+        }
+      }
+
       const processed = preprocessMarkdown(
         content,
-        metadata.macros || {},
+        macros,
         true,
         metadata.media,
         metadata.newSlideOnHeading,

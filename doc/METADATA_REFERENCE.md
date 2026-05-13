@@ -157,6 +157,7 @@ scrollspeed: 2.1
 | `alternatives` | `object` | Alternate markdown files keyed by filename/path with language code; supports `self: hidden` to hide the current file from listing. |
 | `media`        | `object` | Named media aliases used by markdown and macros. |
 | `macros`       | `object` | Named reusable macro blocks. |
+| `macros_external` | `string` | Path to external YAML file (relative to presentation directory) containing macro definitions. |
 | `scrollspeed`  | `number` | Optional notes variant auto-scroll speed. |
 
 ---
@@ -216,6 +217,24 @@ See:
 Parameters support `$1`, `$2`, etc.
 
 `media:alias` values in macro parameters resolve to `_media/` paths during preprocessing.
+
+---
+
+### External Macro Files
+
+For presentations that share macro definitions across multiple decks, use `macros_external` to load macros from a separate YAML file:
+
+```yaml
+---
+title: My Presentation
+macros_external: shared_macros.yaml
+---
+```
+
+The path is **relative to the presentation directory** and must not use absolute paths or `..` traversal. When both `macros` and `macros_external` are present, inline macros take precedence in case of name conflicts.
+
+For detailed examples and usage patterns, see:
+- [Loading Macros from External Files](AUTHORING_REFERENCE.md#loading-macros-from-external-files)
 
 ---
 

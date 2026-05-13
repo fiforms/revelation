@@ -100,6 +100,39 @@ export function sanitizeMarkdownFilename(filename) {
   return segments.join('/');
 }
 
+// Resolve relative paths for external files (macros, etc.)
+// - must be relative (no leading /)
+// - must not escape parent directory (..)
+// - validates filename characters
+export function resolveExternalFilePath(relativePath, presentationDir) {
+  const raw = String(relativePath || '').trim();
+  if (!raw || raw.startsWith('/') || raw.includes('?') || raw.includes('#')) {
+    return null;
+  }
+
+  const normalized = raw.replace(/\\/g, '/');
+  const segments = normalized.split('/');
+
+  // Reject any ".." to prevent directory traversal
+  if (segments.some(seg => seg === '.' || seg === '..')) {
+    console.warn(`Blocked path traversal in external file: ${relativePath}`);
+    return null;
+  }
+
+  // Validate each path segment
+  const validSegment = /^[a-zA-Z0-9_.-]+$/;
+  if (segments.some(seg => !seg || !validSegment.test(seg))) {
+    console.warn(`Blocked invalid external file path: ${relativePath}`);
+    return null;
+  }
+
+  // Join presentation directory with relative path
+  const baseParts = presentationDir ? presentationDir.split('/').filter(Boolean) : [];
+  const resolvedPath = [...baseParts, ...segments].join('/');
+
+  return resolvedPath;
+}
+
 export {
   NOTE_SEPARATOR_CURRENT,
   NOTE_SEPARATOR_LEGACY
