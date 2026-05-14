@@ -65,14 +65,14 @@ export function revealTweaks(deck) {
         initConfidenceMonitorVideoTimer(deck);
       }
       deck.on('slidechanged', e => {
-        e.currentSlide.querySelectorAll('video[data-imagefit]').forEach(v => {
+        e.currentSlide.querySelectorAll('video[data-imagefit], video[data-imagefit-fill]').forEach(v => {
           v.currentTime = 0;
           v.play().catch(() => {});
         });
       });
 
       deck.on('ready', e => {
-        e.currentSlide.querySelectorAll('video[data-imagefit]').forEach(v => {
+        e.currentSlide.querySelectorAll('video[data-imagefit], video[data-imagefit-fill]').forEach(v => {
           v.play().catch(() => {});
         });
       });
@@ -102,7 +102,7 @@ function fixFitMediaPdfLayout(deck) {
 
   const fitSlides = document.querySelectorAll('.reveal .slides .pdf-page > section');
   fitSlides.forEach((slide) => {
-    if (!slide.querySelector('[data-imagefit]')) return;
+    if (!slide.querySelector('[data-imagefit], [data-imagefit-fill]')) return;
     const page = slide.closest('.pdf-page');
     if (!page) return;
 
@@ -150,7 +150,7 @@ function initFitVideoControls(deck) {
       return;
     }
 
-    slide.querySelectorAll('video[data-imagefit]').forEach((video) => {
+    slide.querySelectorAll('video[data-imagefit], video[data-imagefit-fill]').forEach((video) => {
       if (video.dataset.fitVideoControlsWired === '1') {
         return;
       }
@@ -295,7 +295,7 @@ function initConfidenceMonitorVideoTimer(deck) {
     if (!slide) {
       return;
     }
-    slide.querySelectorAll('video[data-imagefit]').forEach(wireVideoTimer);
+    slide.querySelectorAll('video[data-imagefit], video[data-imagefit-fill]').forEach(wireVideoTimer);
   };
 
   if (audioEl) {

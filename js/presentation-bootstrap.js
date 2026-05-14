@@ -394,6 +394,21 @@ export async function loadAndPreprocessMarkdown(deck, selectedFile = null) {
     }
   }
 
+  // Calculate margin in pixels for data-imagefit-fill overflow compensation.
+  // Margin is applied per-axis: presentationDim -= (presentationDim * margin_ratio)
+  const updateMarginPxVariable = () => {
+    const margin = Number.isFinite(Number(config.margin)) ? Number(config.margin) : 0.04;
+    const configWidth = Number(config.width) || 960;
+    const configHeight = Number(config.height) || 700;
+    // Calculate the margin in pixels for each axis using the config dimensions
+    const marginPxH = Math.round(configWidth * margin / 2); // divided by 2 since margin applies to both sides
+    const marginPxV = Math.round(configHeight * margin / 2);
+    // Use the larger value for overflow compensation
+    const marginPx = Math.max(marginPxH, marginPxV);
+    document.documentElement.style.setProperty('--reveal-margin-px', `${marginPx}px`);
+  };
+  updateMarginPxVariable();
+
   // After Reveal applies <!-- .element: --> attributes, lift data-parentfragment
   // values onto the nearest block-level parent (<li> or <p>) so the whole item
   // or paragraph animates as a fragment rather than just the inner inline element.

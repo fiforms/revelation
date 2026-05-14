@@ -289,6 +289,28 @@ body.reveal-ready {
     max-height: 85%;
   }
 
+  section img[data-imagefit-fill], section video[data-imagefit-fill] {
+    position: absolute;
+    top: calc(0px - var(--reveal-margin-px, 0px));
+    left: calc(0px - var(--reveal-margin-px, 0px));
+    right: calc(0px - var(--reveal-margin-px, 0px));
+    bottom: calc(0px - var(--reveal-margin-px, 0px));
+    margin: 0;
+    max-width: none;
+    max-height: none;
+    object-fit: contain;
+  }
+
+  section img[data-imagefit-fill] {
+    width: calc(100% + 2 * var(--reveal-margin-px, 0px));
+    height: calc(100% + 2 * var(--reveal-margin-px, 0px));
+  }
+
+  section video[data-imagefit-fill] {
+    width: calc(100% + 2 * var(--reveal-margin-px, 0px));
+    height: calc(100% + 2 * var(--reveal-margin-px, 0px));
+  }
+
   section:has(iframe.youtube-fit) {
     position: relative;
     height: 100%;
@@ -388,7 +410,9 @@ body.reveal-ready {
 
   // Inside columns, fit media should behave like normal in-flow media, not full-slide absolute fit.
   section div.flexcontainer img[data-imagefit],
-  section div.flexcontainer video[data-imagefit] {
+  section div.flexcontainer video[data-imagefit],
+  section div.flexcontainer img[data-imagefit-fill],
+  section div.flexcontainer video[data-imagefit-fill] {
     position: static;
     top: auto;
     left: auto;

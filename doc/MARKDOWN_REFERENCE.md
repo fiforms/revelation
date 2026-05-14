@@ -519,6 +519,7 @@ Append `++` to convert a line into a fragment:
 ![fit](chart.png)
 ![fit:60](chart.png)
 ![fit:60](clip.mp4)
+![fill](fullscreen.mp4)
 ![caption:Figure caption](chart.png)
 ![youtube](https://youtu.be/VIDEO_ID)
 ![youtube:fit](https://youtu.be/VIDEO_ID)
@@ -540,6 +541,19 @@ Because the height is expressed as a fraction of `--slide-height` (Reveal's inte
 ![fit:50](half-height.jpg)       <!-- 50% of slide height -->
 ![fit:75](tall-chart.png)        <!-- 75% of slide height -->
 ![fit:40](clip.mp4)              <!-- video, 40% of slide height -->
+```
+
+#### `fill` — full-screen fill
+
+`![fill](image.jpg)` fills the entire screen by expanding beyond the slide margins, using the `data-imagefit-fill` attribute. This is useful for full-screen videos, immersive content, or media that should visually extend to the viewport edge.
+
+The expansion is calculated automatically based on your presentation's margin setting in the YAML config, so it always compensates correctly.
+
+Like `![fit]()`, this works with both images and videos, and supports all the same auto-play and control behaviors (auto-play on slide load, hide controls while playing, show controls on pause).
+
+```markdown
+![fill](fullscreen-video.mp4)
+![fill](immersive-image.jpg)
 ```
 
 ---

@@ -229,12 +229,19 @@ Common forms:
 ![background:noloop](loop.mp4)
 ![background:sticky](stage.mp4)
 ![fit](chart.png)
+![fill](fullscreen-video.mp4)
 ![caption:Quarterly trend](chart.png)
 ![youtube](https://youtu.be/VIDEO_ID)
 ![youtube:fit](https://youtu.be/VIDEO_ID)
 ![web](https://example.com)
 ![web:scrollY=500](https://example.com)
 ```
+
+**`![fit]()` vs `![fill]()`:**
+- `![fit](media)` — Fills the usable slide area with content (respects slide margins)
+- `![fill](media)` — Fills the entire screen by expanding beyond the slide margins (useful for full-screen videos or immersive content)
+
+Both support all the same autoplay and control behaviors (auto-play on slide load, hide controls while playing, show on pause).
 
 Note: `![background:sticky]()` is interpreted as a macro, so it will repeat on all slides and will also reset macros.
 
