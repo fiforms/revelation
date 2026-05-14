@@ -1151,13 +1151,6 @@ function getPresentationActions(pres, details = null) {
       action: () => window.electronAPI.showPresentationFolder(pres.slug)
     });
     options.push({
-      label: '🖼️ ' + tr('Regenerate Thumbnail'),
-      action: async () => {
-        await window.electronAPI.exportImages(pres.slug, pres.md, 853, 480, 2, true);
-        window.location = window.location.href;
-      }
-    });
-    options.push({
       label: '📤 ' + tr('Export Presentation…'),
       action: async () => {
         await window.electronAPI.showExportWindow(pres.slug, pres.md);
