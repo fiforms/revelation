@@ -156,8 +156,10 @@ function initFitVideoControls(deck) {
       }
       video.dataset.fitVideoControlsWired = '1';
 
+      let isUserInitiatedPause = false;
+
       const syncControlsToState = () => {
-        video.controls = !!(video.paused || video.ended);
+        video.controls = !!(isUserInitiatedPause && video.paused);
       };
 
       // With controls hidden, keep click useful by toggling pause/play directly.
@@ -166,21 +168,39 @@ function initFitVideoControls(deck) {
           return;
         }
         if (video.paused || video.ended) {
-          video.play().catch(() => {});
+          isUserInitiatedPause = true;
+          syncControlsToState();
           return;
         }
+        isUserInitiatedPause = true;
         video.pause();
       });
 
-      video.addEventListener('play', syncControlsToState);
-      video.addEventListener('pause', syncControlsToState);
-      video.addEventListener('ended', syncControlsToState);
+      video.addEventListener('play', () => {
+        isUserInitiatedPause = false;
+        syncControlsToState();
+      });
+
+      video.addEventListener('pause', () => {
+        syncControlsToState();
+      });
+
+      video.addEventListener('ended', () => {
+        isUserInitiatedPause = false;
+        syncControlsToState();
+      });
+
       syncControlsToState();
     });
   };
 
-  deck.on('ready', (e) => wireSlideFitVideos(e.currentSlide));
-  deck.on('slidechanged', (e) => wireSlideFitVideos(e.currentSlide));
+  deck.on('ready', (e) => {
+    wireSlideFitVideos(e.currentSlide);
+  });
+
+  deck.on('slidechanged', (e) => {
+    wireSlideFitVideos(e.currentSlide);
+  });
 }
 
 function initConfidenceMonitorVideoTimer(deck) {
