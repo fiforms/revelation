@@ -425,7 +425,6 @@ description: {Ask the user, or derive from their instructions}
 author: {See CUSTOM_INSTRUCTIONS.md; if not set there, ask the user and save it to CUSTOM_INSTRUCTIONS.md}
 theme: {Choose an appropriate built-in theme from available selectsion, see Theme Selections below}
 stylesheet: style.css
-thumbnail: thumbnail.jpg
 created: '{today's date as YYYY-MM-DD}'
 newSlideOnHeading: false
 config:
@@ -439,7 +438,7 @@ config:
   showSlideNumber: speaker
   hashOneBasedIndex: true
   hash: true
-version: 1.0.7
+version: 1.0.8
 ---
 ```
 
@@ -503,8 +502,7 @@ description: A short summary
 author: Jane Smith
 theme: revelation_dark.css
 stylesheet: style.css
-thumbnail: thumbnail.jpg
-created: '2026-03-30'
+created: '2026-05-14'
 newSlideOnHeading: false
 config:
   transition: fade
@@ -517,7 +515,7 @@ config:
   showSlideNumber: speaker
   hashOneBasedIndex: true
   hash: true
-version: 1.0.7
+version: 1.0.8
 ---
 
 # Slide Title
