@@ -598,6 +598,15 @@ function isValidMarkdownPath(mdFile = '') {
   return /^(?:[a-zA-Z0-9_.-]+\/)*[a-zA-Z0-9_.-]+\.md$/.test(candidate);
 }
 
+function deriveThumbnailName(mdFile = '') {
+  const mdPath = String(mdFile || '').trim();
+  if (!mdPath) return 'thumbnail.jpg';
+  const lastSlashIndex = mdPath.lastIndexOf('/');
+  const baseName = lastSlashIndex >= 0 ? mdPath.substring(lastSlashIndex + 1) : mdPath;
+  const withoutExt = baseName.replace(/\.md$/i, '');
+  return `${withoutExt}.thumb.jpg`;
+}
+
 function readAuthorName(metadata = {}) {
   if (typeof metadata.author === 'string') return metadata.author;
   if (metadata.author && typeof metadata.author === 'object') {
@@ -649,7 +658,12 @@ async function loadPresentationDetails(pres) {
       details.author = readAuthorName(metadata);
       details.title = String(metadata.title || details.title || '').trim() || details.title;
       details.description = String(metadata.description || details.description || '').trim();
-      details.thumbnail = String(metadata.thumbnail || details.thumbnail || '').trim() || details.thumbnail;
+      const derivedThumbnail = deriveThumbnailName(pres.md);
+      let thumbnail = String(metadata.thumbnail || details.thumbnail || derivedThumbnail).trim();
+      if (!thumbnail) {
+        thumbnail = derivedThumbnail;
+      }
+      details.thumbnail = thumbnail;
       if (metadata.alternatives && typeof metadata.alternatives === 'object' && !Array.isArray(metadata.alternatives)) {
         details.variants = Object.entries(metadata.alternatives)
           .filter(([mdFile]) => String(mdFile || '').trim().toLowerCase() !== 'self')

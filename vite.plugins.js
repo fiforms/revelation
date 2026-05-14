@@ -132,6 +132,11 @@ function toPosixPath(value) {
   return String(value || '').replace(/\\/g, '/');
 }
 
+function deriveThumbnailName(mdFile) {
+  const basename = path.basename(mdFile, path.extname(mdFile));
+  return `${basename}.thumb.jpg`;
+}
+
 function isTransientFsError(err) {
   const code = String(err?.code || '');
   return code === 'ENOENT' || code === 'ENOTDIR' || code === 'ESTALE';
@@ -267,7 +272,7 @@ function generatePresentationIndex() {
           data = {
             title: "{malformed YAML}",
             description: err.message,
-            thumbnail: "preview.jpg",
+            thumbnail: deriveThumbnailName(mdFile),
             _malformed: true
           };
         }
@@ -284,7 +289,7 @@ function generatePresentationIndex() {
           md: toPosixPath(mdFile),
           title: data.title || `${dir}/${mdFile}`,
           description: data.description || "",
-          thumbnail: data.thumbnail || "preview.jpg",
+          thumbnail: data.thumbnail || deriveThumbnailName(mdFile),
           created,
           createdTimestamp: toTimestamp(created),
           modified: stats.mtime.toISOString(),
