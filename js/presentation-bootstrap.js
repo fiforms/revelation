@@ -223,28 +223,36 @@ export async function loadAndPreprocessMarkdown(deck, selectedFile = null) {
     Object.assign(macros, metadata.macros);
   }
 
-  // Load external macros if specified
-  if (metadata.macros_external && typeof metadata.macros_external === 'string') {
+  // Load imports (macros and media) from external file if specified
+  if (metadata.imports && typeof metadata.imports === 'string') {
     try {
       const presentationDir = markdownFile.includes('/')
         ? markdownFile.substring(0, markdownFile.lastIndexOf('/'))
         : '';
-      const externalPath = resolveExternalFilePath(metadata.macros_external, presentationDir);
+      const externalPath = resolveExternalFilePath(metadata.imports, presentationDir);
 
       if (externalPath) {
         const res = await fetch(externalPath);
         if (res.ok) {
           const yaml = await import('js-yaml');
-          const externalMacros = yaml.default.load(await res.text()) || {};
-          if (typeof externalMacros === 'object' && !Array.isArray(externalMacros)) {
-            Object.assign(macros, externalMacros);
+          const importsData = yaml.default.load(await res.text()) || {};
+          if (typeof importsData === 'object' && !Array.isArray(importsData)) {
+            // Merge imported macros
+            if (importsData.macros && typeof importsData.macros === 'object' && !Array.isArray(importsData.macros)) {
+              Object.assign(macros, importsData.macros);
+            }
+            // Merge imported media
+            if (importsData.media && typeof importsData.media === 'object' && !Array.isArray(importsData.media)) {
+              if (!metadata.media) metadata.media = {};
+              Object.assign(metadata.media, importsData.media);
+            }
           }
         } else {
-          console.warn(`Failed to fetch external macros (${externalPath}): ${res.status}`);
+          console.warn(`Failed to fetch imports file (${externalPath}): ${res.status}`);
         }
       }
     } catch (err) {
-      console.warn(`Error loading external macros:`, err);
+      console.warn(`Error loading imports:`, err);
     }
   }
 

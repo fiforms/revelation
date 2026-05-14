@@ -157,7 +157,7 @@ scrollspeed: 2.1
 | `alternatives` | `object` | Alternate markdown files keyed by filename/path with language code; supports `self: hidden` to hide the current file from listing. |
 | `media`        | `object` | Named media aliases used by markdown and macros. |
 | `macros`       | `object` | Named reusable macro blocks. |
-| `macros_external` | `string` | Path to external YAML file (relative to presentation directory) containing macro definitions. |
+| `imports`      | `string` | Path to external YAML file (relative to presentation directory) containing shared macros and media definitions. |
 | `scrollspeed`  | `number` | Optional notes variant auto-scroll speed. |
 
 ---
@@ -220,18 +220,38 @@ Parameters support `$1`, `$2`, etc.
 
 ---
 
-### External Macro Files
+### Shared Imports
 
-For presentations that share macro definitions across multiple decks, use `macros_external` to load macros from a separate YAML file:
+For presentations that share resources (macros and media) across multiple decks, use `imports` to load them from a separate YAML file:
 
 ```yaml
 ---
 title: My Presentation
-macros_external: shared_macros.yaml
+imports: shared-resources.yaml
 ---
 ```
 
-The path is **relative to the presentation directory** and must not use absolute paths or `..` traversal. When both `macros` and `macros_external` are present, inline macros take precedence in case of name conflicts.
+The imported file can contain both macros and media definitions:
+
+```yaml
+# shared-resources.yaml
+macros:
+  fogbg: |
+    <!-- .slide: data-background-video="media:fogloop" -->
+    :ATTRIB:Background by John Doe
+  darkbg: |
+    <!-- .slide: data-darkbg -->
+
+media:
+  fogloop:
+    filename: fog_loop.mp4
+    copyright: Background video by John Doe
+  introaudio:
+    filename: intro.mp3
+    description: Introduction music
+```
+
+The path is **relative to the presentation directory** and must not use absolute paths or `..` traversal. When both inline and imported definitions are present, inline definitions take precedence in case of name conflicts.
 
 For detailed examples and usage patterns, see:
 - [Loading Macros from External Files](AUTHORING_REFERENCE.md#loading-macros-from-external-files)

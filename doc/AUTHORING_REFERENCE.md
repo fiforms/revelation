@@ -579,39 +579,48 @@ This behavior may be flagged or prevented in future versions. Define macros with
 
 #### Loading Macros from External Files
 
-For presentations that reuse macros across multiple decks, you can load macro definitions from a separate YAML file using the `macros_external` field in the front matter:
+For presentations that reuse macros and media across multiple decks, you can load them from a separate YAML file using the `imports` field in the front matter:
 
 ```yaml
 ---
 title: My Presentation
-macros_external: shared_macros.yaml
+imports: shared-resources.yaml
 ---
 ```
 
-The external file path is **relative to the presentation directory** and must be a simple filename or relative path (no absolute paths or `..` traversal). For example:
+The imports file path is **relative to the presentation directory** and must be a simple filename or relative path (no absolute paths or `..` traversal). For example:
 
 ```
 presentations/
-├── slides.md                  # Front matter: macros_external: macros.yaml
-├── macros.yaml                # Loaded from same directory
+├── slides.md                       # Front matter: imports: shared.yaml
+├── shared.yaml                     # Loaded from same directory
 └── themes/
-    └── presentation_dark.md   # Front matter: macros_external: ../macros.yaml
+    └── presentation_dark.md        # Front matter: imports: ../shared.yaml
 ```
 
-The external YAML file should contain a `macros` section (or map the macros directly at the root):
+The imports YAML file can contain both `macros` and `media` sections:
 
 ```yaml
-# macros.yaml
-custom_theme: |-
-  ![background:sticky](theme-bg.jpg)
-  {{darkbg}}
-  {{lighttext}}
+# shared-resources.yaml
+macros:
+  custom_theme: |-
+    ![background:sticky](theme-bg.jpg)
+    {{darkbg}}
+    {{lighttext}}
 
-highlight_red: |-
-  {{bgtint:rgba(255,0,0,0.3)}}
+  highlight_red: |-
+    {{bgtint:rgba(255,0,0,0.3)}}
 
-section_title: |-
-  ![background:sticky](section.jpg)
+  section_title: |-
+    ![background:sticky](section.jpg)
+
+media:
+  background_video:
+    filename: bg.mp4
+    description: Looping background video
+  intro_sound:
+    filename: intro.mp3
+    copyright: Original composition
 ```
 
 Then use them in your presentation:
@@ -620,22 +629,28 @@ Then use them in your presentation:
 {{custom_theme}}
 # Slide with custom theme
 
+![](media:background_video)
+
 ---
 
 {{highlight_red}}
-Important point
+Important point with sound: :audio:play:media:intro_sound:
 ```
 
-**Merging behavior:** If both `macros` (inline) and `macros_external` are present in the front matter, inline macros take precedence in case of name conflicts. This allows you to override shared macros on a per-deck basis.
+**Merging behavior:** If both inline and imported definitions are present in the front matter, inline definitions take precedence in case of name conflicts. This allows you to override shared resources on a per-deck basis.
 
 ```yaml
 ---
 title: My Presentation
-macros_external: shared_macros.yaml
+imports: shared-resources.yaml
 macros:
   custom_theme: |-
-    # This overrides the custom_theme from shared_macros.yaml
+    # This overrides the custom_theme from shared-resources.yaml
     ![background:sticky](override.jpg)
+media:
+  background_video:
+    filename: override-bg.mp4
+    description: Override background video
 ---
 ```
 
