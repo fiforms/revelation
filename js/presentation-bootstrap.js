@@ -400,12 +400,13 @@ export async function loadAndPreprocessMarkdown(deck, selectedFile = null) {
     const margin = Number.isFinite(Number(config.margin)) ? Number(config.margin) : 0.04;
     const configWidth = Number(config.width) || 960;
     const configHeight = Number(config.height) || 700;
-    // Calculate the margin in pixels for each axis using the config dimensions
-    const marginPxH = Math.round(configWidth * margin / 2); // divided by 2 since margin applies to both sides
-    const marginPxV = Math.round(configHeight * margin / 2);
-    // Use the larger value for overflow compensation
-    const marginPx = Math.max(marginPxH, marginPxV);
-    document.documentElement.style.setProperty('--reveal-margin-px', `${marginPx}px`);
+    // Calculate the margin in pixels for each axis
+    // margin represents what fraction of total slide is margins (config dimensions are content area)
+    // so total_slide = content / (1 - margin), and margin_per_side = (total - content) / 2
+    const marginPxH = margin > 0 && margin < 1 ? Math.round(configWidth * margin / (1 - margin) / 2) : 0;
+    const marginPxV = margin > 0 && margin < 1 ? Math.round(configHeight * margin / (1 - margin) / 2) : 0;
+    document.documentElement.style.setProperty('--reveal-margin-px-h', `${marginPxH}px`);
+    document.documentElement.style.setProperty('--reveal-margin-px-v', `${marginPxV}px`);
   };
   updateMarginPxVariable();
 

@@ -291,10 +291,10 @@ body.reveal-ready {
 
   section img[data-imagefit-fill], section video[data-imagefit-fill] {
     position: absolute;
-    top: calc(0px - var(--reveal-margin-px, 0px));
-    left: calc(0px - var(--reveal-margin-px, 0px));
-    right: calc(0px - var(--reveal-margin-px, 0px));
-    bottom: calc(0px - var(--reveal-margin-px, 0px));
+    top: calc(0px - var(--reveal-margin-px-v, 0px));
+    left: calc(0px - var(--reveal-margin-px-h, 0px));
+    right: calc(0px - var(--reveal-margin-px-h, 0px));
+    bottom: calc(0px - var(--reveal-margin-px-v, 0px));
     margin: 0;
     max-width: none;
     max-height: none;
@@ -302,13 +302,13 @@ body.reveal-ready {
   }
 
   section img[data-imagefit-fill] {
-    width: calc(100% + 2 * var(--reveal-margin-px, 0px));
-    height: calc(100% + 2 * var(--reveal-margin-px, 0px));
+    width: calc(100% + 2 * var(--reveal-margin-px-h, 0px));
+    height: calc(100% + 2 * var(--reveal-margin-px-v, 0px));
   }
 
   section video[data-imagefit-fill] {
-    width: calc(100% + 2 * var(--reveal-margin-px, 0px));
-    height: calc(100% + 2 * var(--reveal-margin-px, 0px));
+    width: calc(100% + 2 * var(--reveal-margin-px-h, 0px));
+    height: calc(100% + 2 * var(--reveal-margin-px-v, 0px));
   }
 
   section:has(iframe.youtube-fit) {
