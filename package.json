@@ -1,6 +1,6 @@
 {
   "name": "revelation",
-  "version": "1.0.8-git",
+  "version": "1.0.8",
   "dependencies": {
     "chart.js": "^4.5.1",
     "chokidar": "^5.0.0",
