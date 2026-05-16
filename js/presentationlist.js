@@ -227,20 +227,33 @@ function renderPresentationCards() {
   sorted.forEach((pres) => {
     const displayTitle = translatePresentationTitle(pres.title);
     const card = document.createElement('a');
-    card.href = `${url_prefix}/${pres.slug}/?p=${pres.md}`;
+    card.href = `${url_prefix}/${encodeURIComponent(pres.slug)}/?p=${encodeURIComponent(pres.md)}`;
     card.target = '_blank';
     card.className = 'card';
     if (selectedPresentationBase && selectedPresentationBase.slug === pres.slug && selectedPresentationBase.md === pres.md) {
       card.classList.add('card-selected');
       selectedCardElement = card;
     }
-    card.innerHTML = `
-      <img src="${url_prefix}/${pres.slug}/${pres.thumbnail}" alt="${displayTitle}">
-      <div class="card-content">
-        <div class="card-title">${displayTitle}</div>
-        <div class="card-desc">${pres.description}</div>
-      </div>
-    `;
+
+    const img = document.createElement('img');
+    img.src = `${url_prefix}/${encodeURIComponent(pres.slug)}/${encodeURI(String(pres.thumbnail ?? ''))}`;
+    img.alt = String(displayTitle ?? '');
+    card.appendChild(img);
+
+    const content = document.createElement('div');
+    content.className = 'card-content';
+
+    const titleDiv = document.createElement('div');
+    titleDiv.className = 'card-title';
+    titleDiv.textContent = String(displayTitle ?? '');
+    content.appendChild(titleDiv);
+
+    const descDiv = document.createElement('div');
+    descDiv.className = 'card-desc';
+    descDiv.textContent = String(pres.description ?? '');
+    content.appendChild(descDiv);
+
+    card.appendChild(content);
 
     card.addEventListener('click', (e) => {
       e.preventDefault();
