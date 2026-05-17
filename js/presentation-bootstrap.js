@@ -191,10 +191,12 @@ export async function loadAndPreprocessMarkdown(deck, selectedFile = null) {
   if (selectedTheme) {
     // Presentations saved in older versions use a frozen snapshot of the old CSS so
     // that the reveal.js upstream changes don't alter their appearance.
+    // Legacy CSS can be disabled by setting `window.allowLegacyCss = false` before loading.
     const legacyFolder = resolveLegacyCssFolder(metadata);
+    const allowLegacyCss = window.allowLegacyCss !== false;
     // Legacy CSS snapshots live under oldcss/<version>/ rather than css/ so they
     // bypass the /css serveStatic middleware and are served straight from publicDir.
-    const themeDir = legacyFolder
+    const themeDir = (legacyFolder && allowLegacyCss)
       ? style_path.replace(/css\/$/, `oldcss/${legacyFolder}/`)
       : style_path;
     document.getElementById('theme-stylesheet').href = themeDir + selectedTheme;
