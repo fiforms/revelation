@@ -15,8 +15,8 @@ export function isDangerousURL(value) {
   return (
     normalized.startsWith('javascript:') ||
     normalized.startsWith('vbscript:') ||
-    normalized.startsWith('data:text/html') ||
-    normalized.startsWith('data:application/javascript')
+    // Block all data: URLs (no legitimate use in presentations, all can be vectors)
+    normalized.startsWith('data:')
   );
 }
 
@@ -25,14 +25,34 @@ export function isDangerousURL(value) {
 // to provide security-equivalent sanitization. Do not rely on it as a robust
 // HTML sanitizer; the DOM-based path below is the primary implementation.
 function sanitizeHTMLFragmentFallback(html) {
-  // Reuse the markdown-phase attribute stripping before applying a few
-  // rendered-HTML-specific cleanups.
-  let source = sanitizeMarkdownEmbeddedHTML(String(html || ''));
+  let source = String(html || '');
 
-  // Remove whole blocked elements since the markdown-phase sanitizer only
-  // strips `<script>` tags explicitly.
-  source = source.replace(/<\s*(script|object|embed|applet|base|meta)\b[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi, '');
+  // Remove entirely blocked tags and their contents
+  source = source.replace(/<\s*(script|object|embed|applet|base|meta|style)\b[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi, '');
   source = source.replace(/<\s*(script|object|embed|applet|base|meta)\b[^>]*\/?\s*>/gi, '');
+
+  // Strip event handlers
+  source = source.replace(/\son[a-z0-9_-]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '');
+  source = source.replace(/\ssrcdoc\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '');
+  source = source.replace(/\ssrcset\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '');
+
+  // Strip dangerous URL attributes
+  source = source.replace(
+    /\s(href|src|xlink:href|formaction|action|poster)\s*=\s*("([^"]*)"|'([^']*)'|([^\s>]+))/gi,
+    (fullMatch, attrName, fullValue, dqValue, sqValue, bareValue) => {
+      const rawValue = dqValue ?? sqValue ?? bareValue ?? '';
+      return isDangerousURL(rawValue) ? '' : ` ${attrName}=${fullValue}`;
+    }
+  );
+
+  // Strip dangerous styles
+  source = source.replace(
+    /\sstyle\s*=\s*("([^"]*)"|'([^']*)'|([^\s>]+))/gi,
+    (fullMatch, fullValue, dqValue, sqValue, bareValue) => {
+      const rawValue = dqValue ?? sqValue ?? bareValue ?? '';
+      return /expression\s*\(|url\s*\(\s*['"]?\s*javascript:|@import/i.test(rawValue) ? '' : ` style=${fullValue}`;
+    }
+  );
 
   // Force `rel` hardening on links that open a new browsing context.
   source = source.replace(
@@ -85,6 +105,7 @@ function sanitizeHTMLFragment(html) {
     const tagName = el.tagName.toLowerCase();
     if (BLOCKED_TAGS.has(tagName)) {
       el.remove();
+      console.log(`Removed blocked <${tagName}> element from HTML fragment.`);
       continue;
     }
 
@@ -96,11 +117,13 @@ function sanitizeHTMLFragment(html) {
 
       if (name.startsWith('on') || name === 'srcdoc') {
         el.removeAttribute(attr.name);
+        console.log(`Removed blocked ${name} attribute from <${tagName}> element.`);
         continue;
       }
 
       if (URL_ATTR_NAMES.has(name) && isDangerousURL(value)) {
         el.removeAttribute(attr.name);
+        console.log(`Removed dangerous URL in ${name} attribute from <${tagName}> element.`);
         continue;
       }
 
@@ -109,6 +132,7 @@ function sanitizeHTMLFragment(html) {
         /expression\s*\(|url\s*\(\s*['"]?\s*javascript:|@import/i.test(String(value || ''))
       ) {
         el.removeAttribute(attr.name);
+        console.log(`Removed dangerous style content from <${tagName}> element.`);
       }
     }
 
@@ -126,34 +150,50 @@ function sanitizeHTMLFragment(html) {
 }
 
 // Sanitize raw HTML embedded in markdown before markdown rendering occurs.
+// This uses regex-based sanitization on raw HTML text to remove dangerous elements
+// and attributes before the markdown engine renders it. It handles HTML entity
+// bypasses by matching entity representations of whitespace.
 export function sanitizeMarkdownEmbeddedHTML(markdown) {
   let source = String(markdown || '');
 
-  source = source.replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, '');
-  source = source.replace(/\son[a-z0-9_-]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '');
-  source = source.replace(/\ssrcdoc\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '');
+  // Remove entirely blocked tags and their contents
+  source = source.replace(/<\s*(script|object|embed|applet|base|meta|style)\b[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi, '');
+  source = source.replace(/<\s*(script|object|embed|applet|base|meta)\b[^>]*\/?\s*>/gi, '');
 
+  // Helper to create a regex that matches whitespace OR HTML entity representations of whitespace
+  // This catches entity-space bypasses like <img&#32;onerror>
+  const wsPattern = '(?:\\s|&#(?:32|x20);|&nbsp;|&tab;|&#(?:9|xa|xd);)';
+
+  // Strip event handlers preceded by whitespace (normal or entity-encoded)
+  source = source.replace(new RegExp(`${wsPattern}on[a-z0-9_-]+\\s*=\\s*(?:"[^"]*"|'[^']*'|[^\\s>]+)`, 'gi'), '');
+
+  // Strip srcdoc attributes
+  source = source.replace(new RegExp(`${wsPattern}srcdoc\\s*=\\s*(?:"[^"]*"|'[^']*'|[^\\s>]+)`, 'gi'), '');
+
+  // Strip srcset attributes
+  source = source.replace(new RegExp(`${wsPattern}srcset\\s*=\\s*(?:"[^"]*"|'[^']*'|[^\\s>]+)`, 'gi'), '');
+
+  // Strip URL attributes with dangerous protocols
   source = source.replace(
-    /\s(href|src|xlink:href|formaction|action|poster)\s*=\s*("([^"]*)"|'([^']*)'|([^\s>]+))/gi,
+    new RegExp(`${wsPattern}(href|src|xlink:href|formaction|action|poster)\\s*=\\s*("([^"]*)"|'([^']*)'|([^\\s>]+))`, 'gi'),
     (fullMatch, attrName, fullValue, dqValue, sqValue, bareValue) => {
       const rawValue = dqValue ?? sqValue ?? bareValue ?? '';
-      if (isDangerousURL(rawValue)) {
-        return '';
-      }
-      return ` ${attrName}=${fullValue}`;
+      return isDangerousURL(rawValue) ? '' : ` ${attrName}=${fullValue}`;
     }
   );
 
+  // Strip style attributes with dangerous content
   source = source.replace(
-    /\sstyle\s*=\s*("([^"]*)"|'([^']*)'|([^\s>]+))/gi,
+    new RegExp(`${wsPattern}style\\s*=\\s*("([^"]*)"|'([^']*)'|([^\\s>]+))`, 'gi'),
     (fullMatch, fullValue, dqValue, sqValue, bareValue) => {
       const rawValue = dqValue ?? sqValue ?? bareValue ?? '';
-      if (/expression\s*\(|url\s*\(\s*['"]?\s*javascript:|@import/i.test(rawValue)) {
-        return '';
-      }
-      return ` style=${fullValue}`;
+      return /expression\s*\(|url\s*\(\s*['"]?\s*javascript:|@import/i.test(rawValue) ? '' : ` style=${fullValue}`;
     }
   );
+
+  if(source !== markdown) {
+    console.log('Sanitized potentially dangerous markdown to remove dangerous content.');
+  }
 
   return source;
 }
