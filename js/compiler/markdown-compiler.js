@@ -360,7 +360,12 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
   // Returns the reveal.js directive or null if not a background:sticky image.
   const processBackgroundStickyImage = (src) => {
     if (!src) return null;
-    const resolvedSrc = resolveMediaAlias(src);
+    // Strip CommonMark angle-bracket delimiters (e.g. <url with spaces>)
+    let trimmedSrc = String(src).trim();
+    if (trimmedSrc.startsWith('<') && trimmedSrc.endsWith('>')) {
+      trimmedSrc = trimmedSrc.slice(1, -1);
+    }
+    const resolvedSrc = resolveMediaAlias(trimmedSrc);
     const isVideo = /\.(webm|mp4|mov|m4v)$/i.test(resolvedSrc);
     const shouldLoop = true; // background:sticky defaults to looping
     return isVideo
