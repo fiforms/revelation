@@ -1284,7 +1284,8 @@ async function getCopyLinkBaseURL() {
     try {
       const appConfig = await window.electronAPI.getAppConfig();
       if (appConfig?.mode === 'network' && appConfig?.hostLANURL) {
-        return `http://${appConfig.hostLANURL}:${appConfig.viteServerPort}`;
+        const protocol = appConfig?.httpsEnabled ? 'https' : 'http';
+        return `${protocol}://${appConfig.hostLANURL}:${appConfig.viteServerPort}`;
       }
     } catch (err) {
       console.warn('Failed to load app config for copy link:', err);

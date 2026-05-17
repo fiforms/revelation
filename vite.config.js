@@ -1,14 +1,19 @@
 import { defineConfig } from 'vite';
 const presentationIndexPlugin = require('./vite.plugins.js');
 import path from 'path';
+import fs from 'fs';
 
 
 export default {
-  root: '.',      
+  root: '.',
   publicDir: 'assets',   // Default for static assets
   server: {
     port: 8000,
     allowedHosts: true,
+    https: process.env.VITE_HTTPS_CERT && process.env.VITE_HTTPS_KEY ? {
+      cert: fs.readFileSync(process.env.VITE_HTTPS_CERT),
+      key: fs.readFileSync(process.env.VITE_HTTPS_KEY)
+    } : false,
     cors: {
       // Builder preview iframe runs sandboxed without allow-same-origin (Origin: null).
       origin: 'null',
