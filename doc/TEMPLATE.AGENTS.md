@@ -496,7 +496,11 @@ For individual slide transitions, "in" and "out" transitions can be selected ind
 
 ## Format Quick Reference
 
-For complete format documentation, see the [REVELation Snapshot Presenter Documentation Hub](https://snapshots.vrbm.org/revelation-snapshot-presenter-doc/). Key syntax at a glance:
+For complete format documentation, browse through the markdown files in ./readme/ starting with ./readme/presentation.md and ./readme/revelation-doc-authoring_reference.md
+
+You can also browser the same documentation at the [REVELation Snapshot Presenter Documentation Hub](https://snapshots.vrbm.org/revelation-snapshot-presenter-doc/). 
+
+Key syntax at a glance:
 
 ```markdown
 ---
