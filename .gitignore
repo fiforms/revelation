@@ -17,6 +17,7 @@ reveal-remote.js
 css/*.css
 css/*.css.map
 css/custom
+css/theme-thumbnails
 
 # Ignore user's presentation files
 presentations_*
