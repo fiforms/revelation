@@ -34,6 +34,15 @@ import { ensureHiddenSlidePreviewStyles, createAlternativeSelector } from './loa
 
 let style_path = '/css/';
 
+function isValidStylesheetPath(value) {
+  if (typeof value !== 'string' || !value.trim()) return false;
+  const trimmed = value.trim();
+  if (trimmed.includes('..') || trimmed.startsWith('/') || trimmed.includes('\\')) return false;
+  if (/^(https?:|data:|javascript:)/i.test(trimmed)) return false;
+  if (!/^[a-zA-Z0-9._\/-]+\.css$/.test(trimmed)) return false;
+  return true;
+}
+
 function computeSuppressedSlides(content) {
   const STICKY_MACRO = /^\s*\{\{[^}]+\}\}\s*$/;
   const HTML_COMMENT = /^\s*<!--/;
@@ -188,7 +197,7 @@ export async function loadAndPreprocessMarkdown(deck, selectedFile = null) {
   // Reflect front matter into the page shell, e.g. title plus theme stylesheet selection.
   document.title = metadata.title || 'Reveal.js Presentation';
   const selectedTheme = variantThemeMap[variant] || metadata.theme;
-  if (selectedTheme) {
+  if (selectedTheme && isValidStylesheetPath(selectedTheme)) {
     // Presentations saved in older versions use a frozen snapshot of the old CSS so
     // that the reveal.js upstream changes don't alter their appearance.
     // Legacy CSS can be disabled by setting `window.allowLegacyCss = false` before loading.
@@ -201,7 +210,7 @@ export async function loadAndPreprocessMarkdown(deck, selectedFile = null) {
       : style_path;
     document.getElementById('theme-stylesheet').href = themeDir + selectedTheme;
   }
-  if (metadata.stylesheet) {
+  if (metadata.stylesheet && isValidStylesheetPath(metadata.stylesheet)) {
     const styleEl = document.createElement('link');
     styleEl.rel = 'stylesheet';
     styleEl.href = metadata.stylesheet;

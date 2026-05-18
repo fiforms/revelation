@@ -11,6 +11,13 @@ import {
 import { resolveExternalFilePath } from './compiler/compiler-utils.js';
 import { marked } from 'marked';
 
+function escapeHTML(text) {
+  if (typeof text !== 'string') return '';
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
 const urlParams = new URLSearchParams(window.location.search);
 const mdFile = urlParams.get('p');
 const selectedLang = String(urlParams.get('lang') || '').trim().toLowerCase();
@@ -305,7 +312,7 @@ if (!mdFile) {
 
     })
     .catch(err => {
-      container.innerHTML = `<p>Error loading handout: ${err.message}</p>`;
+      container.innerHTML = `<p>Error loading handout: ${escapeHTML(err.message)}</p>`;
     });
 }
 

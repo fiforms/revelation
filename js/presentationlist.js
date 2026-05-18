@@ -6,6 +6,13 @@ const urlParams = new URLSearchParams(window.location.search);
 const url_key = urlParams.get('key');
 const url_prefix = `/presentations_${url_key}`;
 
+function escapeHTML(text) {
+  if (typeof text !== 'string') return '';
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
 const container = document.getElementById('presentation-list');
 let selectedCardElement = null;
 let selectedPresentationKey = '';
@@ -328,7 +335,7 @@ fetch(`${url_prefix}/index.json`)
   .catch((err) => {
     container.innerHTML = `
       <div style="color: red; font-weight: bold; padding: 1rem;">
-        ❌ ${err.message}
+        ❌ ${escapeHTML(err.message)}
       </div>
     `;
     console.error('[Presentation Load Error]', err);
@@ -810,7 +817,7 @@ async function openSlideshowOptionsLightbox(pres, details = null) {
   overlay.id = 'slideshow-options-overlay';
   overlay.className = 'slideshow-options-overlay';
   const languageSelectOptions = languageOptions.map((entry) => (
-    `<option value="${entry.mdFile}" data-language="${entry.language}">${buildLanguageOptionLabel(entry)}</option>`
+    `<option value="${escapeHTML(entry.mdFile)}" data-language="${escapeHTML(entry.language)}">${escapeHTML(buildLanguageOptionLabel(entry))}</option>`
   )).join('');
   const screenTypeOptions = SCREEN_TYPE_VARIANTS.map((entry) => (
     `<option value="${entry.value}">${tr(entry.label)}</option>`
@@ -992,12 +999,12 @@ function renderSelectedPresentationPanel(pres, details = null) {
   host.innerHTML = `
     <section id="selected-presentation-panel" class="selected-presentation-panel">
       <div class="selected-presentation-header">${tr('Selected Presentation')}</div>
-      <img class="selected-presentation-thumb" src="${url_prefix}/${effectivePres.slug}/${effectivePres.thumbnail}" alt="${displayTitle}">
-      <div class="selected-presentation-title">${displayTitle}</div>
-      <div class="selected-presentation-meta">${effectivePres.description || ''}</div>
-      <div class="selected-presentation-meta"><strong>${tr('Slug')}:</strong> ${effectivePres.slug}</div>
-      <div class="selected-presentation-meta"><strong>${tr('File')}:</strong> ${selectedMd}</div>
-      <div class="selected-presentation-meta"><strong>${tr('Author')}:</strong> ${author}</div>
+      <img class="selected-presentation-thumb" src="${url_prefix}/${effectivePres.slug}/${effectivePres.thumbnail}" alt="${escapeHTML(displayTitle)}">
+      <div class="selected-presentation-title">${escapeHTML(displayTitle)}</div>
+      <div class="selected-presentation-meta">${escapeHTML(effectivePres.description || '')}</div>
+      <div class="selected-presentation-meta"><strong>${tr('Slug')}:</strong> ${escapeHTML(effectivePres.slug)}</div>
+      <div class="selected-presentation-meta"><strong>${tr('File')}:</strong> ${escapeHTML(selectedMd)}</div>
+      <div class="selected-presentation-meta"><strong>${tr('Author')}:</strong> ${escapeHTML(author)}</div>
       <div class="selected-presentation-meta"><strong>${tr('Language variants')}:</strong></div>
       <div class="selected-presentation-file-list selected-presentation-variant-list">
         ${
@@ -1006,7 +1013,7 @@ function renderSelectedPresentationPanel(pres, details = null) {
               ? languageVariants.map((entry) => {
                 const mdFile = String(entry?.mdFile || '').trim();
                 const isCurrent = mdFile === selectedMd;
-                return `<button type="button" class="selected-presentation-file-link${isCurrent ? ' is-current' : ''}" data-file-md="${mdFile}" data-file-group="variant">${buildFileLineLabel(entry)}</button>`;
+                return `<button type="button" class="selected-presentation-file-link${isCurrent ? ' is-current' : ''}" data-file-md="${escapeHTML(mdFile)}" data-file-group="variant">${escapeHTML(buildFileLineLabel(entry))}</button>`;
               }).join('')
               : `<div class="selected-presentation-meta">${tr('Default only')}</div>`)
             : `<div class="selected-presentation-meta">${tr('Loading...')}</div>`
@@ -1020,7 +1027,7 @@ function renderSelectedPresentationPanel(pres, details = null) {
               ? additionalPresentations.map((entry) => {
                 const mdFile = String(entry?.mdFile || '').trim();
                 const isCurrent = mdFile === selectedMd;
-                return `<button type="button" class="selected-presentation-file-link${isCurrent ? ' is-current' : ''}" data-file-md="${mdFile}" data-file-group="additional">${buildFileLineLabel(entry)}</button>`;
+                return `<button type="button" class="selected-presentation-file-link${isCurrent ? ' is-current' : ''}" data-file-md="${escapeHTML(mdFile)}" data-file-group="additional">${escapeHTML(buildFileLineLabel(entry))}</button>`;
               }).join('')
               : `<div class="selected-presentation-meta">${tr('None')}</div>`)
             : `<div class="selected-presentation-meta">${tr('Loading...')}</div>`

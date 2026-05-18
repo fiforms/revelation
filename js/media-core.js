@@ -3,6 +3,13 @@
 
 import { pluginLoader } from './pluginloader.js';
 
+function escapeHTML(text) {
+  if (typeof text !== 'string') return '';
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
 export async function initMediaLibrary(container, {
   key,
   mode = 'standalone',           // 'standalone' | 'picker'
@@ -248,7 +255,7 @@ export async function initMediaLibrary(container, {
       render(viewList);
     })
     .catch(err => {
-      grid.innerHTML = `<p style="color:#f66">${tr('Failed to load media index')}: ${err.message}</p>`;
+      grid.innerHTML = `<p style="color:#f66">${tr('Failed to load media index')}: ${escapeHTML(err.message)}</p>`;
       console.error(err);
     });
 
@@ -341,9 +348,9 @@ export async function initMediaLibrary(container, {
       const meta = document.createElement('div');
       meta.style = 'font-size:.9rem;opacity:.8;margin-top:.25rem;';
       meta.innerHTML = `
-        ${item.description || ''}<br/>
-        <small>${item.original_filename}</small><br/>
-        ${item.copyright ? `<small>${item.copyright}</small><br/>` : ''}
+        ${escapeHTML(item.description || '')}<br/>
+        <small>${escapeHTML(item.original_filename)}</small><br/>
+        ${item.copyright ? `<small>${escapeHTML(item.copyright)}</small><br/>` : ''}
       `;
       const variantStatus = document.createElement('small');
       variantStatus.className = 'media-variant-status';
