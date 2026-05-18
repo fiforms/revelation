@@ -3,13 +3,24 @@ const fs = require('fs');
 const crypto = require('crypto');
 const path = require('path');
 const matter = require('gray-matter');
-const ip = require('ip');
 const serveStatic = require('serve-static');
 const { Server } = require('socket.io');
 const { v4: uuidv4 } = require('uuid');
 const { toDataURL: qrToDataURL } = require('qrcode');
 
-const localIp = ip.address(); // Gets the LAN IP
+function getLocalIpAddress() {
+  const interfaces = os.networkInterfaces();
+  for (const name of Object.keys(interfaces)) {
+    for (const iface of interfaces[name] || []) {
+      if (iface.family === 'IPv4' && !iface.internal) {
+        return iface.address;
+      }
+    }
+  }
+  return '127.0.0.1';
+}
+
+const localIp = getLocalIpAddress(); // Gets the LAN IP
 
 const baseDir = __dirname;
 const prefix = 'presentations_';
