@@ -922,7 +922,14 @@ function presentationIndexPlugin() {
             console.log(`[thumbs] generating: ${decodedPath}`);
             let pending = _thumbInFlight.get(thumbFile);
             if (!pending) {
-              fs.mkdirSync(path.dirname(thumbFile), { recursive: true });
+              const thumbDir = path.dirname(thumbFile);
+              const dirExisted = fs.existsSync(thumbDir);
+              fs.mkdirSync(thumbDir, { recursive: true });
+              if (!dirExisted && process.platform === 'win32') {
+                try {
+                  require('child_process').execFile('attrib', ['+h', thumbDir], () => {});
+                } catch {}
+              }
               pending = _runFfmpegThumb(ffmpegBin, sourceFile, thumbFile)
                 .finally(() => _thumbInFlight.delete(thumbFile));
               _thumbInFlight.set(thumbFile, pending);
