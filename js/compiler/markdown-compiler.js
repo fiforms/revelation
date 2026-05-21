@@ -538,11 +538,12 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
     if (suppressThisSlide) {
       const isAttribLine = /^\s*:ATTRIB:.*$/i.test(line) || /^\s*:AI:\s*$/i.test(line);
       const hasMarkdownImage = /!\[[^\]]*]\([^)]*\)/.test(line);
-      const hasHtmlVisual = /<\s*(img|video|iframe|figure)\b/i.test(line);
-      const hasBackgroundData = /data-background-(image|video|audio|audio-start|audio-loop|audio-stop)/i.test(line);
-      if (!isNoteSeparator && !isHideMacro && (isStickyMacro || isAttribLine || hasMarkdownImage || hasHtmlVisual || hasBackgroundData)) {
+      const hasFillMedia = /!\[fill(?::[^\]]*?)?\]\([^)]*\)/i.test(line);
+      const hasHtmlVisual = /<\s*(img|iframe|figure)\b/i.test(line);
+      const hasBackgroundData = /data-background-(image|audio|audio-start|audio-loop|audio-stop)/i.test(line);
+      if (!isNoteSeparator && !isHideMacro && (isStickyMacro || isAttribLine || (hasMarkdownImage && !hasFillMedia) || hasHtmlVisual || hasBackgroundData)) {
         // If this image line would have triggered caption lookahead, skip the caption line too.
-        if (hasMarkdownImage && lines[index + 1] && /^:caption:.*:\s*$/.test(lines[index + 1])) {
+        if (hasMarkdownImage && !hasFillMedia && lines[index + 1] && /^:caption:.*:\s*$/.test(lines[index + 1])) {
           skipNextLine = true;
         }
         continue;
