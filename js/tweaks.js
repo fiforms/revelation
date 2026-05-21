@@ -204,23 +204,31 @@ function initFitVideoControls(deck) {
 }
 
 function initConfidenceMonitorVideoTimer(deck) {
-  const overlay = document.createElement('div');
-  overlay.id = 'video-timer-overlay';
+  const ensureOverlay = () => {
+    let overlay = document.getElementById('video-timer-overlay');
+    if (overlay) return overlay;
 
-  const remainingBar = document.createElement('div');
-  remainingBar.className = 'video-timer-remaining';
+    overlay = document.createElement('div');
+    overlay.id = 'video-timer-overlay';
 
-  const playedBar = document.createElement('div');
-  playedBar.className = 'video-timer-played';
+    const remainingBar = document.createElement('div');
+    remainingBar.className = 'video-timer-remaining';
 
-  const timeLabel = document.createElement('div');
-  timeLabel.className = 'video-timer-label';
-  timeLabel.textContent = '00:00';
+    const playedBar = document.createElement('div');
+    playedBar.className = 'video-timer-played';
 
-  overlay.appendChild(remainingBar);
-  overlay.appendChild(playedBar);
-  overlay.appendChild(timeLabel);
-  document.body.appendChild(overlay);
+    const timeLabel = document.createElement('div');
+    timeLabel.className = 'video-timer-label';
+    timeLabel.textContent = '00:00';
+
+    overlay.appendChild(remainingBar);
+    overlay.appendChild(playedBar);
+    overlay.appendChild(timeLabel);
+    document.body.appendChild(overlay);
+    return overlay;
+  };
+
+  const overlay = ensureOverlay();
 
   let updateInterval = null;
   let currentVideo = null;
@@ -246,6 +254,7 @@ function initConfidenceMonitorVideoTimer(deck) {
   };
 
   const updateTimer = () => {
+    const overlayEl = document.getElementById('video-timer-overlay') || overlay;
     const isVideoPlaying = currentVideo && !currentVideo.paused && !currentVideo.ended;
     const isAudioPlaying = audioEl && !audioEl.paused && !audioEl.ended && audioEl.duration > 0;
 
@@ -254,23 +263,31 @@ function initConfidenceMonitorVideoTimer(deck) {
       const currentTime = currentVideo.currentTime;
       const remaining = Math.max(0, duration - currentTime);
 
-      timeLabel.textContent = formatTime(remaining);
-      const percentPlayed = duration > 0 ? (currentTime / duration) * 100 : 0;
-      playedBar.style.width = `${percentPlayed}%`;
-      overlay.style.display = 'block';
+      const timeLabel = overlayEl.querySelector('.video-timer-label');
+      const playedBar = overlayEl.querySelector('.video-timer-played');
+      if (timeLabel) timeLabel.textContent = formatTime(remaining);
+      if (playedBar) {
+        const percentPlayed = duration > 0 ? (currentTime / duration) * 100 : 0;
+        playedBar.style.width = `${percentPlayed}%`;
+      }
+      overlayEl.style.display = 'block';
       updateOverlayPosition();
     } else if (isAudioPlaying) {
       const duration = audioEl.duration;
       const currentTime = audioEl.currentTime;
       const remaining = Math.max(0, duration - currentTime);
 
-      timeLabel.textContent = `(audio) ${formatTime(remaining)}`;
-      const percentPlayed = duration > 0 ? (currentTime / duration) * 100 : 0;
-      playedBar.style.width = `${percentPlayed}%`;
-      overlay.style.display = 'block';
+      const timeLabel = overlayEl.querySelector('.video-timer-label');
+      const playedBar = overlayEl.querySelector('.video-timer-played');
+      if (timeLabel) timeLabel.textContent = `(audio) ${formatTime(remaining)}`;
+      if (playedBar) {
+        const percentPlayed = duration > 0 ? (currentTime / duration) * 100 : 0;
+        playedBar.style.width = `${percentPlayed}%`;
+      }
+      overlayEl.style.display = 'block';
       updateOverlayPosition();
     } else {
-      overlay.style.display = 'none';
+      overlayEl.style.display = 'none';
       if (updateInterval) {
         clearInterval(updateInterval);
         updateInterval = null;
@@ -297,12 +314,16 @@ function initConfidenceMonitorVideoTimer(deck) {
     };
 
     const onPause = () => {
-      currentVideo = null;
+      if (currentVideo === video) {
+        currentVideo = null;
+      }
       updateTimer();
     };
 
     const onEnded = () => {
-      currentVideo = null;
+      if (currentVideo === video) {
+        currentVideo = null;
+      }
       updateTimer();
     };
 
@@ -337,12 +358,14 @@ function initConfidenceMonitorVideoTimer(deck) {
   }
 
   deck.on('ready', (e) => {
+    ensureOverlay();
     wireSlideVideos(e.currentSlide);
     updateTimer();
   });
 
   deck.on('slidechanged', (e) => {
     currentVideo = null;
+    ensureOverlay();
     wireSlideVideos(e.currentSlide);
     updateTimer();
   });
