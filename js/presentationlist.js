@@ -158,7 +158,7 @@ function sortPresentations(items, mode) {
   sorted.sort((a, b) => {
     if (mode === 'slug') {
       const bySlug = compareText(a.slug, b.slug);
-      return bySlug || compareText(a.title, b.title);
+      return bySlug || compareText(a.md, b.md);
     }
     if (mode === 'title') {
       const byTitle = compareText(a.title, b.title);
