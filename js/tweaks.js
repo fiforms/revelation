@@ -10,6 +10,8 @@ export function revealTweaks(deck) {
       updateHiddenPreviewOverlay(deck);
       ensureLinksOpenExternally(deck);
       updateFixedOverlayVisibility(deck);
+      ensureMagicSlideStyles();
+      addMagicSlideIndicators(deck);
     }
 
     deck.on('ready', readyTweaks);       
@@ -19,8 +21,8 @@ export function revealTweaks(deck) {
       ensureLinksOpenExternally(deck);
       updateFixedOverlayVisibility(deck);
     });
-    deck.on('overviewshown', () => updateFixedOverlayVisibility(deck));
-    deck.on('overviewhidden', () => {
+    deck.on('overviewshown', () => {
+      updateFixedOverlayVisibility(deck);
       // With the fade transition, overview forces opacity:1 on every slide.
       // When overview closes, all non-present slides would normally fade from
       // opacity:1 → 0 simultaneously, causing a brief scramble. Suppress
@@ -966,4 +968,55 @@ function doubleClickFullScreen() {
         }
       }
     });
+}
+
+function ensureMagicSlideStyles() {
+  if (document.getElementById('magic-slide-styles')) {
+    return;
+  }
+
+  const style = document.createElement('style');
+  style.id = 'magic-slide-styles';
+  style.textContent = `
+    @keyframes sparkle-pulse {
+      0%, 100% {
+        transform: scale(1);
+      }
+      50% {
+        transform: scale(1.3);
+      }
+    }
+
+    .magic-slide-indicator {
+      display: none;
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      font-size: 192px;
+      line-height: 1;
+      pointer-events: none;
+      z-index: 10;
+      animation: sparkle-pulse 1.5s ease-in-out infinite;
+    }
+
+    .reveal.overview [data-magic-slide] .magic-slide-indicator {
+      display: block;
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+function addMagicSlideIndicators(deck) {
+  const revealElement = deck?.getRevealElement?.();
+  if (!revealElement) return;
+
+  const magicSlides = revealElement.querySelectorAll('[data-magic-slide]');
+  magicSlides.forEach((slide) => {
+    if (slide.querySelector('.magic-slide-indicator')) return;
+
+    const indicator = document.createElement('div');
+    indicator.className = 'magic-slide-indicator';
+    indicator.textContent = '✨';
+    slide.appendChild(indicator);
+  });
 }
