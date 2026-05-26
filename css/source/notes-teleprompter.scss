@@ -6,6 +6,7 @@
 :root {
   --notes-main-width: 40%;
   --notes-pane-ratio-to-main: 150%;
+  --notes-preview-width-hidden: 30vw;
   --notes-mobile-pane-height: 45vh;
   --notes-mobile-pane-height: 45dvh;
   --notes-preview-height: 30vh;
@@ -111,7 +112,7 @@ body.has-next-preview:not(.notes-pane-hidden) .notes-next-preview {
 /* Wide mode, notes pane hidden: compact 30×30 in lower-left */
 body.has-next-preview.notes-pane-hidden .notes-next-preview {
   display: flex;
-  width: 30vw;
+  width: var(--notes-preview-width-hidden);
   height: var(--notes-preview-height);
 }
 
@@ -119,6 +120,44 @@ body.has-next-preview.notes-pane-hidden .notes-next-preview {
 body.has-next-preview .reveal {
   /* max-height: calc(100vh - var(--notes-preview-height)) !important; */
   max-height: calc(100dvh - var(--notes-preview-height)) !important;
+}
+
+/* --- Heading-Only Display (hybrid mode) --- */
+
+.notes-heading-display {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: auto;
+  z-index: 10;
+  background: rgba(8, 8, 8, 0.92);
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  border-left: 1px solid rgba(255, 255, 255, 0.12);
+  align-items: center;
+  justify-content: center;
+  color: #f7f7f7;
+  overflow: hidden;
+}
+
+.notes-heading-display h1,
+.notes-heading-display h2,
+.notes-heading-display h3 {
+  margin: 0;
+  padding: 0.5rem 1.5rem;
+  font-size: 8vh;
+  line-height: 1.2;
+  text-align: center;
+  color: #f7f7f7;
+  text-shadow: 0 0 6px rgba(255, 255, 255, 0.2);
+}
+
+/* Show heading display to the right of the next-slide tile */
+body.notes-heading-only.has-next-preview .notes-heading-display {
+  display: flex;
+  left: var(--notes-preview-width-hidden);
+  right: 0;
+  height: var(--notes-preview-height);
 }
 
 @media screen and (max-width: 1024px) {
@@ -168,5 +207,10 @@ body.has-next-preview .reveal {
   body.has-next-preview.notes-pane-hidden .reveal.show-notes {
     max-height: calc(100vh - var(--notes-preview-narrow-height)) !important;
     max-height: calc(100dvh - var(--notes-preview-narrow-height)) !important;
+  }
+
+  /* Narrow: hide heading display */
+  .notes-heading-display {
+    display: none !important;
   }
 }

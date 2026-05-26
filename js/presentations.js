@@ -569,6 +569,62 @@ pluginLoader('presentations',`/plugins_${key}`).then(async function() {
     return false;
   }
 
+  function currentSlideNotesIsOnlyHeading() {
+    const slide = deck.getCurrentSlide?.();
+    if (!slide) return false;
+
+    for (const notesEl of slide.querySelectorAll('aside.notes')) {
+      // Filter: keep only heading elements and non-attribution divs that contain content
+      const children = Array.from(notesEl.children)
+        .filter(el => {
+          // Ignore attribution divs
+          if (el.tagName === 'DIV' && el.classList.contains('slide-attribution')) return false;
+          if (/^H[123]$/.test(el.tagName)) return true;
+          if (el.tagName === 'DIV' && (el.textContent || '').trim()) return true;
+          return (el.textContent || '').trim().length > 0;
+        });
+      if (children.length === 0) continue;
+      // Check if only child is a heading
+      const isHeadingOnly = children.length === 1 && /^H[123]$/.test(children[0].tagName);
+      if (isHeadingOnly) return true;
+      return false;
+    }
+
+    const attr = slide.getAttribute('data-notes');
+    if (attr) {
+      const trimmed = attr.trim();
+      return /^#{1,3}\s+[^\n#]+$/.test(trimmed);
+    }
+
+    return false;
+  }
+
+  function getCurrentSlideHeadingNoteHTML() {
+    const slide = deck.getCurrentSlide?.();
+    if (!slide) return '';
+    for (const notesEl of slide.querySelectorAll('aside.notes')) {
+      const children = Array.from(notesEl.children)
+        .filter(el => {
+          // Ignore attribution divs
+          if (el.tagName === 'DIV' && el.classList.contains('slide-attribution')) return false;
+          if (/^H[123]$/.test(el.tagName)) return true;
+          if (el.tagName === 'DIV' && (el.textContent || '').trim()) return true;
+          return (el.textContent || '').trim().length > 0;
+        });
+      // Find the first heading element
+      const headingEl = children.find(el => /^H[123]$/.test(el.tagName));
+      if (headingEl && children.length === 1) {
+        return headingEl.outerHTML;
+      }
+    }
+    const attr = slide.getAttribute('data-notes');
+    if (attr) {
+      const text = attr.trim().replace(/^#{1,3}\s+/, '');
+      return `<h2>${text}</h2>`;
+    }
+    return '';
+  }
+
   function updateNotesPaneVisibility() {
     if (document.body.dataset.variant !== 'notes') return;
     const showNotesEnabled = !!deck.getConfig?.().showNotes;
@@ -577,9 +633,23 @@ pluginLoader('presentations',`/plugins_${key}`).then(async function() {
       return;
     }
     const hasNotes = currentSlideHasNotes();
-    const shouldHide = !hasNotes || !!deck.isOverview?.();
+    const isHeadingOnly = hasNotes && currentSlideNotesIsOnlyHeading();
+    const shouldHide = !hasNotes || isHeadingOnly || !!deck.isOverview?.();
     const changed = document.body.classList.contains('notes-pane-hidden') !== shouldHide;
     document.body.classList.toggle('notes-pane-hidden', shouldHide);
+
+    const headingDisplayEl = document.getElementById('notes-heading-display');
+    if (headingDisplayEl) {
+      if (isHeadingOnly && !deck.isOverview?.()) {
+        const headingHTML = getCurrentSlideHeadingNoteHTML();
+        headingDisplayEl.innerHTML = headingHTML;
+        document.body.classList.add('notes-heading-only');
+      } else {
+        headingDisplayEl.innerHTML = '';
+        document.body.classList.remove('notes-heading-only');
+      }
+    }
+
     if (shouldHide) {
       notesScrollContextKey = '';
       cancelNotesAutoScroll();
@@ -639,6 +709,11 @@ pluginLoader('presentations',`/plugins_${key}`).then(async function() {
     previewEl.appendChild(labelEl);
     previewEl.appendChild(slideWrapEl);
     document.body.appendChild(previewEl);
+
+    const headingEl = document.createElement('div');
+    headingEl.id = 'notes-heading-display';
+    headingEl.className = 'notes-heading-display';
+    document.body.appendChild(headingEl);
 
     function updateNextSlidePreview() {
       slideWrapEl.innerHTML = '';
