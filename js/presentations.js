@@ -985,6 +985,41 @@ function setHotReloading() {
     setTimeout(doReload, 950); // fallback if transitionend doesn't fire
   };
 
+  const isAnyMediaPlaying = () => {
+    // Check audio elements globally (audio player may be outside the slide deck)
+    const audioElements = document.querySelectorAll('audio');
+    for (const audio of audioElements) {
+      if (!audio.paused) return true;
+    }
+
+    // Check foreground video on the currently visible slide (not in background)
+    const currentSlide = window.deck?.getCurrentSlide?.();
+    if (currentSlide) {
+      const videoElements = currentSlide.querySelectorAll('video');
+      for (const video of videoElements) {
+        // Skip videos in the background container
+        if (video.closest('.background')) continue;
+        if (video.closest('.backgrounds')) continue;
+        if (!video.paused) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  };
+
+  const tryReload = () => {
+    if (!reloadPending) return;
+    if (isAnyMediaPlaying()) {
+      console.log('[HMR] Media is playing, deferring reload to next slide change');
+      return;
+    }
+    console.log('[HMR] Reloading presentation');
+    reloadPending = false;
+    fadeAndReload();
+  };
+
   import.meta.hot.on('reload-presentations', (data) => {
     if (!window.location.href.includes(`${data.slug}/`) || mdFile !== data.mdFile) return;
     if (reloadPending) return;
@@ -997,9 +1032,16 @@ function setHotReloading() {
       return;
     }
 
-    console.log('[HMR] Reloading presentation');
-    fadeAndReload();
+    // Try to reload immediately, but if media is playing, defer
+    tryReload();
   });
+
+  // For all modes: hook into slidechanged to attempt reload when media stops
+  if (window.deck) {
+    window.deck.on('slidechanged', () => {
+      tryReload();
+    });
+  }
 
   // Followers: hook into RevealRemote so the reload fires on the next
   // incoming multiplex navigation rather than immediately.
@@ -1018,6 +1060,13 @@ function setHotReloading() {
       }
       remotePlugin.onBeforeSync(async () => {
         if (!reloadPending) return; // undefined → proceed normally
+
+        // Check if media is playing before reloading
+        if (isAnyMediaPlaying()) {
+          console.log('[HMR] Follower: media is playing, deferring reload to next navigation');
+          return;
+        }
+
         let currentTime = Date.now();
         if (currentTime - reloadPending < 3000) {
           console.log('[HMR] Follower: onBeforeSync triggered but reload already pending — ignoring');
