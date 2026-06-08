@@ -413,7 +413,7 @@ All of the fields for media elements listed in the example above are important, 
 
 #### Important Note on sticky macros: 
 
-![background:sticky]() and all macros in double-curly braces are considered sticky. Applying a new sticky macro on any subsequent slide will reset previous sticky macros. For instance, if a background is set on a cover slide, and a subsequent slide wants to apply a different tint using {{bigtint}}, the sticky background tag must be repeated along with the {{bgtint}} because it will be reset by the new sticky macro.
+![background:sticky]() and all macros in double-curly braces are considered sticky. Applying a new sticky macro on any subsequent slide will reset previous sticky macros. For instance, if a background is set on a cover slide, and a subsequent slide wants to apply a different tint using {{bgtint}}, the sticky background tag must be repeated along with the {{bgtint}} because it will be reset by the new sticky macro.
 
 ---
 
