@@ -780,15 +780,10 @@ function resolveTintStyle(rawTint) {
     return null;
   }
 
-  if (/^image\s*:/i.test(value)) {
-    const source = value.replace(/^image\s*:/i, '').trim();
-    if (!source) {
-      return null;
-    }
-    return {
-      type: 'image',
-      value: normalizeTintImageValue(source)
-    };
+  // Block image: prefix and any url() references — tint supports colors and
+  // gradients only; loading external resources via this attribute is not allowed.
+  if (/^image\s*:/i.test(value) || /\burl\s*\(/i.test(value)) {
+    return null;
   }
 
   if (/^(linear-gradient|radial-gradient|conic-gradient)\s*\(/i.test(value)) {
@@ -796,16 +791,6 @@ function resolveTintStyle(rawTint) {
   }
 
   return { type: 'color', value };
-}
-
-function normalizeTintImageValue(source) {
-  if (/^url\(/i.test(source)) {
-    return source;
-  }
-
-  const unquoted = source.replace(/^['"]|['"]$/g, '');
-  const escaped = unquoted.replace(/"/g, '\\"');
-  return `url("${escaped}")`;
 }
 
 function ensureTintLayers(tint, tintFadeMs) {
@@ -912,20 +897,11 @@ export function initVideoSync(deck, remotePlugin) {
 function applyTintStyleToLayer(layer, tintStyle) {
   layer.style.backgroundColor = 'transparent';
   layer.style.backgroundImage = 'none';
-  layer.style.backgroundPosition = '';
-  layer.style.backgroundRepeat = '';
-  layer.style.backgroundSize = '';
 
   if (tintStyle.type === 'color') {
     layer.style.backgroundColor = tintStyle.value;
   } else {
     layer.style.backgroundImage = tintStyle.value;
-  }
-
-  if (tintStyle.type === 'image') {
-    layer.style.backgroundPosition = 'center';
-    layer.style.backgroundRepeat = 'no-repeat';
-    layer.style.backgroundSize = 'cover';
   }
 
   layer.dataset.tintSignature = tintStyleSignature(tintStyle);
