@@ -38,6 +38,11 @@
     "tests": "node tests/run-tests.cjs",
     "tests:generate": "node tests/run-tests.cjs --generate"
   },
+  "overrides": {
+    "reveal.js-plugins": {
+      "npm": "npm:noop2@2.0.0"
+    }
+  },
   "devDependencies": {
     "concurrently": "^10.0.3",
     "esbuild": "^0.28.0",
