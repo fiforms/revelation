@@ -45,7 +45,7 @@
   },
   "devDependencies": {
     "concurrently": "^10.0.3",
-    "esbuild": "^0.28.0",
+    "esbuild": "^0.28.1",
     "sass": "^1.100.0"
   }
 }
