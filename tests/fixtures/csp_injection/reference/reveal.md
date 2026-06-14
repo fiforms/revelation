@@ -102,6 +102,20 @@
 <img src="https://example.com/image.jpg" alt="safe"/>
 
 
+---
+
+## Test 16: Residual handler reassembled after removal (single pass would leak)
+
+<img>
+
+
+---
+
+## Test 17: Residual handler reassembled, single-quoted decoy
+
+<svg></svg>
+
+
 
 ---
 

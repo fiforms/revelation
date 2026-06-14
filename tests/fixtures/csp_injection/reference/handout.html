@@ -102,3 +102,17 @@
 <h2>Test 15: Safe self-closing tag (should be preserved)</h2>
 <img src="https://example.com/image.jpg" alt="safe"/>
 </section>
+<section class="slide">
+<div class="slide-number slide-number-link"><a data-handout-skip-intercept="1" href="index.html?p=presentation.md#1/16" target="_blank">16</a></div>
+<div class="slide-number slide-number-nolink" style="display: none">16</div>
+<h2>Test 16: Residual handler reassembled after removal (single pass would leak)</h2>
+<p>&lt;img onmouse onmouseover&#39;)&quot;&gt;</p>
+
+</section>
+<section class="slide">
+<div class="slide-number slide-number-link"><a data-handout-skip-intercept="1" href="index.html?p=presentation.md#1/17" target="_blank">17</a></div>
+<div class="slide-number slide-number-nolink" style="display: none">17</div>
+<h2>Test 17: Residual handler reassembled, single-quoted decoy</h2>
+<p>&lt;svg onlo onload&#39;)&quot;&gt;</svg></p>
+
+</section>

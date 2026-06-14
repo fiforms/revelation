@@ -95,3 +95,15 @@ config:
 ## Test 15: Safe self-closing tag (should be preserved)
 
 <img src="https://example.com/image.jpg" alt="safe"/>
+
+---
+
+## Test 16: Residual handler reassembled after removal (single pass would leak)
+
+<img onmouse onx="1"over="alert('reassembled onmouseover')">
+
+---
+
+## Test 17: Residual handler reassembled, single-quoted decoy
+
+<svg onlo onx='1'ad="alert('reassembled onload')"></svg>
