@@ -7,6 +7,22 @@
 const URL_ATTR_NAMES = new Set(['href', 'src', 'xlink:href', 'formaction', 'action', 'poster']);
 const BLOCKED_TAGS = new Set(['script', 'object', 'embed', 'applet', 'base', 'meta']);
 
+// Remove blocked tags (paired and self-closing/open forms) from a raw HTML
+// string, repeating until the result stops changing. The repeat closes the
+// "incomplete multi-character sanitization" gap where removing an inner match
+// rejoins surrounding text into a fresh blocked tag, e.g.
+// `<scri<script>pt>` -> `<script>`.
+function stripBlockedTags(input) {
+  let source = String(input || '');
+  let previous;
+  do {
+    previous = source;
+    source = source.replace(/<\s*(script|object|embed|applet|base|meta|style)\b[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi, '');
+    source = source.replace(/<\s*(script|object|embed|applet|base|meta)\b[^>]*\/?\s*>/gi, '');
+  } while (source !== previous);
+  return source;
+}
+
 // Detect URL payloads that should never survive into generated markup.
 export function isDangerousURL(value) {
   const normalized = String(value || '')
@@ -27,18 +43,21 @@ export function isDangerousURL(value) {
 function sanitizeHTMLFragmentFallback(html) {
   let source = String(html || '');
 
-  // Remove entirely blocked tags and their contents
-  source = source.replace(/<\s*(script|object|embed|applet|base|meta|style)\b[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi, '');
-  source = source.replace(/<\s*(script|object|embed|applet|base|meta)\b[^>]*\/?\s*>/gi, '');
+  // Remove entirely blocked tags and their contents. Run repeatedly until the
+  // output stabilizes so a removed inner tag cannot re-form an outer one (e.g.
+  // `<scr<script>ipt>` collapsing back into `<script>`).
+  source = stripBlockedTags(source);
 
+  // HTML accepts whitespace OR `/` between attributes, so both must count as a
+  // separator boundary; otherwise `<svg/onload=...>` slips past these strippers.
   // Strip event handlers
-  source = source.replace(/\son[a-z0-9_-]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '');
-  source = source.replace(/\ssrcdoc\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '');
-  source = source.replace(/\ssrcset\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '');
+  source = source.replace(/[\s/]on[a-z0-9_-]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '');
+  source = source.replace(/[\s/]srcdoc\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '');
+  source = source.replace(/[\s/]srcset\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '');
 
   // Strip dangerous URL attributes
   source = source.replace(
-    /\s(href|src|xlink:href|formaction|action|poster)\s*=\s*("([^"]*)"|'([^']*)'|([^\s>]+))/gi,
+    /[\s/](href|src|xlink:href|formaction|action|poster)\s*=\s*("([^"]*)"|'([^']*)'|([^\s>]+))/gi,
     (fullMatch, attrName, fullValue, dqValue, sqValue, bareValue) => {
       const rawValue = dqValue ?? sqValue ?? bareValue ?? '';
       return isDangerousURL(rawValue) ? '' : ` ${attrName}=${fullValue}`;
@@ -47,7 +66,7 @@ function sanitizeHTMLFragmentFallback(html) {
 
   // Strip dangerous styles
   source = source.replace(
-    /\sstyle\s*=\s*("([^"]*)"|'([^']*)'|([^\s>]+))/gi,
+    /[\s/]style\s*=\s*("([^"]*)"|'([^']*)'|([^\s>]+))/gi,
     (fullMatch, fullValue, dqValue, sqValue, bareValue) => {
       const rawValue = dqValue ?? sqValue ?? bareValue ?? '';
       return /expression\s*\(|url\s*\(\s*['"]?\s*javascript:|@import/i.test(rawValue) ? '' : ` style=${fullValue}`;
@@ -87,6 +106,65 @@ function sanitizeHTMLFragmentFallback(html) {
   return source;
 }
 
+// Sanitize a single parsed/live element in place: drop blocked tags entirely,
+// strip event handlers and dangerous URL/style attributes, and harden links.
+function sanitizeElement(el) {
+  const tagName = el.tagName.toLowerCase();
+  if (BLOCKED_TAGS.has(tagName)) {
+    el.remove();
+    console.log(`Removed blocked <${tagName}> element from HTML fragment.`);
+    return;
+  }
+
+  // Walk every attribute on every parsed element and drop dangerous payloads.
+  const attrs = Array.from(el.attributes || []);
+  for (const attr of attrs) {
+    const name = attr.name.toLowerCase();
+    const value = attr.value;
+
+    if (name.startsWith('on') || name === 'srcdoc') {
+      el.removeAttribute(attr.name);
+      console.log(`Removed blocked ${name} attribute from <${tagName}> element.`);
+      continue;
+    }
+
+    if (URL_ATTR_NAMES.has(name) && isDangerousURL(value)) {
+      el.removeAttribute(attr.name);
+      console.log(`Removed dangerous URL in ${name} attribute from <${tagName}> element.`);
+      continue;
+    }
+
+    if (
+      name === 'style' &&
+      /expression\s*\(|url\s*\(\s*['"]?\s*javascript:|@import/i.test(String(value || ''))
+    ) {
+      el.removeAttribute(attr.name);
+      console.log(`Removed dangerous style content from <${tagName}> element.`);
+    }
+  }
+
+  if (tagName === 'a' && String(el.getAttribute('target') || '').toLowerCase() === '_blank') {
+    // Opening a new tab/window requires `rel` hardening to avoid tabnabbing.
+    const currentRel = String(el.getAttribute('rel') || '');
+    const relSet = new Set(currentRel.split(/\s+/).filter(Boolean).map((part) => part.toLowerCase()));
+    relSet.add('noopener');
+    relSet.add('noreferrer');
+    el.setAttribute('rel', Array.from(relSet).join(' '));
+  }
+}
+
+// Sanitize every descendant element of a parsed fragment or live DOM subtree in
+// place. Exported so callers can re-sanitize markup that a third party rendered
+// straight into the document (e.g. Reveal's markdown plugin), where regex
+// pre-sanitization is not the last line of defense.
+export function sanitizeElementTree(root) {
+  if (!root || typeof root.querySelectorAll !== 'function') return root;
+  for (const el of root.querySelectorAll('*')) {
+    sanitizeElement(el);
+  }
+  return root;
+}
+
 // Primary sanitizer used when browser APIs are available. This relies on the
 // browser's HTML parser so sanitization runs against parsed elements and
 // normalized attributes instead of raw text.
@@ -99,52 +177,7 @@ function sanitizeHTMLFragment(html) {
   // executing the markup.
   const template = document.createElement('template');
   template.innerHTML = String(html || '');
-  const elements = template.content.querySelectorAll('*');
-
-  for (const el of elements) {
-    const tagName = el.tagName.toLowerCase();
-    if (BLOCKED_TAGS.has(tagName)) {
-      el.remove();
-      console.log(`Removed blocked <${tagName}> element from HTML fragment.`);
-      continue;
-    }
-
-    // Walk every attribute on every parsed element and drop dangerous payloads.
-    const attrs = Array.from(el.attributes || []);
-    for (const attr of attrs) {
-      const name = attr.name.toLowerCase();
-      const value = attr.value;
-
-      if (name.startsWith('on') || name === 'srcdoc') {
-        el.removeAttribute(attr.name);
-        console.log(`Removed blocked ${name} attribute from <${tagName}> element.`);
-        continue;
-      }
-
-      if (URL_ATTR_NAMES.has(name) && isDangerousURL(value)) {
-        el.removeAttribute(attr.name);
-        console.log(`Removed dangerous URL in ${name} attribute from <${tagName}> element.`);
-        continue;
-      }
-
-      if (
-        name === 'style' &&
-        /expression\s*\(|url\s*\(\s*['"]?\s*javascript:|@import/i.test(String(value || ''))
-      ) {
-        el.removeAttribute(attr.name);
-        console.log(`Removed dangerous style content from <${tagName}> element.`);
-      }
-    }
-
-    if (tagName === 'a' && String(el.getAttribute('target') || '').toLowerCase() === '_blank') {
-      // Opening a new tab/window requires `rel` hardening to avoid tabnabbing.
-      const currentRel = String(el.getAttribute('rel') || '');
-      const relSet = new Set(currentRel.split(/\s+/).filter(Boolean).map((part) => part.toLowerCase()));
-      relSet.add('noopener');
-      relSet.add('noreferrer');
-      el.setAttribute('rel', Array.from(relSet).join(' '));
-    }
-  }
+  sanitizeElementTree(template.content);
 
   return template.innerHTML;
 }
@@ -156,13 +189,14 @@ function sanitizeHTMLFragment(html) {
 export function sanitizeMarkdownEmbeddedHTML(markdown) {
   let source = String(markdown || '');
 
-  // Remove entirely blocked tags and their contents
-  source = source.replace(/<\s*(script|object|embed|applet|base|meta|style)\b[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi, '');
-  source = source.replace(/<\s*(script|object|embed|applet|base|meta)\b[^>]*\/?\s*>/gi, '');
+  // Remove entirely blocked tags and their contents (repeats until stable).
+  source = stripBlockedTags(source);
 
-  // Helper to create a regex that matches whitespace OR HTML entity representations of whitespace
-  // This catches entity-space bypasses like <img&#32;onerror>
-  const wsPattern = '(?:\\s|&#(?:32|x20);|&nbsp;|&tab;|&#(?:9|xa|xd);)';
+  // Match an attribute-separator boundary: whitespace, `/` (a valid HTML
+  // attribute separator, so `<svg/onload=...>` must be caught), OR HTML entity
+  // representations of whitespace (catches entity-space bypasses like
+  // `<img&#32;onerror>`).
+  const wsPattern = '(?:\\s|/|&#(?:32|x20);|&nbsp;|&tab;|&#(?:9|xa|xd);)';
 
   // Strip event handlers preceded by whitespace (normal or entity-encoded)
   source = source.replace(new RegExp(`${wsPattern}on[a-z0-9_-]+\\s*=\\s*(?:"[^"]*"|'[^']*'|[^\\s>]+)`, 'gi'), '');

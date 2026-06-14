@@ -21,7 +21,7 @@
  */
 import convertSmartQuotes from './smart-quotes';
 import { preprocessMarkdown, extractFrontMatter } from './compiler/markdown-compiler.js';
-import { sanitizeMarkdownEmbeddedHTML } from './compiler/html-sanitization.js';
+import { sanitizeMarkdownEmbeddedHTML, sanitizeElementTree } from './compiler/html-sanitization.js';
 import {
   getStorageItemSafe,
   getNoteSeparator,
@@ -425,6 +425,15 @@ export async function loadAndPreprocessMarkdown(deck, selectedFile = null) {
   // values onto the nearest block-level parent (<li> or <p>) so the whole item
   // or paragraph animates as a fragment rather than just the inner inline element.
   deck.on('ready', () => {
+    // Defense-in-depth: Reveal's markdown plugin renders slide HTML straight into
+    // the document via innerHTML, so re-sanitize the rendered tree to strip any
+    // event handlers / dangerous attributes that the pre-render markdown pass
+    // missed. The page CSP is the primary, race-free guard (it blocks inline
+    // handlers outright); this pass also neutralizes handlers that only fire on
+    // later user interaction (e.g. onclick) and any reconstructed blocked tags.
+    const slidesRoot = document.querySelector('.reveal .slides');
+    if (slidesRoot) sanitizeElementTree(slidesRoot);
+
     document.querySelectorAll('[data-parentfragment]').forEach(el => {
       const parent = el.closest('li, p');
       if (!parent) return;

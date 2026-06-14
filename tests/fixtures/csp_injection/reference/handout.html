@@ -1,0 +1,104 @@
+<section class="slide">
+<div class="slide-number slide-number-link"><a data-handout-skip-intercept="1" href="index.html?p=presentation.md#1/1" target="_blank">1</a></div>
+<div class="slide-number slide-number-nolink" style="display: none">1</div>
+<h2>Test 1: Slash separator before onload (svg)</h2>
+<p>&lt;svg slash onload&#39;)&quot;&gt;</svg></p>
+
+</section>
+<section class="slide">
+<div class="slide-number slide-number-link"><a data-handout-skip-intercept="1" href="index.html?p=presentation.md#1/2" target="_blank">2</a></div>
+<div class="slide-number slide-number-nolink" style="display: none">2</div>
+<h2>Test 2: Slash separator after quoted attribute (img)</h2>
+<p>&lt;img src=&quot;x&quot; slash onerror&#39;)&quot;&gt;</p>
+
+</section>
+<section class="slide">
+<div class="slide-number slide-number-link"><a data-handout-skip-intercept="1" href="index.html?p=presentation.md#1/3" target="_blank">3</a></div>
+<div class="slide-number slide-number-nolink" style="display: none">3</div>
+<h2>Test 3: Multiple slash separators</h2>
+<p>&lt;details/open slash ontoggle&#39;)&quot;&gt;Toggle</details></p>
+
+</section>
+<section class="slide">
+<div class="slide-number slide-number-link"><a data-handout-skip-intercept="1" href="index.html?p=presentation.md#1/4" target="_blank">4</a></div>
+<div class="slide-number slide-number-nolink" style="display: none">4</div>
+<h2>Test 4: Slash before onerror, unquoted value</h2>
+<p>&lt;svg></p>
+
+</section>
+<section class="slide">
+<div class="slide-number slide-number-link"><a data-handout-skip-intercept="1" href="index.html?p=presentation.md#1/5" target="_blank">5</a></div>
+<div class="slide-number slide-number-nolink" style="display: none">5</div>
+<h2>Test 5: Slash separator before dangerous href</h2>
+<p>&lt;a href=&quot;javascript:alert(&#39;slash href&#39;)&quot;&gt;Link</a></p>
+
+</section>
+<section class="slide">
+<div class="slide-number slide-number-link"><a data-handout-skip-intercept="1" href="index.html?p=presentation.md#1/6" target="_blank">6</a></div>
+<div class="slide-number slide-number-nolink" style="display: none">6</div>
+<h2>Test 6: Slash separator before srcdoc</h2>
+<p>&lt;iframe></p>
+
+</section>
+<section class="slide">
+<div class="slide-number slide-number-link"><a data-handout-skip-intercept="1" href="index.html?p=presentation.md#1/7" target="_blank">7</a></div>
+<div class="slide-number slide-number-nolink" style="display: none">7</div>
+<h2>Test 7: Slash separator before srcset</h2>
+<p>&lt;img src=&quot;fallback.jpg&quot; srcset&#39;)&quot;&gt;</p>
+
+</section>
+<section class="slide">
+<div class="slide-number slide-number-link"><a data-handout-skip-intercept="1" href="index.html?p=presentation.md#1/8" target="_blank">8</a></div>
+<div class="slide-number slide-number-nolink" style="display: none">8</div>
+<h2>Test 8: Slash separator before style expression</h2>
+<p>&lt;div style=&quot;background: expression(alert(&#39;slash style&#39;))&quot;&gt;Box</div></p>
+
+</section>
+<section class="slide">
+<div class="slide-number slide-number-link"><a data-handout-skip-intercept="1" href="index.html?p=presentation.md#1/9" target="_blank">9</a></div>
+<div class="slide-number slide-number-nolink" style="display: none">9</div>
+<h2>Test 9: Tag reconstruction via inner script</h2>
+<p>&lt;script>alert('reconstructed script')</script></p>
+
+</section>
+<section class="slide">
+<div class="slide-number slide-number-link"><a data-handout-skip-intercept="1" href="index.html?p=presentation.md#1/10" target="_blank">10</a></div>
+<div class="slide-number slide-number-nolink" style="display: none">10</div>
+<h2>Test 10: Tag reconstruction via inner object</h2>
+<p>&lt;object data=&quot;javascript:alert(&#39;reconstructed object&#39;)&quot;&gt;&lt;/object&gt;</p>
+
+</section>
+<section class="slide">
+<div class="slide-number slide-number-link"><a data-handout-skip-intercept="1" href="index.html?p=presentation.md#1/11" target="_blank">11</a></div>
+<div class="slide-number slide-number-nolink" style="display: none">11</div>
+<h2>Test 11: Self-closing reconstruction</h2>
+<p>&lt;script src="evil.js"></p>
+
+</section>
+<section class="slide">
+<div class="slide-number slide-number-link"><a data-handout-skip-intercept="1" href="index.html?p=presentation.md#1/12" target="_blank">12</a></div>
+<div class="slide-number slide-number-nolink" style="display: none">12</div>
+<h2>Test 12: Mixed slash and whitespace separators</h2>
+<p>&lt;svg sep&#39;)&quot;&gt;</svg></p>
+
+</section>
+<section class="slide">
+<div class="slide-number slide-number-link"><a data-handout-skip-intercept="1" href="index.html?p=presentation.md#1/13" target="_blank">13</a></div>
+<div class="slide-number slide-number-nolink" style="display: none">13</div>
+<h2>Test 13: Slash separator with entity-encoded handler boundary</h2>
+<p>&lt;img src=x&#32; plus slash&#39;)&quot;&gt;</p>
+
+</section>
+<section class="slide">
+<div class="slide-number slide-number-link"><a data-handout-skip-intercept="1" href="index.html?p=presentation.md#1/14" target="_blank">14</a></div>
+<div class="slide-number slide-number-nolink" style="display: none">14</div>
+<h2>Test 14: Safe slash usage in image path (should be preserved)</h2>
+<p><img src="images/photo.png" alt=""></p>
+
+</section>
+<section class="slide">
+<div class="slide-number slide-number-link"><a data-handout-skip-intercept="1" href="index.html?p=presentation.md#1/15" target="_blank">15</a></div>
+<div class="slide-number slide-number-nolink" style="display: none">15</div>
+<h2>Test 15: Safe self-closing tag (should be preserved)</h2>
+<img src="https://example.com/image.jpg" alt="safe"/>
+</section>
