@@ -1,6 +1,6 @@
 import { pluginLoader } from './pluginloader.js';
 import { createInfoPanel } from './info-panel.js';
-import yaml from 'js-yaml';
+import * as yaml from 'js-yaml';
 
 const urlParams = new URLSearchParams(window.location.search);
 const url_key = urlParams.get('key');

@@ -29,7 +29,7 @@
  * mutating the DOM, and initializing Reveal lives outside this module in
  * `../presentation-bootstrap.js`.
  */
-import yaml from 'js-yaml';
+import * as yaml from 'js-yaml';
 import { createSlideCompiler } from './slide-compiler.js';
 import { createMarkdownLineParsers } from './markdown-line-parsers.js';
 import { createMediaLineParsers } from './media-line-parsers.js';
