@@ -99,7 +99,7 @@ part of the model, not a gap in it.
 | `/admin/**` | T0 | loopback |
 | `/peer/status`, `/peer/command` | T0 | loopback + `mdnsPublish` |
 | `/peer/public-key` | T3 | `mdnsPublish` only — F8 |
-| `/peer/socket-info`, `/peer/challenge` | T4 | `mdnsPublish` + PIN — F4 |
+| `/peer/socket-info`, `/peer/challenge` | T4 | `mdnsPublish` + PIN (fail-closed, 3-strike lockout) |
 | `/publish/<publishKey>.html` | T2 | 64-bit key in filename |
 | `/media-share/<token>` | T2 | 192-bit token |
 | `/_remote/ui/**` | T3 | none (static UI only) |
@@ -192,11 +192,11 @@ broadcast where the audience should watch but not draw.
 
 ## Part 2 — Findings
 
-Nine issues were raised against the model above. F1 and F2 are fixed, and F3
-has been reduced: its injection sink is sanitized and its open-channel half is
-now [accepted design](#16-open-collaboration-plugins--accepted-design). What
-remains of F3 — `bibletext` using the access key as a room id — is the top open
-item, followed by F4 and F5.
+Nine issues were raised against the model above. F1, F2 and F4 are fixed, and
+F3 has been reduced: its injection sink is sanitized and its open-channel half
+is now [accepted design](#16-open-collaboration-plugins--accepted-design).
+Nothing above Medium remains. What is left of F3 — `bibletext` using the access
+key as a room id — is the top open item, followed by F8 and F5.
 
 ---
 
@@ -475,10 +475,9 @@ advisory. Low priority; not a security defect given the carve-out.
 
 ---
 
-### F4 — The pairing PIN check is skipped entirely when no PIN is configured
+### F4 — The pairing PIN check was skipped entirely when no PIN is configured — **FIXED**
 
-**Severity: Medium** · [vite.plugins.js:684](vite.plugins.js#L684),
-[vite.plugins.js:778](vite.plugins.js#L778)
+**Severity: Medium** · Fixed 2026-09-20
 
 ```js
 const expectedPin = config.mdnsPairingPin;
@@ -486,32 +485,39 @@ const providedPin = parsedUrl.searchParams.get('pin');
 if (expectedPin && providedPin !== expectedPin) { /* reject */ }
 ```
 
-If `mdnsPairingPin` is null, empty, or absent, the guard is a no-op and *any*
-LAN host gets a signed `/peer/socket-info` token and unrestricted access to the
-`/peer/challenge` signing oracle from F2.
+If `mdnsPairingPin` was null, empty, or absent, the guard was a no-op and *any*
+LAN host got a signed `/peer/socket-info` token and unrestricted access to the
+`/peer/challenge` signer.
 
-In the normal flow this is unreachable: `configManager` auto-generates a PIN
-whenever `mdnsPublish` is true ([configManager.js:216-223](../lib/configManager.js#L216-L223)).
-But the server reads `config.json` off disk on every request
-([vite.plugins.js:999-1006](vite.plugins.js#L999-L1006)) and trusts whatever it
-finds. A hand-edited config, a failed write, a config restored from an older
-schema, or a profile switch that lands a PIN-less config on disk all silently
-open the endpoint. Fail-open authentication should never be structural.
+In the normal flow this was unreachable: `configManager` auto-generates a PIN
+whenever `mdnsPublish` is true. But the server re-reads `config.json` off disk
+on every request and trusts whatever it finds, so a hand-edited config, a
+failed write, a config restored from an older schema, or a profile switch that
+lands a PIN-less config on disk all silently opened the endpoints. Fail-open
+authentication should never be structural.
 
-**Fix:** invert the condition so a missing PIN denies rather than allows.
+**Resolution.** Both call sites now delegate to one `enforcePairingPin()` helper
+in [vite.plugins.js](vite.plugins.js) that fails closed: a config with no usable
+PIN answers `503 Pairing is not configured on this device` and logs the cause
+for the operator, rather than letting the request through. "No usable PIN"
+covers null, undefined, absent, empty, whitespace-only, and any non-string /
+non-number value; a numeric PIN is accepted and surrounding whitespace trimmed.
 
-```js
-if (!expectedPin) {
-  res.writeHead(503, { 'Content-Type': 'application/json' });
-  res.end(JSON.stringify({ error: 'Pairing not configured' }));
-  return;
-}
-if (providedPin !== expectedPin) { /* existing failure path */ }
-```
+The duplication was itself the hazard — the same fail-open test existed in two
+places — so the lockout check, the failure counter and the comparison now live
+in the single helper. Comparison uses `crypto.timingSafeEqual` on equal-length
+buffers; length is not hidden, but with a fixed 6-digit PIN and a three-attempt
+lockout that leaks nothing useful.
 
-Apply at both sites. While there, compare with
-`crypto.timingSafeEqual` on equal-length buffers — the lockout makes timing
-attacks impractical, but it costs nothing.
+Followers surface the refusal verbatim (both `peerPairing.js` and
+`mdnsManager.js` reject with the server's `error` string), so a PIN-less master
+reports "Pairing is not configured on this device" instead of failing opaquely.
+
+Verified with 35 assertions: every shape of missing PIN is refused; correct,
+wrong, empty, null, prefix and trailing-whitespace PINs behave correctly; the
+three-strike lockout still fires, is recorded as a peer event, refuses even the
+correct PIN while active, and is scoped per remote address; and a success
+clears the counter.
 
 ---
 
@@ -697,7 +703,7 @@ Still outstanding from that review:
 |---|---|---|
 | ~~1~~ | ~~Sanitise `bibletext/client.js` before `innerHTML`~~ | **done** |
 | ~~2~~ | ~~`crypto.randomBytes` / `crypto.randomInt` for `key` and PIN (F1)~~ | **done** |
-| 3 | Fail-closed PIN check at both `/peer/*` sites (F4) | minutes |
+| ~~3~~ | ~~Fail-closed PIN check at both `/peer/*` sites (F4)~~ | **done** |
 | 4 | Drop `hostname` from `/peer/public-key` (F8) | minutes |
 | 5 | Per-session room id for `bibletext`, not `config.key` (F3) | ~1 hour |
 | 6 | Restrict `/plugins_<key>/` to browser-facing files (F7) | ~1 hour |

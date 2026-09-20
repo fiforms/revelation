@@ -680,33 +680,9 @@ function presentationIndexPlugin() {
             res.end(JSON.stringify({ error: 'Peer private key unavailable' }));
             return;
           }
-          const state = getPinFailureState(remoteAddress);
-          if (state.blockedUntil && state.blockedUntil > Date.now()) {
-            const block = pinBlockedResponse(state);
-            res.writeHead(429, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: 'Too many invalid pairing PIN attempts', retryAfterSec: block.retryAfterSec }));
+          if (enforcePairingPin(config, parsedUrl.searchParams.get('pin'), remoteAddress, res)) {
             return;
           }
-          const expectedPin = config.mdnsPairingPin;
-          const providedPin = parsedUrl.searchParams.get('pin');
-          if (expectedPin && providedPin !== expectedPin) {
-            const next = registerPinFailure(remoteAddress);
-            if (next.blockedUntil && next.blockedUntil > Date.now()) {
-              const block = pinBlockedResponse(next);
-              recordPeerEvent('pin-lockout', {
-                remoteAddress,
-                retryAfterSec: block.retryAfterSec
-              });
-              res.writeHead(429, { 'Content-Type': 'application/json' });
-              res.end(JSON.stringify({ error: 'Too many invalid pairing PIN attempts', retryAfterSec: block.retryAfterSec }));
-            } else {
-              const remainingAttempts = Math.max(0, PIN_FAILURE_LIMIT - next.failures);
-              res.writeHead(403, { 'Content-Type': 'application/json' });
-              res.end(JSON.stringify({ error: 'Invalid pairing PIN', remainingAttempts }));
-            }
-            return;
-          }
-          clearPinFailures(remoteAddress);
           const token = crypto.randomBytes(16).toString('hex');
           const expiresAt = Date.now() + 60_000;
           const socketPath = PEER_SOCKET_PATH;
@@ -774,33 +750,9 @@ function presentationIndexPlugin() {
               return;
             }
             const challenge = data.challenge;
-            const state = getPinFailureState(remoteAddress);
-            if (state.blockedUntil && state.blockedUntil > Date.now()) {
-              const block = pinBlockedResponse(state);
-              res.writeHead(429, { 'Content-Type': 'application/json' });
-              res.end(JSON.stringify({ error: 'Too many invalid pairing PIN attempts', retryAfterSec: block.retryAfterSec }));
+            if (enforcePairingPin(config, data.pin, remoteAddress, res)) {
               return;
             }
-            const expectedPin = config.mdnsPairingPin;
-            const providedPin = data.pin;
-            if (expectedPin && providedPin !== expectedPin) {
-              const next = registerPinFailure(remoteAddress);
-              if (next.blockedUntil && next.blockedUntil > Date.now()) {
-                const block = pinBlockedResponse(next);
-                recordPeerEvent('pin-lockout', {
-                  remoteAddress,
-                  retryAfterSec: block.retryAfterSec
-                });
-                res.writeHead(429, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ error: 'Too many invalid pairing PIN attempts', retryAfterSec: block.retryAfterSec }));
-              } else {
-                const remainingAttempts = Math.max(0, PIN_FAILURE_LIMIT - next.failures);
-                res.writeHead(403, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ error: 'Invalid pairing PIN', remainingAttempts }));
-              }
-              return;
-            }
-            clearPinFailures(remoteAddress);
             if (!challenge || !config.peerRsaPrivateKey) {
               res.writeHead(400, { 'Content-Type': 'application/json' });
               res.end(JSON.stringify({ error: 'Missing challenge or private key' }));
@@ -1119,6 +1071,70 @@ function clearPinFailures(remoteAddress) {
 function pinBlockedResponse(state) {
   const retryAfterSec = Math.max(1, Math.ceil((state.blockedUntil - Date.now()) / 1000));
   return { retryAfterSec };
+}
+
+function timingSafeEqualString(a, b) {
+  const bufA = Buffer.from(String(a ?? ''), 'utf8');
+  const bufB = Buffer.from(String(b ?? ''), 'utf8');
+  // Length is not hidden, but the PIN is a fixed 6 digits and three wrong
+  // guesses trigger a 60s lockout, so that leak carries no useful signal.
+  if (bufA.length !== bufB.length) return false;
+  return crypto.timingSafeEqual(bufA, bufB);
+}
+
+// Gate a pairing request on the PIN. Returns true when the request has already
+// been answered and the caller must stop; false to continue.
+//
+// Fails CLOSED. The previous check was `if (expectedPin && providedPin !==
+// expectedPin)`, so a missing, empty or non-string PIN skipped verification
+// altogether and handed any LAN caller a signed socket token plus access to the
+// challenge signer. configManager auto-generates a PIN whenever mdnsPublish is
+// enabled, so the normal flow never hit it — but this config is re-read from
+// disk on every request and trusted as found, so a hand-edited file, a failed
+// write, a restored older-schema config or a profile switch was enough to open
+// the endpoints. Authentication must not be structurally fail-open.
+// See SECURITY.md (F4).
+function enforcePairingPin(config, providedPin, remoteAddress, res) {
+  const rawPin = config?.mdnsPairingPin;
+  const expectedPin = (typeof rawPin === 'string' || typeof rawPin === 'number')
+    ? String(rawPin).trim()
+    : '';
+
+  if (!expectedPin) {
+    console.warn(
+      '⚠ Peer pairing request refused: no mdnsPairingPin is configured. ' +
+      'Set a pairing PIN in Settings (or disable Master Mode).'
+    );
+    res.writeHead(503, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'Pairing is not configured on this device' }));
+    return true;
+  }
+
+  const state = getPinFailureState(remoteAddress);
+  if (state.blockedUntil && state.blockedUntil > Date.now()) {
+    const block = pinBlockedResponse(state);
+    res.writeHead(429, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'Too many invalid pairing PIN attempts', retryAfterSec: block.retryAfterSec }));
+    return true;
+  }
+
+  if (!timingSafeEqualString(providedPin, expectedPin)) {
+    const next = registerPinFailure(remoteAddress);
+    if (next.blockedUntil && next.blockedUntil > Date.now()) {
+      const block = pinBlockedResponse(next);
+      recordPeerEvent('pin-lockout', { remoteAddress, retryAfterSec: block.retryAfterSec });
+      res.writeHead(429, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Too many invalid pairing PIN attempts', retryAfterSec: block.retryAfterSec }));
+    } else {
+      const remainingAttempts = Math.max(0, PIN_FAILURE_LIMIT - next.failures);
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Invalid pairing PIN', remainingAttempts }));
+    }
+    return true;
+  }
+
+  clearPinFailures(remoteAddress);
+  return false;
 }
 
 function isLoopbackAddress(address) {
