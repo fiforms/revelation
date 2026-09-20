@@ -44,7 +44,8 @@ a link to one presentation.
 | `config.key` | 64 bits (`crypto`) | `/presentations_<key>/`, `/plugins_<key>/`, `/thumbs_<key>/`, API server on :8001 | **Every shared presentation link** (`/presentation.html?slug=…&key=…`) |
 | `presentationPublishKey` | 64 bits (`crypto`) | `/publish/<key>.html` | The URL-publish screen link |
 | `mdnsPairingPin` | 6 digits (`crypto`) | `/peer/socket-info`, `/peer/challenge` | Shown in the presenter info panel |
-| `rsaPrivateKey` | RSA | Peer socket auth **and** WordPress publish auth | Never served; but see F2 (signing oracle) |
+| `rsaPrivateKey` | RSA | WordPress publish auth only | Never served |
+| `peerRsaPrivateKey` | RSA | Peer pairing and peer socket auth | Never served |
 | Reveal-remote `remoteId` | UUIDv4 | Remote-control channel for one deck | Presenter's remote QR code |
 | Reveal-remote `multiplexId` | UUIDv4 | Follower/multiplex channel | Every follower link |
 | `/media-share/<token>` | 192 bits (`crypto`) | One registered media file | Deck HTML |
@@ -91,7 +92,7 @@ a link to one presentation.
 | `/admin/**` | T0 | loopback |
 | `/peer/status`, `/peer/command` | T0 | loopback + `mdnsPublish` |
 | `/peer/public-key` | T3 | `mdnsPublish` only — F8 |
-| `/peer/socket-info`, `/peer/challenge` | T4 | `mdnsPublish` + PIN — F2, F4 |
+| `/peer/socket-info`, `/peer/challenge` | T4 | `mdnsPublish` + PIN — F4 |
 | `/publish/<publishKey>.html` | T2 | 64-bit key in filename |
 | `/media-share/<token>` | T2 | 192-bit token |
 | `/_remote/ui/**` | T3 | none (static UI only) |
@@ -104,7 +105,7 @@ a link to one presentation.
 
 ## Part 2 — Findings
 
-Nine issues break the model above. F1 is fixed; F2 and F3 are the ones I would
+Nine issues break the model above. F1 and F2 are fixed; F3 is the one I would
 fix next.
 
 ---
@@ -164,9 +165,9 @@ rather than a silent migration.
 
 ---
 
-### F2 — `/peer/challenge` is a blind signing oracle for the WordPress publishing key
+### F2 — `/peer/challenge` was a blind signing oracle for the WordPress publishing key — **FIXED**
 
-**Severity: High** · [vite.plugins.js:754-811](vite.plugins.js#L754-L811)
+**Severity: High** · Fixed 2026-09-20
 
 `/peer/challenge` signs **arbitrary caller-supplied bytes** with
 `config.rsaPrivateKey`:
@@ -193,23 +194,55 @@ This is a trust-tier crossing: T4 (slide sync only) escalates to full control of
 the user's WordPress presentation library. It also violates the general rule
 that a key should serve exactly one protocol.
 
-**Fix — do both:**
+**Resolution — both halves were applied.**
 
-1. **Separate the keys.** Give peer pairing its own keypair
-   (`peerRsaPublicKey`/`peerRsaPrivateKey`) and leave `rsaPrivateKey` for
-   WordPress only. This alone closes the cross-protocol path.
-2. **Domain-separate the oracle.** Never sign raw caller input. Sign a
-   structured, prefixed message the peer protocol owns:
+**1. The keys are separated.** `peerRsaPublicKey`/`peerRsaPrivateKey` are new
+config fields, generated at both keypair sites in
+[lib/configManager.js](../lib/configManager.js) and stripped from
+`get-app-config` alongside `rsaPrivateKey`. `rsaPrivateKey` is now used by
+`plugins/wordpress_publish` and nothing else; every peer path — `/peer/public-key`,
+`/peer/socket-info`, `/peer/challenge`, the `/peer-commands` handshake check, and
+the mDNS `pubKeyFingerprint` — uses the peer key. `/peer/public-key` no longer
+publishes the WordPress public key at all.
 
-   ```js
-   const signature = signChallenge(
-     config.peerRsaPrivateKey,
-     `revelation-peer-challenge:v1:${crypto.createHash('sha256').update(String(challenge)).digest('hex')}`
-   );
-   ```
+**2. Peer signatures are domain-separated.** Nothing signs caller bytes
+directly any more. Two constructions cover a prefixed digest:
 
-   and have the peer client verify against the same construction. A signature
-   produced here is then structurally unusable anywhere else.
+```
+revelation-peer-challenge:v1:<sha256hex of challenge>
+revelation-peer-socket:v1:<sha256hex of token:expiresAt:socketPath>
+```
+
+exposed as `signPeerChallenge` / `verifyPeerChallenge` /
+`signPeerSocketPayload` / `verifyPeerSocketPayload` in
+[lib/peerAuth.js](../lib/peerAuth.js). So even within the peer protocol a
+challenge signature is not a valid socket signature, and neither is meaningful
+to any other verifier.
+
+**⚠ The two constructions are duplicated** in `lib/peerAuth.js` and
+[vite.plugins.js](vite.plugins.js) — the Vite plugin runs in the utility process
+and cannot require from the wrapper. They are wire protocol. Both copies carry a
+warning comment; change them together or pairing silently breaks.
+
+**Breaking change: existing pairings must be renewed.** The master now signs
+with a key its paired followers have never seen, so old pairings cannot verify.
+This is handled explicitly rather than as a crypto failure:
+
+- `/peer/public-key` and `/peer/challenge` advertise `peerProtocol: 1`.
+- `pairWithPeer` refuses a master that does not advertise it, with "…is running
+  an older, incompatible peering protocol. Update the app on the master and try
+  again." Refusing rather than falling back is deliberate — a fallback would
+  keep the oracle reachable.
+- Paired-master records store `peerPublicKey` + `peerProtocol`; the legacy
+  `publicKey` field is no longer persisted. `peerCommandClient` detects its
+  absence and raises "pairing…must be renewed — unpair and pair again" once,
+  instead of failing signature verification on every refresh.
+
+Verified with a round-trip harness: the two copies of each construction agree
+byte-for-byte over ASCII, empty, colon-bearing, Unicode and 5 KB inputs; the
+happy-path challenge and socket flows verify and reject tampering; an oracle
+response is not accepted as a WordPress signature; and challenge and socket
+signatures do not cross-validate.
 
 ---
 
@@ -524,7 +557,7 @@ Still outstanding from that review:
 | 5 | Restrict `/plugins_<key>/` to browser-facing files (F7) | ~1 hour |
 | 6 | Bound `_thumbQueue`, extension allowlist (F6) | ~1 hour |
 | 7 | Explicit `allowedHosts` + `Host` check on apiServer (F5) | ~2 hours |
-| 8 | Separate peer and WordPress keypairs; domain-separate the challenge (F2) | ~half day + migration |
+| ~~8~~ | ~~Separate peer and WordPress keypairs; domain-separate the challenge (F2)~~ | **done** |
 | 9 | Authenticate `/presenter-plugins-socket`; split publish/subscribe (F3) | ~1–2 days, touches 5 plugins |
 
 Items 1–4 are one-line-ish and remove the sharpest edges. Item 9 is the real

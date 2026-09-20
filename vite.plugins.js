@@ -25,6 +25,11 @@ const localIp = getLocalIpAddress(); // Gets the LAN IP
 const baseDir = __dirname;
 const prefix = 'presentations_';
 const PEER_SOCKET_PATH = '/peer-commands';
+// Bumped when the peer wire protocol changes incompatibly. v1 introduced the
+// dedicated peer keypair and domain-separated signatures (SECURITY.md F2);
+// masters that advertise no version sign with the legacy shared WordPress key
+// and followers must refuse to pair with them.
+const PEER_PROTOCOL_VERSION = 1;
 const PRESENTER_PLUGINS_SOCKET_PATH = '/presenter-plugins-socket';
 let peerCommandIo = null;
 let presenterPluginsIo = null;
@@ -653,11 +658,14 @@ function presentationIndexPlugin() {
         }
 
         if (req.method === 'GET' && req.url === '/peer/public-key') {
-          const publicKey = config.rsaPublicKey;
+          // Serves the peer identity only. The WordPress keypair
+          // (config.rsaPublicKey) is deliberately never published here.
+          const publicKey = config.peerRsaPublicKey;
           const payload = {
             instanceId: config.mdnsInstanceId,
             instanceName: config.mdnsInstanceName,
             hostname: os.hostname(),
+            peerProtocol: PEER_PROTOCOL_VERSION,
             publicKey,
             publicKeyFingerprint: fingerprintPublicKey(publicKey || '')
           };
@@ -667,7 +675,7 @@ function presentationIndexPlugin() {
         }
 
         if (req.method === 'GET' && parsedUrl.pathname === '/peer/socket-info') {
-          if (!config.rsaPrivateKey) {
+          if (!config.peerRsaPrivateKey) {
             res.writeHead(500, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ error: 'Peer private key unavailable' }));
             return;
@@ -703,7 +711,7 @@ function presentationIndexPlugin() {
           const expiresAt = Date.now() + 60_000;
           const socketPath = PEER_SOCKET_PATH;
           const payload = buildSocketPayload(token, expiresAt, socketPath);
-          const signature = signChallenge(config.rsaPrivateKey, payload);
+          const signature = signPeerSocketPayload(config.peerRsaPrivateKey, payload);
           const protocol = req.socket?.encrypted ? 'https' : 'http';
           const socketUrl = `${protocol}://${req.headers.host}`;
 
@@ -793,15 +801,17 @@ function presentationIndexPlugin() {
               return;
             }
             clearPinFailures(remoteAddress);
-            if (!challenge || !config.rsaPrivateKey) {
+            if (!challenge || !config.peerRsaPrivateKey) {
               res.writeHead(400, { 'Content-Type': 'application/json' });
               res.end(JSON.stringify({ error: 'Missing challenge or private key' }));
               return;
             }
             try {
-              const signature = signChallenge(config.rsaPrivateKey, challenge);
+              // Domain-separated: the caller's bytes are hashed under a peer
+              // protocol prefix, never signed directly. See SECURITY.md (F2).
+              const signature = signPeerChallenge(config.peerRsaPrivateKey, challenge);
               res.writeHead(200, { 'Content-Type': 'application/json' });
-              res.end(JSON.stringify({ signature }));
+              res.end(JSON.stringify({ signature, peerProtocol: PEER_PROTOCOL_VERSION }));
             } catch (err) {
               res.writeHead(500, { 'Content-Type': 'application/json' });
               res.end(JSON.stringify({ error: err.message }));
@@ -1130,14 +1140,14 @@ function ensurePeerCommandServer(server, configPath) {
     const { token, expiresAt, signature } = auth;
     const config = loadPeerConfig(configPath);
 
-    if (!token || !expiresAt || !signature || !config?.rsaPublicKey) {
+    if (!token || !expiresAt || !signature || !config?.peerRsaPublicKey) {
       return next(new Error('Missing peer auth'));
     }
     if (Number(expiresAt) < Date.now()) {
       return next(new Error('Peer auth expired'));
     }
     const payload = buildSocketPayload(token, expiresAt, PEER_SOCKET_PATH);
-    if (!verifySignature(config.rsaPublicKey, payload, signature)) {
+    if (!verifyPeerSocketPayload(config.peerRsaPublicKey, payload, signature)) {
       return next(new Error('Invalid peer signature'));
     }
     return next();
@@ -1242,6 +1252,43 @@ function verifySignature(publicKeyPem, payload, signatureBase64) {
   verifier.update(payload);
   verifier.end();
   return verifier.verify(publicKeyPem, Buffer.from(signatureBase64, 'base64'));
+}
+
+// --- Domain-separated peer signatures -------------------------------------
+//
+// /peer/challenge signs caller-supplied bytes by design, so it must never
+// produce a signature that is meaningful outside the peer protocol. Signing a
+// prefixed digest rather than the caller's bytes makes the endpoint useless as
+// an oracle for any other verifier. See SECURITY.md (F2).
+//
+// ⚠ These two constructions are byte-identical copies of the ones in
+// ../lib/peerAuth.js (this file runs in the Vite utility process and cannot
+// require from the wrapper). They are wire protocol: change both sides
+// together or pairing breaks.
+
+const PEER_CHALLENGE_DOMAIN = 'revelation-peer-challenge:v1:';
+const PEER_SOCKET_DOMAIN = 'revelation-peer-socket:v1:';
+
+function peerChallengeMessage(challenge) {
+  const digest = crypto.createHash('sha256').update(String(challenge ?? ''), 'utf8').digest('hex');
+  return `${PEER_CHALLENGE_DOMAIN}${digest}`;
+}
+
+function peerSocketMessage(payload) {
+  const digest = crypto.createHash('sha256').update(String(payload ?? ''), 'utf8').digest('hex');
+  return `${PEER_SOCKET_DOMAIN}${digest}`;
+}
+
+function signPeerChallenge(privateKeyPem, challenge) {
+  return signChallenge(privateKeyPem, peerChallengeMessage(challenge));
+}
+
+function signPeerSocketPayload(privateKeyPem, payload) {
+  return signChallenge(privateKeyPem, peerSocketMessage(payload));
+}
+
+function verifyPeerSocketPayload(publicKeyPem, payload, signatureBase64) {
+  return verifySignature(publicKeyPem, peerSocketMessage(payload), signatureBase64);
 }
 
 function buildSocketPayload(token, expiresAt, socketPath) {
