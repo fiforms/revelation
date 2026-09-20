@@ -1,11 +1,16 @@
 // scripts/init-presentations.js
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 
 const prefix = 'presentations_';
 
-function generateKey(length = 10) {
-  return [...Array(length)].map(() => Math.random().toString(36)[2]).join('');
+// The folder suffix is the server access key: it gates /presentations_<key>/,
+// /plugins_<key>/ and /thumbs_<key>/, so it must come from a CSPRNG rather than
+// Math.random(). See SECURITY.md (F1). Hex keeps the name in the same
+// lowercase-alphanumeric class the old base36 keys used.
+function generateKey(bytes = 8) {
+  return crypto.randomBytes(bytes).toString('hex');
 }
 
 function getExistingPresentationFolder(baseDir) {
