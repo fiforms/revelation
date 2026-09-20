@@ -48,7 +48,7 @@ part of the model, not a gap in it.
 
 | Secret | Entropy | Gates | Where it leaks to |
 |---|---|---|---|
-| `config.key` | 64 bits (`crypto`) | `/presentations_<key>/`, `/plugins_<key>/`, `/thumbs_<key>/`, API server on :8001 | **Every shared presentation link** (`/presentation.html?slug=…&key=…`) |
+| `config.key` | 64 bits (`crypto`) | `/presentations_<key>/`, `/plugins_<key>/`, `/thumbs_<key>/`, API server on :8900 | **Every shared presentation link** (`/presentation.html?slug=…&key=…`) |
 | `presentationPublishKey` | 64 bits (`crypto`) | `/publish/<key>.html` | The URL-publish screen link |
 | `mdnsPairingPin` | 6 digits (`crypto`) | `/peer/socket-info`, `/peer/challenge` | Shown in the presenter info panel |
 | `rsaPrivateKey` | RSA | WordPress publish auth only | Never served |
@@ -81,8 +81,8 @@ part of the model, not a gap in it.
 - **Feature flag** — the whole `/peer/*` tree 403s unless
   `config.mdnsPublish === true` ([vite.plugins.js:634-638](vite.plugins.js#L634-L638)).
 - **Bind address** — in `localhost` mode Vite is started without `--host`, so
-  nothing but loopback can connect at all. The API server on :8001 is always
-  bound to `127.0.0.1` ([lib/apiServer.js:26](../lib/apiServer.js#L26)).
+  nothing but loopback can connect at all. The API server on :8900 is always
+  bound to `127.0.0.1`, and its port defaults clear of Vite's fallback range.
 - **CSP** — `presentation.html` ships
   `script-src 'self'; object-src 'none'; base-uri 'self'`, which is what keeps
   injected markup from becoming code execution (see F3).
@@ -98,7 +98,7 @@ part of the model, not a gap in it.
 | `**/index.json` | T0 | loopback |
 | `/admin/**` | T0 | loopback |
 | `/peer/status`, `/peer/command` | T0 | loopback + `mdnsPublish` |
-| `/peer/public-key` | T3 | `mdnsPublish` only — F8 |
+| `/peer/public-key` | T3 | `mdnsPublish` only — public by design, same data mDNS broadcasts |
 | `/peer/socket-info`, `/peer/challenge` | T4 | `mdnsPublish` + PIN (fail-closed, 3-strike lockout) |
 | `/publish/<publishKey>.html` | T2 | 64-bit key in filename |
 | `/media-share/<token>` | T2 | 192-bit token |
@@ -106,7 +106,7 @@ part of the model, not a gap in it.
 | `/socket.io` (Reveal Remote) | T3 | none; per-channel UUID | 
 | `/peer-commands` | T4 | RSA bearer |
 | `/presenter-plugins-socket` | T2c | room id only — **open by design**, see [§1.6](#16-open-collaboration-plugins--accepted-design) |
-| `http://127.0.0.1:8001/api/**` | T0 + key | loopback bind + `key` |
+| `http://127.0.0.1:8900/api/**` | T0 + key | loopback bind + `key` |
 
 ---
 
@@ -119,7 +119,7 @@ a shared room as **a collaborative space in which every participant is a peer**:
 |---|---|---|
 | `slidecontrol` | Navigate the deck for everyone: next/prev, jump to slide, blank, overview | `remoteMultiplexId` |
 | `markerboard` | Draw on, clear, and restore the shared whiteboard | `remoteMultiplexId` |
-| `bibletext` | Push the live verse shown on every magic slide | `live-<config.key>` |
+| `bibletext` | Push the live verse shown on every magic slide | `presenterLiveRoomId` (per server session) |
 | `captions` | Push live caption text | `remoteMultiplexId` |
 | `videostream` | Drive shared video playback | `remoteMultiplexId` |
 
@@ -152,15 +152,15 @@ set the same flag; see `doc/dev/PLUGINS.md`.
 
 Two consequences worth stating plainly, because they are easy to under-estimate:
 
-- **Revocation means rotating the secret.** To remove a collaborator you must
-  invalidate the room id: rotate `config.key` (Settings → reset key) for
-  `bibletext`, or start a new multiplex session for the other four. Un-sharing
-  a link does nothing on its own.
-- **The room is not confined to the LAN.** `presenterPluginsPublicServer`
-  defaults to `https://revealremote.fiforms.org/presenter-plugins-socket`, a
-  public internet relay, so a participant does not need to be on your network —
-  only to hold the room id. Point it at the local server if you want the
-  collaboration space bounded by the LAN.
+- **Revocation means invalidating the room id.** Un-sharing a link does
+  nothing on its own. Restart the app to mint a new `presenterLiveRoomId` for
+  `bibletext`, or start a new multiplex session for the other four. (Before the
+  F3 fix this meant rotating `config.key`, which also broke every shared link.)
+- **The room is LAN-bound by default, but need not be.** Traffic stays on this
+  machine's Vite server unless *Route Live Features Through the Public Server*
+  is enabled in Settings, which moves it to a public internet relay — at which
+  point a participant no longer has to be on your network, only to hold the
+  room id.
 
 #### What the carve-out does *not* cover
 
@@ -195,8 +195,9 @@ broadcast where the audience should watch but not draw.
 Nine issues were raised against the model above. F1, F2 and F4 are fixed, and
 F3 has been reduced: its injection sink is sanitized and its open-channel half
 is now [accepted design](#16-open-collaboration-plugins--accepted-design).
-Nothing above Medium remains. What is left of F3 — `bibletext` using the access
-key as a room id — is the top open item, followed by F8 and F5.
+F8 is withdrawn as not a defect. Nothing above Low-to-Medium remains open: F7
+(plugin source served over the network), F6 (unbounded thumbnail queue) and F5
+(`allowedHosts: true`).
 
 ---
 
@@ -336,11 +337,71 @@ signatures do not cross-validate.
 
 ---
 
-### F3 — `bibletext` uses the access key as its collaboration room id
+### F3 — `bibletext` used the access key as its collaboration room id, on a public relay by default — **FIXED**
 
-**Severity: Medium — the injection sink is FIXED; the room-id defect is open**
-· [vite.plugins.js](vite.plugins.js),
-[plugins/bibletext/client.js](../plugins/bibletext/client.js)
+**Severity: was High in practice** · Fixed 2026-09-20
+
+Reassessment during the fix found this materially worse than first written up.
+The original note said the key reached "a third-party relay"; what it missed is
+that **the relay was the default for all live traffic**, not an opt-in:
+
+```js
+// revelation/reveal-remote.js, as generated before the fix
+window.revealRemoteServer = window.location.protocol + "//" + window.location.hostname + ":8000/";
+window.presenterPluginsPublicServer = "https://revealremote.fiforms.org/presenter-plugins-socket";
+```
+
+Note the asymmetry — Reveal Remote pointed at the local server, presenter
+plugins at the internet, and only the former was mode-aware. Three
+consequences:
+
+- `bibletext` starts its follower on **every** deck open (not only decks with a
+  `:bibleverse:` slide) and is in `defaultPlugins`, so opening any presentation
+  sent `live-<config.key>` to a public host.
+- The local `/presenter-plugins-socket` that `ensurePresenterPluginsServer()`
+  starts had **no clients at all** by default.
+- All five plugins explicitly rejected a relative endpoint
+  (`if (configured.startsWith('/')) return null`), so pointing the channel at
+  the local server was not even possible: `localhost` breaks LAN browsers and a
+  baked-in LAN IP breaks when the address changes.
+
+**Resolution, in four parts.**
+
+1. **Same-origin endpoints now work.** All five plugins resolve the configured
+   value against `window.location`, so a relative `/presenter-plugins-socket`
+   reaches whichever origin served the deck — correct for the presenter window
+   and LAN browsers alike, and immune to the LAN IP changing mid-session.
+2. **Local is the default.** `writeRevealRemoteJSFile()` emits the relative path
+   and the local Reveal Remote URL unless the new `useRemotePublicServer`
+   config flag is set. Nothing in a running app reaches the relay by default.
+3. **The relay is an explicit, visible opt-in.** One Settings switch moves both
+   `revealRemoteServer` and `presenterPluginsPublicServer` to the public relay,
+   for the case it exists to serve — a remote control or viewer that cannot
+   reach this LAN, such as a phone on cellular.
+4. **The room id is per-session.** `serverManager` mints
+   `crypto.randomBytes(16)` at each server start and publishes it as
+   `window.presenterLiveRoomId`; both the deck and the main-process broadcaster
+   read it. `config.key` is no longer a room name anywhere. When the global is
+   absent both sides return `''` and stay offline rather than falling back to
+   the key.
+
+This also decouples revocation: restarting the app now issues a new room id,
+where previously ejecting a collaborator meant rotating `config.key` and
+breaking every shared link and `/publish/*.html` file.
+
+**Standalone exports are deliberately unchanged** and still default to the
+public relay — they have no local server to talk to. That path reads
+`config.revealRemotePublicServer` / `presenterPluginsPublicServer` directly and
+does not consult `useRemotePublicServer`. WordPress is unaffected too; it
+carries its own independent `reveal_remote_url` setting.
+
+Verified with 24 assertions: the generated globals are local by default and
+relay-only when opted in, including the localhost-mode case; deck resolution
+yields the right origin for localhost, LAN and HTTPS decks and still accepts an
+absolute relay URL; the main process agrees with the decks, honours
+`httpsEnabled` and follows a drifted Vite port; deck and broadcaster compute an
+identical room id that contains no key and satisfies the server's
+`sanitizeRoomId`; and the export path is untouched.
 
 The `/presenter-plugins-socket` namespace has no handshake check, no token and
 no origin restriction. Any party that can reach it may `presenter-plugin:join`
@@ -362,39 +423,6 @@ presenterPluginsIo.on('connection', (socket) => { /* no auth of any kind */
 permission, deliberately, so that collaborative navigation and the shared
 whiteboard work. Viewers changing what the room displays is a feature, and the
 publish/subscribe split that would change it is explicitly deferred.
-
-What remains a defect is narrower, and survives the carve-out because it is not
-about collaboration at all:
-
-**`bibletext` derives its room id from the install's master secret**
-([client.js:100-103](../plugins/bibletext/client.js#L100-L103)):
-
-```js
-getLiveRoomId() { return `live-${key}`; }   // key = config.key
-```
-
-`config.key` gates `/presentations_<key>/`, `/plugins_<key>/`,
-`/thumbs_<key>/` and the control API. Using it as a room name sends it, in
-cleartext at the application layer, to whatever server
-`presenterPluginsPublicServer` points at — by default the public relay
-`revealremote.fiforms.org`, operated by a third party, where it lands in room
-tables and plausibly in logs. The other four plugins do not have this problem:
-they use `remoteMultiplexId`, a per-session UUID that gates nothing else.
-
-Two things follow:
-
-- A secret that protects the whole presentation library is disclosed to a third
-  party as a side effect of enabling a verse plugin. Nobody consented to that
-  at the point of sharing a link.
-- Rotating the key to eject a `bibletext` collaborator (§1.6) simultaneously
-  invalidates every shared presentation link and every `/publish/*.html` file.
-  The two concerns should not be coupled to the same secret.
-
-**Fix:** give `bibletext` a per-session room id like the other four —
-`remoteMultiplexId` where one exists, otherwise a random id minted per
-presentation session and distributed the same way. Nothing about the open
-collaboration model has to change; the room id simply stops being the access
-key. This is a small, self-contained change and is now the top open item.
 
 ---
 
@@ -540,7 +568,7 @@ requests arrive with `req.socket.remoteAddress === '127.0.0.1'`, so every gate i
 - `POST /peer/command` → arbitrary peer commands are broadcast to all paired
   followers, including `open-presentation` with an attacker-chosen URL.
 
-The API server on :8001 is `http.createServer` with no `Host` validation at all,
+The API server on :8900 is `http.createServer` with no `Host` validation at all,
 so it is rebindable too; it additionally requires `key`, which a T2 viewer
 already has.
 
@@ -624,20 +652,42 @@ a per-plugin `web/` subdirectory declared in `plugin-manifest.json`.
 
 ---
 
-### F8 — `/peer/public-key` discloses hostname and instance identity to any LAN host
+### F8 — `/peer/public-key` discloses hostname and instance identity — **WITHDRAWN, not a defect**
 
-**Severity: Low** · [vite.plugins.js:655-667](vite.plugins.js#L655-L667)
+**Severity: none** · Reassessed 2026-09-20
 
-When `mdnsPublish` is on, any LAN host — no PIN, no pairing — gets
-`instanceId`, `instanceName`, `os.hostname()`, the RSA public key and its
-fingerprint. This is genuinely needed before pairing, so it cannot simply be
-gated. But `mdnsPublish` already advertises instance name and fingerprint over
-mDNS, so `os.hostname()` is the one field that adds new information, and it is a
-gratuitous fingerprinting datum for a T3 prober.
+The original claim was that `os.hostname()` in the `/peer/public-key` payload
+is a gratuitous fingerprinting datum for a LAN prober. That was wrong: it
+overlooked that the endpoint and mDNS publishing are governed by the same
+switch, and that mDNS already broadcasts strictly more.
 
-**Fix:** drop `hostname` from the payload; `instanceName` already serves the
-"which machine is this" purpose in the pairing UI. This also slightly reduces the
-value of scanning for presenters on a hostile network.
+`/peer/*` 403s unless `config.mdnsPublish === true`
+([vite.plugins.js:639](vite.plugins.js#L639)). That same flag is what starts
+the mDNS announcement, whose TXT record already contains `hostname`,
+`instanceId`, `mode`, `version`, `pairingPort`, `httpsEnabled` and
+`pubKeyFingerprint`, with `instanceName` as the service name
+([lib/mdnsManager.js:102-117](../lib/mdnsManager.js#L102-L117)). So whenever
+the endpoint can answer at all, the same hostname is already being multicast
+unsolicited to the entire subnet — no port scan required.
+
+The endpoint's payload is therefore close to a subset of what is already
+public. It adds the full public key PEM (mDNS carries only its fingerprint),
+which is not a secret and *must* be fetchable for pairing to work.
+
+Removing `hostname` would also not achieve the stated goal: `instanceName` is
+returned beside it and is usually *more* identifying, since users name their
+instances things like "Sanctuary Laptop".
+
+The one residual case is a network that blocks multicast — common enough that
+manual pairing by IP exists for it — where mDNS reaches nobody but HTTP still
+answers. Even there, a prober who has found the port learns nothing from
+`hostname` that `instanceName` and `version` in the same response do not
+already give them.
+
+**No change made.** Peer discovery metadata is public by design whenever
+master mode is on; that is coherent, and it is the `mdnsPublish` switch — not
+field-level trimming — that controls it. Recorded here so the question is not
+re-opened on a later pass.
 
 ---
 
@@ -704,8 +754,8 @@ Still outstanding from that review:
 | ~~1~~ | ~~Sanitise `bibletext/client.js` before `innerHTML`~~ | **done** |
 | ~~2~~ | ~~`crypto.randomBytes` / `crypto.randomInt` for `key` and PIN (F1)~~ | **done** |
 | ~~3~~ | ~~Fail-closed PIN check at both `/peer/*` sites (F4)~~ | **done** |
-| 4 | Drop `hostname` from `/peer/public-key` (F8) | minutes |
-| 5 | Per-session room id for `bibletext`, not `config.key` (F3) | ~1 hour |
+| — | ~~Drop `hostname` from `/peer/public-key` (F8)~~ | **withdrawn — not a defect** |
+| ~~5~~ | ~~Per-session room id for `bibletext`; local-by-default relay (F3)~~ | **done** |
 | 6 | Restrict `/plugins_<key>/` to browser-facing files (F7) | ~1 hour |
 | 7 | Bound `_thumbQueue`, extension allowlist (F6) | ~1 hour |
 | 8 | Explicit `allowedHosts` + `Host` check on apiServer (F5) | ~2 hours |
