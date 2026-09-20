@@ -27,6 +27,12 @@ vulnerability. The boundaries worth defending are the two *outer* tiers: a LAN
 neighbour who merely discovers the service, and an audience member who was given
 a link to one presentation.
 
+One deliberate exception qualifies that second boundary. When a collaboration
+plugin is enabled, viewers holding a link are *meant* to be able to change the
+shared slide space — navigate the deck, draw on the whiteboard, push a verse.
+See [§1.6](#16-open-collaboration-plugins--accepted-design); that carve-out is
+part of the model, not a gap in it.
+
 ### 1.2 Trust tiers
 
 | Tier | Who | Should be able to | Must **not** be able to |
@@ -34,6 +40,7 @@ a link to one presentation.
 | **T0 — Operator** | Console user of the machine; anything reaching the app over loopback | Everything | — |
 | **T1 — Key holder** | Anyone who knows `config.key` (it appears in every shared presentation URL) | Read presentations and media; render decks | Reach the control API, read app config, execute code in the Electron app |
 | **T2 — Invited viewer** | Given one presentation or multiplex link | View that content; follow the presenter | Modify content, control other viewers' decks, enumerate the library |
+| **T2c — Collaborating viewer** | An invited viewer, when a collaboration plugin is enabled | Everything T2 can, **plus** drive the shared slide space — see [§1.6](#16-open-collaboration-plugins--accepted-design) | Execute code, read files, reach the control API, enumerate the library |
 | **T3 — LAN prober** | Discovers `http://<host>:8000/` with no link and no key | Learn that a presenter app is running | Enumerate presentations, read files, obtain keys/PINs, trigger any operation |
 | **T4 — Paired peer** | A follower instance paired over mDNS with the PIN | Receive slide-sync commands | Extract signing material or act as the app toward third parties |
 
@@ -98,15 +105,90 @@ a link to one presentation.
 | `/_remote/ui/**` | T3 | none (static UI only) |
 | `/socket.io` (Reveal Remote) | T3 | none; per-channel UUID | 
 | `/peer-commands` | T4 | RSA bearer |
-| `/presenter-plugins-socket` | T3 | **none at all** — F3 |
+| `/presenter-plugins-socket` | T2c | room id only — **open by design**, see [§1.6](#16-open-collaboration-plugins--accepted-design) |
 | `http://127.0.0.1:8001/api/**` | T0 + key | loopback bind + `key` |
+
+---
+
+### 1.6 Open-collaboration plugins — accepted design
+
+Five plugins use the `/presenter-plugins-socket` namespace, and all five treat
+a shared room as **a collaborative space in which every participant is a peer**:
+
+| Plugin | What a participant may do | Room id |
+|---|---|---|
+| `slidecontrol` | Navigate the deck for everyone: next/prev, jump to slide, blank, overview | `remoteMultiplexId` |
+| `markerboard` | Draw on, clear, and restore the shared whiteboard | `remoteMultiplexId` |
+| `bibletext` | Push the live verse shown on every magic slide | `live-<config.key>` |
+| `captions` | Push live caption text | `remoteMultiplexId` |
+| `videostream` | Drive shared video playback | `remoteMultiplexId` |
+
+**This is intended behaviour, not a defect.** The namespace has no
+authentication and no publish/subscribe split: holding the room id is the
+permission. A room id is not a capability the app tries to protect — it is in
+the multiplex link handed to every viewer.
+
+Accordingly, **T2c is the operative tier whenever any of these plugins is
+enabled**: sharing a presentation link is equivalent to granting collaborator
+rights in that slide space. The T2 restrictions in §1.2 ("must not modify
+content, control other viewers' decks") describe the app only when none of
+these plugins is enabled.
+
+#### Operational rule
+
+> **If any collaboration plugin is enabled, share presentation and multiplex
+> links only with a small group of trusted people.** There is no per-viewer
+> permission, no read-only mode, and no way to eject a participant. Anyone who
+> obtains the link — or forwards it onward — can drive the shared space for
+> everyone in it.
+
+Two consequences worth stating plainly, because they are easy to under-estimate:
+
+- **Revocation means rotating the secret.** To remove a collaborator you must
+  invalidate the room id: rotate `config.key` (Settings → reset key) for
+  `bibletext`, or start a new multiplex session for the other four. Un-sharing
+  a link does nothing on its own.
+- **The room is not confined to the LAN.** `presenterPluginsPublicServer`
+  defaults to `https://revealremote.fiforms.org/presenter-plugins-socket`, a
+  public internet relay, so a participant does not need to be on your network —
+  only to hold the room id. Point it at the local server if you want the
+  collaboration space bounded by the LAN.
+
+#### What the carve-out does *not* cover
+
+Accepting open collaboration means accepting that participants can change what
+the room displays. It does not extend to letting them escape the room:
+
+- **No code execution.** A participant may set slide *content*, not run script
+  in another viewer's page. The `bibletext` allowlist sanitizer (F3) and the
+  `presentation.html` CSP both enforce this and remain load-bearing.
+- **No access to anything outside the shared space.** The library, local files,
+  app config and the control API stay off-limits — those are T0/T1 boundaries
+  and are unaffected by this carve-out.
+- **No leaking the access key.** See F3: `bibletext` derives its room id from
+  `config.key`, which puts the install's master secret on a third-party relay.
+  That is a real defect independent of the collaboration model.
+
+#### Deferred: publish/subscribe permission split
+
+A future design could separate *publish* from *subscribe* on this namespace —
+a presenter-held token permitting broadcast, with viewers subscribed read-only
+and navigation intent relayed through the presenter. **Not planned.** There is
+no concrete use case today for a viewer who should see the shared space but not
+participate in it, and the open model is what makes the collaborative
+whiteboard and audience-driven navigation work at all. Revisit only if a
+deployment appears that needs mixed-permission rooms — for example a public
+broadcast where the audience should watch but not draw.
 
 ---
 
 ## Part 2 — Findings
 
-Nine issues break the model above. F1 and F2 are fixed; F3 is the one I would
-fix next.
+Nine issues were raised against the model above. F1 and F2 are fixed, and F3
+has been reduced: its injection sink is sanitized and its open-channel half is
+now [accepted design](#16-open-collaboration-plugins--accepted-design). What
+remains of F3 — `bibletext` using the access key as a room id — is the top open
+item, followed by F4 and F5.
 
 ---
 
@@ -246,9 +328,16 @@ signatures do not cross-validate.
 
 ---
 
-### F3 — `/presenter-plugins-socket` has no authentication; any client can inject content into other viewers' decks
+### F3 — `bibletext` uses the access key as its collaboration room id
 
-**Severity: High** · [vite.plugins.js:1184-1231](vite.plugins.js#L1184-L1231)
+**Severity: Medium — the injection sink is FIXED; the room-id defect is open**
+· [vite.plugins.js](vite.plugins.js),
+[plugins/bibletext/client.js](../plugins/bibletext/client.js)
+
+The `/presenter-plugins-socket` namespace has no handshake check, no token and
+no origin restriction. Any party that can reach it may `presenter-plugin:join`
+any `{plugin, roomId}` pair and `presenter-plugin:event` arbitrary
+`{type, payload}` to everyone else in that room:
 
 ```js
 presenterPluginsIo = new Server(server.httpServer, {
@@ -260,73 +349,121 @@ presenterPluginsIo = new Server(server.httpServer, {
 presenterPluginsIo.on('connection', (socket) => { /* no auth of any kind */
 ```
 
-There is no handshake check, no token, no origin restriction. Any party that can
-reach the socket may `presenter-plugin:join` any `{plugin, roomId}` pair and then
-`presenter-plugin:event` arbitrary `{type, payload}` to everyone else in that
-room. Room membership is the *only* access control, and the room ids are not
-secrets:
+**The open channel itself is accepted design** — see
+[§1.6](#16-open-collaboration-plugins--accepted-design). Room membership is the
+permission, deliberately, so that collaborative navigation and the shared
+whiteboard work. Viewers changing what the room displays is a feature, and the
+publish/subscribe split that would change it is explicitly deferred.
 
-| Plugin | Room id | Known to |
-|---|---|---|
-| `bibletext` | `live-<config.key>` ([client.js:100-103](../plugins/bibletext/client.js#L100-L103)) | anyone with any presentation link |
-| `slidecontrol`, `markerboard`, `captions` | the `remoteMultiplexId` from the URL | every follower |
+What remains a defect is narrower, and survives the carve-out because it is not
+about collaboration at all:
 
-Two concrete consequences:
+**`bibletext` derives its room id from the install's master secret**
+([client.js:100-103](../plugins/bibletext/client.js#L100-L103)):
 
-**(a) Markup injection into every viewer's slide.** The bibletext live-verse
-follower assigns the received payload straight to `innerHTML`
-([plugins/bibletext/client.js:194](../plugins/bibletext/client.js#L194)):
+```js
+getLiveRoomId() { return `live-${key}`; }   // key = config.key
+```
+
+`config.key` gates `/presentations_<key>/`, `/plugins_<key>/`,
+`/thumbs_<key>/` and the control API. Using it as a room name sends it, in
+cleartext at the application layer, to whatever server
+`presenterPluginsPublicServer` points at — by default the public relay
+`revealremote.fiforms.org`, operated by a third party, where it lands in room
+tables and plausibly in logs. The other four plugins do not have this problem:
+they use `remoteMultiplexId`, a per-session UUID that gates nothing else.
+
+Two things follow:
+
+- A secret that protects the whole presentation library is disclosed to a third
+  party as a side effect of enabling a verse plugin. Nobody consented to that
+  at the point of sharing a link.
+- Rotating the key to eject a `bibletext` collaborator (§1.6) simultaneously
+  invalidates every shared presentation link and every `/publish/*.html` file.
+  The two concerns should not be coupled to the same secret.
+
+**Fix:** give `bibletext` a per-session room id like the other four —
+`remoteMultiplexId` where one exists, otherwise a random id minted per
+presentation session and distributed the same way. Nothing about the open
+collaboration model has to change; the room id simply stops being the access
+key. This is a small, self-contained change and is now the top open item.
+
+---
+
+**(a) Markup injection into every viewer's slide — FIXED 2026-09-20.** The
+bibletext live-verse follower assigned the received payload straight to
+`innerHTML`:
 
 ```js
 el.innerHTML = html ? `<div class="bibletext-live-container">${html}</div>` : '';
 ```
 
-`html` is `event.payload.html`, unvalidated, from an unauthenticated broadcast.
-The CSP on `presentation.html` (`script-src 'self'`) is what stops this from
-being remote code execution — inline handlers and inline scripts are blocked,
-and `innerHTML`-inserted `<script>` never executes. It does **not** stop
+`html` was `event.payload.html`, unvalidated, from a broadcast any room
+participant can send. Because the channel is open by design (§1.6), sanitizing
+this sink is not optional — it is what keeps "a collaborator may change what
+the room displays" from becoming "a collaborator may run code in everyone's
+browser". The CSP on `presentation.html` (`script-src 'self'`) is what stopped
+this from being remote code execution — inline handlers and inline scripts are
+blocked, and `innerHTML`-inserted `<script>` never executes. It did **not** stop
 defacement: `style-src` allows `'unsafe-inline'`, so an injected
-`<div style="position:fixed;inset:0;z-index:9999">` covers the projected screen
-with arbitrary text or imagery for the whole audience. **The CSP is the only
-thing between this bug and full code execution — treat it as load-bearing and do
-not relax it.**
+`<div style="position:fixed;inset:0;z-index:9999">` could cover the projected
+screen with arbitrary content for the whole audience. **The CSP remains
+load-bearing for this channel — do not relax it.**
 
-**(b) Deck hijacking by any viewer.** `slidecontrol` executes `prev`, `next`,
-`blank`, `overview`, `slide_to`, and `markerboard_toggle` received on this
-channel ([plugins/slidecontrol/client.js:222-234](../plugins/slidecontrol/client.js#L222-L234)).
-`allowControlFromAnyClient` defaults to `true`
-([client.js:78](../plugins/slidecontrol/client.js#L78)), and a follower is
-excluded from *executing* commands but not from *sending* them. So any audience
-member holding a multiplex link can drive the presenter's projected deck. This
-may be the intent for small trusted rooms, but it directly contradicts the T2
-rule, and it is on by default.
+`_sanitizeLiveHtml()` in
+[plugins/bibletext/client.js](../plugins/bibletext/client.js) now sanitizes at
+the point of receipt (the only writer of `_latest`), so unsanitized markup is
+never stored or rendered. It is a strict **allowlist**, not the general
+`sanitizeRenderedHTML()`: `buildLiveVerseHtml()` emits an exactly known
+vocabulary — `div/p/span/em/br` carrying only `bibletext-live*` classes — so the
+sanitizer parses into an inert `<template>` and rebuilds the tree from that
+vocabulary alone. Unknown elements are unwrapped (text kept, so a future
+formatting change degrades to readable text rather than a blank slide) except
+for a small raw-text/embedding set (`script`, `style`, `noscript`, `template`,
+`iframe`, `object`, `embed`, `svg`, `math`) which is dropped with its subtree.
+`class` is the only attribute carried over, and only within the plugin's own
+namespace.
 
-Note that by default this traffic does not even stay on the LAN:
-`presenterPluginsPublicServer` defaults to
-`https://revealremote.fiforms.org/presenter-plugins-socket`
-([lib/configManager.js:29](../lib/configManager.js#L29)), so rooms named
-`live-<key>` are joinable from anywhere on the internet by anyone who has seen a
-presentation link.
+This is deliberately stricter than the general sanitizer, because it also has
+to reject what that one permits by design: `<img>`, `<iframe>`, `id`, borrowed
+theme classes, and the inline `style` behind the defacement vector above.
 
-**Fix, in priority order:**
+Verified against a real HTML parser (jsdom) with 37 assertions: genuine
+payloads round-trip byte-identically; `onerror`/`onload`/`<script>`/nested
+`<scr<script>ipt>`/`javascript:`/`srcdoc`/entity-space handler variants are all
+stripped; the defacement vectors are stripped; and inserting sanitized output
+into a live `runScripts: 'dangerously'` document fires nothing.
 
-1. **Sanitise the sink now** — it is one line and removes the worst case
-   regardless of transport. In `bibletext/client.js:194`, run `html` through the
-   project's existing markdown sanitizer, or restrict to a tag allowlist, before
-   assignment.
-2. **Authenticate the namespace.** Mirror what `/peer-commands` already does —
-   require a short-lived server-signed token in `socket.handshake.auth`, issued
-   over loopback, in `presenterPluginsIo.use(...)`.
-3. **Split publish from subscribe.** Viewers need to *receive*
-   `live-verse`/`caption-state` and to *send* nothing but navigation intent.
-   Give the presenter a per-session publisher token and reject
-   `presenter-plugin:event` from unauthenticated sockets for presenter-owned
-   event types.
-4. **Stop deriving room ids from `config.key`.** `live-<key>` both leaks the key
-   into room names on a third-party server and makes the room guessable. Use a
-   per-session random id distributed the same way `multiplexId` is.
-5. Surface `allowControlFromAnyClient` in Settings and consider defaulting it to
-   `false` for network mode.
+**⚠ If `buildLiveVerseHtml()` gains a tag or class, add it to the allowlist** or
+the new markup is silently flattened to text.
+
+**(b) Deck control by any viewer — ACCEPTED DESIGN, not a finding.**
+`slidecontrol` executes `prev`, `next`, `blank`, `overview`, `slide_to` and
+`markerboard_toggle` received on this channel
+([plugins/slidecontrol/client.js:222-234](../plugins/slidecontrol/client.js#L222-L234)),
+and `allowControlFromAnyClient` defaults to `true`
+([client.js:78](../plugins/slidecontrol/client.js#L78)). Any viewer holding a
+multiplex link can therefore drive the projected deck. Per
+[§1.6](#16-open-collaboration-plugins--accepted-design) this is the intended
+collaborative model, and the T2 rule in §1.2 is superseded by T2c whenever such
+a plugin is enabled. Recorded here only so the behaviour is not re-filed as a
+bug on a later pass.
+
+The one thing worth reconsidering independently is that
+`allowControlFromAnyClient` is not surfaced in Settings, so an operator who
+wants the collaborative model *off* has to hand-edit `pluginConfigs`. Exposing
+the toggle would make the §1.6 operational rule actionable rather than
+advisory. Low priority; not a security defect given the carve-out.
+
+**Remaining fix list**
+
+1. ~~**Sanitise the sink**~~ — **done**, see (a).
+2. **Stop deriving the `bibletext` room id from `config.key`** — the open item
+   described at the head of this finding.
+3. ~~Authenticate the namespace~~ / ~~split publish from subscribe~~ —
+   **deferred by design**, see §1.6. Not planned; revisit only if a
+   mixed-permission deployment appears.
+4. Surface `allowControlFromAnyClient` in Settings (usability, not security).
 
 ---
 
@@ -550,18 +687,21 @@ Still outstanding from that review:
 
 | # | Change | Effort |
 |---|---|---|
-| 1 | Sanitise `bibletext/client.js:194` before `innerHTML` | minutes |
+| ~~1~~ | ~~Sanitise `bibletext/client.js` before `innerHTML`~~ | **done** |
 | ~~2~~ | ~~`crypto.randomBytes` / `crypto.randomInt` for `key` and PIN (F1)~~ | **done** |
 | 3 | Fail-closed PIN check at both `/peer/*` sites (F4) | minutes |
 | 4 | Drop `hostname` from `/peer/public-key` (F8) | minutes |
-| 5 | Restrict `/plugins_<key>/` to browser-facing files (F7) | ~1 hour |
-| 6 | Bound `_thumbQueue`, extension allowlist (F6) | ~1 hour |
-| 7 | Explicit `allowedHosts` + `Host` check on apiServer (F5) | ~2 hours |
-| ~~8~~ | ~~Separate peer and WordPress keypairs; domain-separate the challenge (F2)~~ | **done** |
-| 9 | Authenticate `/presenter-plugins-socket`; split publish/subscribe (F3) | ~1–2 days, touches 5 plugins |
+| 5 | Per-session room id for `bibletext`, not `config.key` (F3) | ~1 hour |
+| 6 | Restrict `/plugins_<key>/` to browser-facing files (F7) | ~1 hour |
+| 7 | Bound `_thumbQueue`, extension allowlist (F6) | ~1 hour |
+| 8 | Explicit `allowedHosts` + `Host` check on apiServer (F5) | ~2 hours |
+| ~~9~~ | ~~Separate peer and WordPress keypairs; domain-separate the challenge (F2)~~ | **done** |
+| — | ~~Authenticate `/presenter-plugins-socket`; split publish/subscribe~~ | **deferred by design** (§1.6) |
 
-Items 1–4 are one-line-ish and remove the sharpest edges. Item 9 is the real
-architectural fix and the one that most directly restores the T2 boundary.
+Items 3–5 are small and remove the sharpest remaining edges; item 5 is the last
+piece of F3 that is still a defect. The publish/subscribe split is no longer on
+this list — see [§1.6](#16-open-collaboration-plugins--accepted-design) for why,
+and for the conditions under which it should be revisited.
 
 ## Reporting a vulnerability
 
