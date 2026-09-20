@@ -134,6 +134,14 @@ rights in that slide space. The T2 restrictions in §1.2 ("must not modify
 content, control other viewers' decks") describe the app only when none of
 these plugins is enabled.
 
+These five declare `"collaboration": true` in their `plugin-manifest.json`,
+alongside a `collaboration_detail` string naming the specific abilities a
+viewer gains. Settings badges them, shows the detail when the plugin is
+expanded, and displays a standing banner listing whichever are enabled — so the
+operational rule below is visible at the moment of choosing, not only here. A
+new plugin that accepts `presenter-plugin:event` from other participants must
+set the same flag; see `doc/dev/PLUGINS.md`.
+
 #### Operational rule
 
 > **If any collaboration plugin is enabled, share presentation and multiplex
