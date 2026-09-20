@@ -23,6 +23,7 @@
     "dev": "npm-run-all --parallel watch:theme vite",
     "vite": "vite",
     "vite:serve": "vite --host",
+    "relay": "REVELATION_PUBLIC_SERVER=1 vite --host",
     "watch:theme": "sass --watch css/source:css --silence-deprecation import --load-path=node_modules --load-path=node_modules/reveal.js/css/theme",
     "build:theme": "sass css/source:dist/css --silence-deprecation import --load-path=node_modules --load-path=node_modules/reveal.js/css/theme",
     "build:fonts": "node scripts/copy-fonts.js",

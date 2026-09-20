@@ -142,6 +142,42 @@ operational rule below is visible at the moment of choosing, not only here. A
 new plugin that accepts `presenter-plugin:event` from other participants must
 set the same flag; see `doc/dev/PLUGINS.md`.
 
+#### Running a public relay
+
+The socket namespaces can be hosted on a public server so that participants
+off the LAN can join — this is what `revealremote.fiforms.org` is. That
+deployment is the one place where the reverse-proxy weakness in §1.4 genuinely
+bites: behind a same-machine proxy every forwarded request presents
+`127.0.0.1`, so every `isLoopbackAddress()` gate passes for the entire
+internet.
+
+**Public relay mode** exists for exactly this. Start the server with
+`REVELATION_PUBLIC_SERVER=1` (or `--public-server`, or `npm run relay`) and it
+serves only:
+
+| Path | What |
+|---|---|
+| `/socket.io` | Reveal Remote broker |
+| `/presenter-plugins-socket` | Presenter-plugins channel |
+| `/_remote/ui/**` | The static remote-control UI (self-contained) |
+| `/` | A one-line liveness string, no host details |
+
+Everything else returns a flat `404`. The mode does not gate the local-machine
+features — it **never registers them**: no presentations, plugins, thumbnails
+(so no `ffmpeg`), media tokens, `/publish`, `/admin`, `/peer/*`, `index.json`,
+file watching, or Vite static root and `/@fs`. `ensurePeerCommandServer` is
+not started either, since peer pairing authenticates against a `config.json` a
+relay has no business holding. The presentations directory is never resolved,
+so a relay needs no presentation data on disk at all.
+
+Because nothing loopback-gated is mounted, the proxy question does not arise:
+there is nothing behind the gate to reach. Do not run a relay in the app's
+normal mode and try to firewall the extra routes — use this mode.
+
+Verified against a live server with 36 probes covering the allowed paths,
+Vite's static root and source files, `/@fs` and traversal escapes, every
+local-machine route, and the three socket namespaces.
+
 #### Operational rule
 
 > **If any collaboration plugin is enabled, share presentation and multiplex
@@ -732,12 +768,17 @@ code:
 
 Still outstanding from that review:
 
-- **Reverse-proxy documentation.** Every loopback gate in §1.4 fails open behind
-  a same-machine reverse proxy, because all forwarded requests present
-  `127.0.0.1`. F5 is the browser-side version of the same weakness. If running
-  behind nginx/Caddy is ever supported, `/admin`, `/peer/*` and `**/index.json`
-  must be explicitly blocked at the proxy, and that needs to be written down in
-  `doc/` with worked config examples.
+- **Reverse-proxy exposure — RESOLVED by design, 2026-09-20.** Every loopback
+  gate in §1.4 fails open behind a same-machine reverse proxy, because all
+  forwarded requests present `127.0.0.1`. The only deployment that actually
+  puts this server behind a proxy is a public socket relay, and that case is
+  now served by **public relay mode**
+  ([§1.6](#running-a-public-relay)), which mounts none of the gated routes at
+  all. No proxy rule list is needed, because there is nothing behind the gates
+  to block. The app's normal mode is not intended to be proxied, and should
+  not be. F5 remains open as the browser-side version of the same weakness
+  (DNS rebinding against a loopback listener), which relay mode does not
+  address.
 - **`shareUrl` handling.** `initialData.shareUrl` is client-supplied and is
   interpolated into `multiplexUrl`, then emitted to remote-control clients as
   `presentation_url` ([vite.plugins.js:1342-1343](vite.plugins.js#L1342-L1343),

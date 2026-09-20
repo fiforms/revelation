@@ -75,7 +75,35 @@ if (process.parentPort) {
   });
 }
 
-if(process.env.PRESENTATIONS_DIR_OVERRIDE && process.env.PRESENTATIONS_KEY_OVERRIDE) {
+// --- Public relay mode --------------------------------------------------
+//
+// Runs this server as a bare Socket.IO relay for Reveal Remote and the
+// presenter-plugins channel — the role revealremote.fiforms.org fills — with
+// every local-machine feature switched off.
+//
+// This is the one deployment where the reverse-proxy weakness in the loopback
+// gates actually bites: behind a same-machine proxy every forwarded request
+// presents 127.0.0.1, so `isLoopbackAddress()` passes for the whole internet.
+// Rather than trying to teach those gates about proxies, this mode removes
+// everything they were guarding: no presentations, no plugins, no thumbnails,
+// no media, no admin UI, no peer endpoints, no file watching, and no Vite
+// static root. What remains is the two socket namespaces and the static
+// remote-control UI, none of which touch this machine's files or config.
+//
+// Enable with REVELATION_PUBLIC_SERVER=1 (preferred — an env var cannot
+// collide with Vite's own CLI parsing) or the --public-server argument.
+const isPublicServerMode =
+  /^(1|true)$/i.test(process.env.REVELATION_PUBLIC_SERVER || '') ||
+  process.argv.includes('--public-server');
+
+if (isPublicServerMode) {
+    // A relay has no presentations directory, and the lookup below throws when
+    // it cannot find one. Leave these blank; nothing in this mode reads them.
+    presentationsDir = '';
+    key = '';
+    presentationsWebPath = '';
+}
+else if(process.env.PRESENTATIONS_DIR_OVERRIDE && process.env.PRESENTATIONS_KEY_OVERRIDE) {
     presentationsDir = process.env.PRESENTATIONS_DIR_OVERRIDE;
     key = process.env.PRESENTATIONS_KEY_OVERRIDE;
     presentationsWebPath = `/${prefix}${key}`;
@@ -381,14 +409,80 @@ function _runFfmpegThumb(ffmpegBin, sourceFile, thumbFile) {
   }));
 }
 
+// Everything a public relay is allowed to answer. Socket.IO handles its own
+// two paths on the HTTP server before Connect middlewares ever run, so they do
+// not need entries here — they are listed for documentation and to keep the
+// landing page honest.
+const PUBLIC_RELAY_SOCKET_PATHS = ['/socket.io', PRESENTER_PLUGINS_SOCKET_PATH];
+// The only HTTP surface: the static remote-control UI. Self-contained —
+// server-ui/index.html references nothing outside its own directory.
+const PUBLIC_RELAY_UI_PREFIX = '/_remote/ui';
+
+function configurePublicRelayServer(server) {
+  const remoteUiDir = path.resolve(__dirname, 'node_modules/reveal.js-remote/server-ui');
+
+  // FIRST middleware, so it runs ahead of Vite's own static handling. Without
+  // it Vite would serve the project root and /@fs/ to the internet.
+  //
+  // Deny by default: anything not explicitly allowed gets a flat 404, with no
+  // hint as to whether the path exists.
+  server.middlewares.use((req, res, next) => {
+    let pathname = '';
+    try {
+      pathname = new URL(req.url || '', 'http://localhost').pathname;
+    } catch {
+      res.writeHead(400, { 'Content-Type': 'text/plain' });
+      res.end('400 Bad Request');
+      return;
+    }
+
+    if (pathname === '/' || pathname === '/index.html') {
+      // Deliberately contentless: says the service is alive, nothing about the
+      // host, its version, or what else might be running on it.
+      res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
+      res.end('REVELation relay: socket relay only.\n');
+      return;
+    }
+
+    if (pathname === PUBLIC_RELAY_UI_PREFIX || pathname.startsWith(`${PUBLIC_RELAY_UI_PREFIX}/`)) {
+      return next();
+    }
+
+    res.writeHead(404, { 'Content-Type': 'text/plain' });
+    res.end('404 Not Found');
+  });
+
+  if (fs.existsSync(remoteUiDir)) {
+    server.middlewares.use(PUBLIC_RELAY_UI_PREFIX, serveStatic(remoteUiDir, { fallthrough: false }));
+  } else {
+    console.warn(`⚠ Remote UI directory missing: ${remoteUiDir}`);
+  }
+
+  // The two relay namespaces. ensurePeerCommandServer is deliberately NOT
+  // started: peer pairing authenticates against this machine's config.json,
+  // which a relay neither has nor should have.
+  ensurePresenterPluginsServer(server);
+  ensureRevealRemoteServer(server);
+
+  console.log('🔒 PUBLIC RELAY MODE');
+  console.log(`   serving: ${PUBLIC_RELAY_SOCKET_PATHS.join(', ')}, ${PUBLIC_RELAY_UI_PREFIX}/`);
+  console.log('   disabled: presentations, plugins, thumbnails, media, admin, peer endpoints, file watching, Vite static root');
+}
+
 function presentationIndexPlugin() {
   return {
     name: 'generate-presentation-index',
     buildStart() {
+      if (isPublicServerMode) return;
       safeGeneratePresentationIndex('buildStart');
       generateMediaIndex();
     },
     configureServer(server) {
+      if (isPublicServerMode) {
+        configurePublicRelayServer(server);
+        return;
+      }
+
       const isGui = /^(1|true)$/i.test(process.env.REVELATION_GUI || '');
       const cssServeDir = isGui ? path.resolve(__dirname, 'dist/css') : path.resolve(__dirname, 'css');
       const revealDistDir = path.resolve(__dirname, 'node_modules/reveal.js/dist');
