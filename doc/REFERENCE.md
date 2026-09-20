@@ -54,6 +54,7 @@ YAML front matter, macros, and media alias definitions:
 
 REVELation framework runtime and extension architecture:
 - [revelation/doc/ARCHITECTURE.md](ARCHITECTURE.md)
+- [revelation/doc/SECURITY.md](SECURITY.md)
 
 Reverse Proxy Setup
 - [revelation/doc/REVERSE_PROXY.md](REVERSE_PROXY.md)

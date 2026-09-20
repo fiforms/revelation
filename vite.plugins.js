@@ -26,7 +26,7 @@ const baseDir = __dirname;
 const prefix = 'presentations_';
 const PEER_SOCKET_PATH = '/peer-commands';
 // Bumped when the peer wire protocol changes incompatibly. v1 introduced the
-// dedicated peer keypair and domain-separated signatures (SECURITY.md F2);
+// dedicated peer keypair and domain-separated signatures (doc/SECURITY.md F2);
 // masters that advertise no version sign with the legacy shared WordPress key
 // and followers must refuse to pair with them.
 const PEER_PROTOCOL_VERSION = 1;
@@ -854,7 +854,7 @@ function presentationIndexPlugin() {
             }
             try {
               // Domain-separated: the caller's bytes are hashed under a peer
-              // protocol prefix, never signed directly. See SECURITY.md (F2).
+              // protocol prefix, never signed directly. See doc/SECURITY.md (F2).
               const signature = signPeerChallenge(config.peerRsaPrivateKey, challenge);
               res.writeHead(200, { 'Content-Type': 'application/json' });
               res.end(JSON.stringify({ signature, peerProtocol: PEER_PROTOCOL_VERSION }));
@@ -1187,7 +1187,7 @@ function timingSafeEqualString(a, b) {
 // disk on every request and trusted as found, so a hand-edited file, a failed
 // write, a restored older-schema config or a profile switch was enough to open
 // the endpoints. Authentication must not be structurally fail-open.
-// See SECURITY.md (F4).
+// See doc/SECURITY.md (F4).
 function enforcePairingPin(config, providedPin, remoteAddress, res) {
   const rawPin = config?.mdnsPairingPin;
   const expectedPin = (typeof rawPin === 'string' || typeof rawPin === 'number')
@@ -1369,7 +1369,7 @@ function verifySignature(publicKeyPem, payload, signatureBase64) {
 // /peer/challenge signs caller-supplied bytes by design, so it must never
 // produce a signature that is meaningful outside the peer protocol. Signing a
 // prefixed digest rather than the caller's bytes makes the endpoint useless as
-// an oracle for any other verifier. See SECURITY.md (F2).
+// an oracle for any other verifier. See doc/SECURITY.md (F2).
 //
 // ⚠ These two constructions are byte-identical copies of the ones in
 // ../lib/peerAuth.js (this file runs in the Vite utility process and cannot
