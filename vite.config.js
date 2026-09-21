@@ -27,6 +27,9 @@ export default {
       input: {
         'offline-bundle': path.resolve(__dirname, 'js/offline.js')
       },
+      // Suppress EMPTY_IMPORT_META warning: Vite's internal preload helper uses
+      // import.meta, which isn't valid in iife output and gets replaced with {}.
+      transform: { define: { 'import.meta': '({})' } },
       output: {
         entryFileNames: 'js/[name].js', // ✅ outputs js/offline-bundle.js
         format: 'iife' // ✅ makes it usable via <script>
