@@ -59,7 +59,7 @@ part of the model, not a gap in it.
 | `peerRsaPrivateKey` | RSA | Peer pairing and peer socket auth | Never served |
 | Reveal-remote `remoteId` | UUIDv4 | Remote-control channel for one deck | Presenter's remote QR code |
 | Reveal-remote `multiplexId` | UUIDv4 | Follower/multiplex channel | Every follower link |
-| `presenterLiveRoomId` | 128 bits (`crypto`, per server session) | The `bibletext` live-verse room | Every deck, via `reveal-remote.js` |
+| `presenterLiveRoomId` | 128 bits (`crypto`, per server session) | The `bibletext-live` live-verse room | Every deck, via `reveal-remote.js` |
 | `/media-share/<token>` | 192 bits (`crypto`) | One registered media file | Deck HTML |
 
 > **The key is global, not per-presentation.** Handing someone a link to one
@@ -124,7 +124,7 @@ a shared room as **a collaborative space in which every participant is a peer**:
 |---|---|---|
 | `slidecontrol` | Navigate the deck for everyone: next/prev, jump to slide, blank, overview | `remoteMultiplexId` |
 | `markerboard` | Draw on, clear, and restore the shared whiteboard | `remoteMultiplexId` |
-| `bibletext` | Push the live verse shown on every magic slide | `presenterLiveRoomId` (per server session) |
+| `bibletext-live` | Push the live verse shown on every magic slide | `presenterLiveRoomId` (per server session) |
 | `captions` | Push live caption text | `remoteMultiplexId` |
 | `videostream` | Drive shared video playback | `remoteMultiplexId` |
 
@@ -195,7 +195,7 @@ Two consequences worth stating plainly, because they are easy to under-estimate:
 
 - **Revocation means invalidating the room id.** Un-sharing a link does
   nothing on its own. Restart the app to mint a new `presenterLiveRoomId` for
-  `bibletext`, or start a new multiplex session for the other four. (Before
+  `bibletext-live`, or start a new multiplex session for the other four. (Before
   the F3 fix this meant rotating `config.key`, which also broke every shared
   link and every published URL.)
 - **The room is LAN-bound by default, but need not be.** Traffic stays on this
@@ -210,13 +210,13 @@ Accepting open collaboration means accepting that participants can change what
 the room displays. It does not extend to letting them escape the room:
 
 - **No code execution.** A participant may set slide *content*, not run script
-  in another viewer's page. The `bibletext` allowlist sanitizer (F3) and the
+  in another viewer's page. The `bibletext-live` allowlist sanitizer (F3) and the
   `presentation.html` CSP both enforce this and remain load-bearing.
 - **No access to anything outside the shared space.** The library, local files,
   app config and the control API stay off-limits — those are T0/T1 boundaries
   and are unaffected by this carve-out.
 - **No leaking the access key.** Room ids must never be derived from
-  `config.key`. `bibletext` once named its room `live-<config.key>`, which put
+  `config.key`. `bibletext-live` (formerly part of `bibletext`) once named its room `live-<config.key>`, which put
   the install's master secret into the socket server's room table — fixed in
   F3; rooms now use a per-session `presenterLiveRoomId`, and the other four
   plugins use the `remoteMultiplexId`. A room id is shared with everyone in the
