@@ -764,7 +764,14 @@ Line-based commands used in slide content. Must be on their own line (except `:n
 
 :hide:                          ← hide slide everywhere
 :hide:handout:                  ← hide in handout only
-:hide:slideshow:                ← hide in slideshow only
+:hide:slideshow:                ← hide everywhere except handout (main, confidence, lowerthirds, notes)
+:hide:main:                     ← hide in the main presentation window only
+:hide:confidence:               ← hide on the confidence monitor only
+:hide:notes:                    ← hide in the notes/teleprompter view only
+:hide:lowerthirds:              ← hide in the lower-thirds output only
+:hide:not:confidence:           ← hide everywhere EXCEPT the confidence monitor
+                                   (pair with :hide:confidence: on a twin slide to
+                                   show a different version on the confidence monitor)
 
 :countdown:from:mm:ss:          ← countdown timer
 :countdown:from:hh:mm:ss:

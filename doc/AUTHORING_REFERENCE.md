@@ -356,7 +356,12 @@ Line-based commands/macros commonly used while authoring:
 | `:nothird:` | Suppress persisted upper/lower-third layout |
 | `:hide:` | Hide the current slide in handout and slideshow views |
 | `:hide:handout:` | Hide the current slide only in handout view |
-| `:hide:slideshow:` | Hide the current slide only in slideshow view |
+| `:hide:slideshow:` | Hide the current slide only in slideshow view (main, confidence monitor, lower-thirds, notes) |
+| `:hide:main:` | Hide the current slide only in the main presentation window |
+| `:hide:confidence:` | Hide the current slide only on the confidence monitor (`?variant=confidencemonitor`) |
+| `:hide:notes:` | Hide the current slide only in the notes/teleprompter view (`?variant=notes`) |
+| `:hide:lowerthirds:` | Hide the current slide only in the lower-thirds output (`?variant=lowerthirds`) |
+| `:hide:not:<target>:` | Hide the current slide everywhere *except* `<target>`, e.g. `:hide:not:confidence:` shows the slide only on the confidence monitor |
 
 ---
 

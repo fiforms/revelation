@@ -8,6 +8,7 @@ export function createMarkdownLineParsers(context) {
   const {
     macros,
     forHandout,
+    renderContext,
     showHiddenSlidesInPreview,
     slideLocalSuppressions,
     parseHideTarget,
@@ -152,8 +153,11 @@ export function createMarkdownLineParsers(context) {
     }
     if (key === 'hide') {
       const hideTarget = parseHideTarget(paramString);
-      const shouldHideSlide = shouldHideCurrentSlide(hideTarget, forHandout);
-      const shouldPreviewHiddenSlide = !forHandout && showHiddenSlidesInPreview && shouldHideCurrentSlide(hideTarget, false);
+      const shouldHideSlide = shouldHideCurrentSlide(hideTarget, renderContext);
+      // Preview always evaluates against the main slideshow pass, regardless of which
+      // variant is actually rendering the builder/admin preview iframe.
+      const shouldPreviewHiddenSlide = !forHandout && showHiddenSlidesInPreview
+        && shouldHideCurrentSlide(hideTarget, { forHandout: false, variant: 'main' });
       if (shouldHideSlide && !shouldPreviewHiddenSlide) {
         applyOperations([enterHiddenSlideOp()]);
         return true;

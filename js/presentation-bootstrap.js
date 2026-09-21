@@ -95,6 +95,12 @@ export async function loadAndPreprocessMarkdown(deck, selectedFile = null) {
     notes: 'notes-teleprompter.css'
   };
   const suppressVisualElements = variant === 'lowerthirds' || variant === 'confidencemonitor';
+  // Maps the URL variant to the :hide: target name a slide's author would write, e.g.
+  // `?variant=confidencemonitor` -> `:hide:confidence:` / `:hide:not:confidence:`.
+  const hideRenderVariant = variant === 'confidencemonitor' ? 'confidence'
+    : variant === 'lowerthirds' ? 'lowerthirds'
+    : variant === 'notes' ? 'notes'
+    : 'main';
 
   // Stamp the active variant onto the DOM so variant-specific CSS can react, e.g. notes or lower-thirds mode.
   if (variant) {
@@ -334,7 +340,8 @@ export async function loadAndPreprocessMarkdown(deck, selectedFile = null) {
     suppressVisualElements,
     appConfig,
     forceControls,
-    perSlideSuppress
+    perSlideSuppress,
+    hideRenderVariant
   );
   if (forceControls) {
     ensureHiddenSlidePreviewStyles();

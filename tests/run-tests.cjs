@@ -202,7 +202,7 @@ function loadCreditCcliMarkdownPreprocessor() {
 function loadMarkdownCompiler(slideCompiler, markdownLineParsers, mediaLineParsers, htmlSanitization, loaderUtils) {
   const filePath = path.join(REVELATION_ROOT, 'js', 'compiler', 'markdown-compiler.js');
   let source = readText(filePath);
-  source = source.replace("import yaml from 'js-yaml';", "const yaml = require('js-yaml');");
+  source = source.replace("import * as yaml from 'js-yaml';", "const yaml = require('js-yaml');");
   source = source.replace("import { createSlideCompiler } from './slide-compiler.js';", 'const { createSlideCompiler } = __imports.slideCompiler;');
   source = source.replace("import { createMarkdownLineParsers } from './markdown-line-parsers.js';", 'const { createMarkdownLineParsers } = __imports.markdownLineParsers;');
   source = source.replace("import { createMediaLineParsers } from './media-line-parsers.js';", 'const { createMediaLineParsers } = __imports.mediaLineParsers;');

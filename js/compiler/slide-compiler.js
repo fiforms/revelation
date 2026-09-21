@@ -54,7 +54,13 @@ export function createSlideCompiler(options = {}) {
   }
 
   function detectAutoSlide(line) {
-    return Boolean(newSlideOnHeading && line.match(/^#{1,3} (?!#)/) && !blankslide);
+    // `blankslide` tracks whether the currently-buffered slide has content yet, so a
+    // heading that opens a fresh slide doesn't also trigger a redundant extra break.
+    // While hidden, content lines are swallowed before they ever update `blankslide`
+    // (see handleHiddenSlide), so it stays stale from before hiding began. Ignoring it
+    // while hidden ensures a heading always ends the hidden run instead of silently
+    // being swallowed along with everything after it.
+    return Boolean(newSlideOnHeading && line.match(/^#{1,3} (?!#)/) && (slideHidden || !blankslide));
   }
 
   function getBreakType(line, autoSlide) {
@@ -106,7 +112,15 @@ export function createSlideCompiler(options = {}) {
 
     const breakLine = getBreakLine(line, autoSlide);
     if (breakLine && currentSlideBreakIndex >= 0) {
-      processedLines[currentSlideBreakIndex] = breakLine;
+      // The surviving separator must reflect the strongest boundary crossed while
+      // skipping over this hidden slide: if either the entry separator (already
+      // written at this index) or the exit separator (breakLine) started a new
+      // column ('***'), the join has to stay a column break. Never downgrade an
+      // existing '***' to '---', or a hidden slide that opens a new column would
+      // silently merge that column into the previous one.
+      if (breakLine === '***' || processedLines[currentSlideBreakIndex] !== '***') {
+        processedLines[currentSlideBreakIndex] = breakLine;
+      }
     }
 
     slideHidden = false;

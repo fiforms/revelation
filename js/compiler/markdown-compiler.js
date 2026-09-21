@@ -42,19 +42,44 @@ import {
   NOTE_SEPARATOR_LEGACY
 } from './compiler-utils.js';
 
+// Named render passes a slide can be selectively hidden from/shown on. 'handout' is the
+// standalone export pass; the rest all compile with forHandout=false and are distinguished
+// only by which runtime variant is rendering (see resolveRenderPassId below).
+const HIDE_TARGET_VALUES = new Set(['handout', 'slideshow', 'main', 'confidence', 'notes', 'lowerthirds']);
+const HIDE_TARGET_PATTERN_SOURCE = '(?:not:)?(?:' + Array.from(HIDE_TARGET_VALUES).join('|') + ')';
+
+// Parses `:hide:<target>:` params into { negate, value }, e.g. `:hide:not:confidence:` ->
+// { negate: true, value: 'confidence' } (hidden everywhere except the confidence monitor).
 function parseHideTarget(rawValue) {
   const normalized = String(rawValue || '').trim().toLowerCase();
-  if (!normalized) return 'both';
-  if (normalized === 'handout' || normalized === 'slideshow') {
-    return normalized;
-  }
-  return null;
+  if (!normalized) return { negate: false, value: 'both' };
+  const negateMatch = normalized.match(/^not:(.+)$/);
+  const negate = Boolean(negateMatch);
+  const value = negate ? negateMatch[1] : normalized;
+  if (!HIDE_TARGET_VALUES.has(value)) return null;
+  return { negate, value };
 }
 
-function shouldHideCurrentSlide(target, forHandout) {
+// Identifies which named pass is currently compiling. Handout is its own pass regardless of
+// variant; every other pass is identified by the runtime `variant` (defaulting to 'main').
+function resolveRenderPassId(renderContext) {
+  if (!renderContext) return 'main';
+  if (renderContext.forHandout) return 'handout';
+  return renderContext.variant || 'main';
+}
+
+function hideTargetMatchesPass(value, passId) {
+  if (value === 'both') return true;
+  if (value === 'handout') return passId === 'handout';
+  if (value === 'slideshow') return passId !== 'handout'; // legacy alias: any non-handout pass
+  return passId === value;
+}
+
+function shouldHideCurrentSlide(target, renderContext) {
   if (!target) return false;
-  if (target === 'both') return true;
-  return forHandout ? target === 'handout' : target === 'slideshow';
+  const passId = resolveRenderPassId(renderContext);
+  const matches = hideTargetMatchesPass(target.value, passId);
+  return target.negate ? !matches : matches;
 }
 
 // Peel YAML front matter off the source document and recover safely from malformed YAML.
@@ -147,7 +172,9 @@ function preExpandUserMacros(md, userMacros) {
  * slide compiler to assemble final per-slide output with sticky state and
  * boundary behavior preserved.
  */
-export function preprocessMarkdown(md, userMacros = {}, forHandout = false, media = {}, newSlideOnHeading = true, mediaIndex = null, preferHigh = null, suppressVisualElements = false, appConfig = null, showHiddenSlidesInPreview = false, perSlideSuppress = null) {
+export function preprocessMarkdown(md, userMacros = {}, forHandout = false, media = {}, newSlideOnHeading = true, mediaIndex = null, preferHigh = null, suppressVisualElements = false, appConfig = null, showHiddenSlidesInPreview = false, perSlideSuppress = null, renderVariant = 'main') {
+  // Identifies which named pass (see HIDE_TARGET_VALUES) is compiling right now, for :hide: targeting.
+  const renderContext = { forHandout, variant: forHandout ? null : (renderVariant || 'main') };
   // Pre-expand user macros before plugins run, so user macros can chain into plugin-defined syntax.
   md = preExpandUserMacros(md, userMacros);
 
@@ -377,6 +404,7 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
   const { tryHandleInlineMacroLine, tryHandleMacroUseLine, tryHandleStickyMetaLine } = createMarkdownLineParsers({
     macros,
     forHandout,
+    renderContext,
     showHiddenSlidesInPreview,
     slideLocalSuppressions,
     parseHideTarget,
@@ -475,6 +503,9 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
     ops: { appendLineOp, addAttributionOp }
   });
 
+  const hideStickyMacroRe = new RegExp(`^\\s*\\{\\{hide(?::${HIDE_TARGET_PATTERN_SOURCE})?\\}\\}\\s*$`, 'i');
+  const hideInlineMacroRe = new RegExp(`^\\s*:hide(?::${HIDE_TARGET_PATTERN_SOURCE})?:\\s*$`, 'i');
+
   // Main compiler scan: process one source line at a time while preserving fence and slide state.
   let slideIdx = 0;
   let skipNextLine = false;
@@ -527,7 +558,7 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
     const trimmedLine = line.trim();
     const isNoteSeparator = trimmedLine.toLowerCase() === NOTE_SEPARATOR_CURRENT || trimmedLine.toLowerCase() === NOTE_SEPARATOR_LEGACY.toLowerCase();
     const isStickyMacro = /^\s*\{\{[^}]+\}\}\s*$/.test(line);
-    const isHideMacro = /^\s*\{\{hide(?::(?:handout|slideshow))?\}\}\s*$/i.test(line) || /^\s*:hide(?::(?:handout|slideshow))?:\s*$/i.test(line);
+    const isHideMacro = hideStickyMacroRe.test(line) || hideInlineMacroRe.test(line);
 
     // In confidence monitor, always suppress sticky macros and sticky background images
     const isStickyBackgroundImage = /!\[background:sticky\]\([^)]*\)/.test(line);
@@ -580,6 +611,16 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
     const autoSlide = compiler.detectAutoSlide(line);
     const hiddenResult = compiler.handleHiddenSlide(line, index, lines.length, autoSlide);
     if (hiddenResult.skipLine) continue;
+    if (hiddenResult.exitedHiddenSlide && autoSlide) {
+      // A heading that ends a hidden run already got its boundary written by
+      // handleHiddenSlide (which rewrote the separator left behind by the discarded
+      // slide). Treat this heading as the first content line of the new slide directly,
+      // rather than also running it through the normal shouldFinalize/finalizeSlide path
+      // below, which would push a second, duplicate separator for the same boundary.
+      compiler.appendLine(line);
+      compiler.markContentLine(line);
+      continue;
+    }
     if (isNoteSeparatorLine) {
       applyOperations([appendLineOp(line)]);
       continue;
