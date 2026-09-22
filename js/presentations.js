@@ -255,7 +255,11 @@ pluginLoader('presentations',`/plugins_${key}`).then(async function() {
         normalizeShareUrl: (url) => {
           try {
             const u = new URL(url);
-            u.searchParams.delete('variant');
+            // The reveal-remote preview panel loads this URL in its own iframe.
+            // Force `remotepreview` (regardless of the presenter's own variant) so it
+            // applies :hide:notes: filtering and keeps native video/audio controls,
+            // without pulling in the full notes-window teleprompter UI.
+            u.searchParams.set('variant', 'remotepreview');
             return u.toString();
           } catch { return url; }
         }

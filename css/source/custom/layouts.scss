@@ -767,3 +767,17 @@ cite.attrib {
         pointer-events: none;
     }
 }
+
+// The reveal-remote preview panel embeds the presentation in a phone-sized iframe, so the
+// confidence-monitor overlay's TV-sized fixed pixel dimensions above are far too large there.
+// Scale it to the iframe's own viewport (vh/vw) instead of a fixed pixel size.
+body[data-variant="remotepreview"] #video-timer-overlay {
+    height: 14vh;
+    font-size: 8vh;
+    line-height: 14vh;
+    padding-right: 3vw;
+
+    .video-timer-label {
+        right: 3vw;
+    }
+}

@@ -3,6 +3,10 @@ export function revealTweaks(deck) {
 
     const isThumbnail = window.location.href.includes('backgroundTransition=none');
     const isFollower = !!new URLSearchParams(window.location.search).get('remoteMultiplexId');
+    // The reveal-remote preview panel is a follower too (it mirrors slide position via
+    // multiplex), but unlike an audience-facing follower display it should keep native
+    // video/audio controls so the presenter can see playback progress.
+    const isNotesPreview = new URLSearchParams(window.location.search).get('variant') === 'remotepreview';
 
     const readyTweaks = () => {
       applyStackAttributes(deck);
@@ -58,10 +62,11 @@ export function revealTweaks(deck) {
     if (!isThumbnail) {
       initBackgroundAudio(deck);
       initCountdowns(deck);
-      if (!isFollower) initFitVideoControls(deck);
+      if (!isFollower || isNotesPreview) initFitVideoControls(deck);
       const params = new URLSearchParams(window.location.search);
       const shouldShowTimer = params.get('variant') === 'confidencemonitor' ||
                              params.get('variant') === 'notes' ||
+                             params.get('variant') === 'remotepreview' ||
                              params.get('builderPreview') === '1';
       if (shouldShowTimer) {
         initConfidenceMonitorVideoTimer(deck);
@@ -835,16 +840,19 @@ function tintStyleSignature(tintStyle) {
 
 export function initVideoSync(deck, remotePlugin) {
   const isFollower = !!new URLSearchParams(window.location.search).get('remoteMultiplexId');
+  const isNotesPreview = new URLSearchParams(window.location.search).get('variant') === 'remotepreview';
 
   if (isFollower) {
-    const stripControls = (slide) => {
-      slide?.querySelectorAll('video').forEach(v => {
-        v.controls = false;
-        v.removeAttribute('controls');
-      });
-    };
-    deck.on('ready', e => stripControls(e.currentSlide));
-    deck.on('slidechanged', e => stripControls(e.currentSlide));
+    if (!isNotesPreview) {
+      const stripControls = (slide) => {
+        slide?.querySelectorAll('video').forEach(v => {
+          v.controls = false;
+          v.removeAttribute('controls');
+        });
+      };
+      deck.on('ready', e => stripControls(e.currentSlide));
+      deck.on('slidechanged', e => stripControls(e.currentSlide));
+    }
 
     remotePlugin.onMessage('video-command', (data) => {
       const indices = deck.getIndices();

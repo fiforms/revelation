@@ -97,9 +97,12 @@ export async function loadAndPreprocessMarkdown(deck, selectedFile = null) {
   const suppressVisualElements = variant === 'lowerthirds' || variant === 'confidencemonitor';
   // Maps the URL variant to the :hide: target name a slide's author would write, e.g.
   // `?variant=confidencemonitor` -> `:hide:confidence:` / `:hide:not:confidence:`.
+  // `remotepreview` (the reveal-remote preview panel) reuses the `notes` hide target so
+  // it honors the same :hide:notes:/:hide:not:notes: directives, without picking up the
+  // rest of the notes-window UI (teleprompter pane, next-slide bar) below.
   const hideRenderVariant = variant === 'confidencemonitor' ? 'confidence'
     : variant === 'lowerthirds' ? 'lowerthirds'
-    : variant === 'notes' ? 'notes'
+    : (variant === 'notes' || variant === 'remotepreview') ? 'notes'
     : 'main';
 
   // Stamp the active variant onto the DOM so variant-specific CSS can react, e.g. notes or lower-thirds mode.
