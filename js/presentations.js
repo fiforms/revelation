@@ -31,6 +31,13 @@ const builderPreviewToken = urlParams.get('builderPreviewToken') || '';
 const PREVIEW_BRIDGE = 'revelation-builder-preview-bridge';
 const SAFE_MD_LINK_RE = /^(?:\.\/)?(?:[a-zA-Z0-9_.-]+\/)*[a-zA-Z0-9_.-]+\.md$/;
 
+// 'notes' (split view) and 'notesteleprompter' (teleprompter-only) both drive the
+// speaker-notes pane, auto-scroll, and next-slide preview UI in this file.
+function isNotesFamilyVariant() {
+  const variant = document.body.dataset.variant;
+  return variant === 'notes' || variant === 'notesteleprompter';
+}
+
 function setupBuilderPreviewBridge(deck) {
   if (!builderPreviewMode) return;
   if (!builderPreviewToken) return;
@@ -332,7 +339,7 @@ pluginLoader('presentations',`/plugins_${key}`).then(async function() {
   }
 
   function scheduleNotesAutoScroll() {
-    if (document.body.dataset.variant !== 'notes') return;
+    if (!isNotesFamilyVariant()) return;
     if (document.body.classList.contains('notes-pane-hidden')) return;
     const contextKey = getNotesContextKey();
     const hasActiveScrollCycle = !!(notesScrollStartTimer || notesScrollReadyTimer || notesScrollRaf);
@@ -629,22 +636,56 @@ pluginLoader('presentations',`/plugins_${key}`).then(async function() {
     return '';
   }
 
+  // Reveal's Notes plugin overwrites .speaker-notes' innerHTML on every update, so
+  // this has to be re-appended each time rather than added once. In teleprompter
+  // mode the next-slide preview tile floats over the bottom-right of the (full-width)
+  // notes pane, which can otherwise permanently cover the last lines of long notes —
+  // this spacer guarantees there's always enough scroll room to clear it.
+  //
+  // Reveal dispatches 'slidechanged' BEFORE it calls notes.update() internally, so
+  // appending the spacer from our own 'slidechanged' handler would just get wiped
+  // out moments later when the innerHTML is replaced. A MutationObserver sidesteps
+  // that ordering problem by reacting to the innerHTML replacement itself.
+  let teleprompterNotesObserver = null;
+  function ensureTeleprompterScrollSpacer(notesPane) {
+    if (notesPane.lastElementChild?.classList.contains('notes-scroll-spacer')) return;
+    const spacer = document.createElement('div');
+    spacer.className = 'notes-scroll-spacer';
+    notesPane.appendChild(spacer);
+  }
+  function setupTeleprompterScrollSpacer() {
+    if (document.body.dataset.variant !== 'notesteleprompter') return;
+    if (teleprompterNotesObserver) return;
+    const notesPane = document.querySelector('.reveal .speaker-notes');
+    if (!notesPane) return;
+    ensureTeleprompterScrollSpacer(notesPane);
+    teleprompterNotesObserver = new MutationObserver(() => ensureTeleprompterScrollSpacer(notesPane));
+    teleprompterNotesObserver.observe(notesPane, { childList: true });
+  }
+
   function updateNotesPaneVisibility() {
-    if (document.body.dataset.variant !== 'notes') return;
+    if (!isNotesFamilyVariant()) return;
     const showNotesEnabled = !!deck.getConfig?.().showNotes;
     if (!showNotesEnabled) {
       cancelNotesAutoScroll();
       return;
     }
+    // Teleprompter has no slide area to expand into when notes are absent, so keep
+    // the pane on screen at all times (it falls back to Reveal's own "No notes on
+    // this slide." placeholder) rather than hiding it like the split-view does.
+    const isTeleprompter = document.body.dataset.variant === 'notesteleprompter';
+    if (isTeleprompter) setupTeleprompterScrollSpacer();
     const hasNotes = currentSlideHasNotes();
     const isHeadingOnly = hasNotes && currentSlideNotesIsOnlyHeading();
-    const shouldHide = !hasNotes || isHeadingOnly || !!deck.isOverview?.();
+    const shouldHide = isTeleprompter
+      ? !!deck.isOverview?.()
+      : (!hasNotes || isHeadingOnly || !!deck.isOverview?.());
     const changed = document.body.classList.contains('notes-pane-hidden') !== shouldHide;
     document.body.classList.toggle('notes-pane-hidden', shouldHide);
 
     const headingDisplayEl = document.getElementById('notes-heading-display');
     if (headingDisplayEl) {
-      if (isHeadingOnly && !deck.isOverview?.()) {
+      if (!isTeleprompter && isHeadingOnly && !deck.isOverview?.()) {
         const headingHTML = getCurrentSlideHeadingNoteHTML();
         headingDisplayEl.innerHTML = headingHTML;
         document.body.classList.add('notes-heading-only');
@@ -669,13 +710,13 @@ pluginLoader('presentations',`/plugins_${key}`).then(async function() {
   }
 
   function getNotesViewportMode() {
-    if (document.body.dataset.variant !== 'notes') return 'off';
+    if (!isNotesFamilyVariant()) return 'off';
     const viewportWidth = window.innerWidth || document.documentElement?.clientWidth || 0;
     return viewportWidth <= NOTES_LAYOUT_BREAKPOINT_PX ? 'narrow' : 'wide';
   }
 
   function refreshNotesLayoutAfterViewportChange() {
-    if (document.body.dataset.variant !== 'notes') return;
+    if (!isNotesFamilyVariant()) return;
     const nextMode = getNotesViewportMode();
     const modeChanged = nextMode !== notesViewportMode;
     notesViewportMode = nextMode;
@@ -697,7 +738,7 @@ pluginLoader('presentations',`/plugins_${key}`).then(async function() {
   // --- Next Slide Preview (notes variant) ---
 
   function setupNextSlidePreview() {
-    if (document.body.dataset.variant !== 'notes') return null;
+    if (!isNotesFamilyVariant()) return null;
 
     const previewEl = document.createElement('div');
     previewEl.id = 'notes-next-preview';
@@ -923,7 +964,7 @@ pluginLoader('presentations',`/plugins_${key}`).then(async function() {
   // them to Reveal. This covers the gap before beginAnimation's keydown listener
   // is active (3-second delay, no-overflow slides, etc.).
   // Capture phase so we beat the browser's default scroll-the-focused-div behaviour.
-  if (document.body.dataset.variant === 'notes') {
+  if (isNotesFamilyVariant()) {
     document.addEventListener('keydown', (e) => {
       // Only act when the focused element is inside the notes pane.
       if (!document.activeElement?.closest?.('.speaker-notes')) return;

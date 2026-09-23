@@ -67,6 +67,7 @@ export function revealTweaks(deck) {
       const shouldShowTimer = params.get('variant') === 'confidencemonitor' ||
                              params.get('variant') === 'notes' ||
                              params.get('variant') === 'remotepreview' ||
+                             params.get('variant') === 'notesteleprompter' ||
                              params.get('builderPreview') === '1';
       if (shouldShowTimer) {
         initConfidenceMonitorVideoTimer(deck);

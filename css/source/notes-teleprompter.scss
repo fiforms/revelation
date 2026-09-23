@@ -160,6 +160,58 @@ body.notes-heading-only.has-next-preview .notes-heading-display {
   height: var(--notes-preview-height);
 }
 
+/* --- Teleprompter-only layout (notesteleprompter variant) ---
+ * Hides the current slide entirely and expands the speaker-notes pane to
+ * fill the screen, so this screen can run standalone alongside a separate
+ * confidence-monitor/normal screen instead of splitting one display.
+ */
+
+/* Hide only the slide/background content — the container itself stays
+ * overflow:visible (reveal.js's own default) so the speaker-notes pane,
+ * which is positioned absolutely relative to this container, isn't clipped. */
+body[data-variant="notesteleprompter"] .reveal.show-notes > .slides,
+body[data-variant="notesteleprompter"] .reveal.show-notes > .backgrounds {
+  visibility: hidden;
+}
+
+body[data-variant="notesteleprompter"] .reveal.show-notes .speaker-notes {
+  left: 0;
+  width: 100vw !important;
+  /* Fully opaque — unlike the split view, there's no slide showing alongside this
+   * pane, so the translucent dark tint would otherwise let the hidden slide bleed
+   * through faintly. */
+  background: #0a0a0a !important;
+}
+
+body[data-variant="notesteleprompter"].notes-pane-hidden .reveal.show-notes .speaker-notes {
+  opacity: 0;
+}
+
+/* Guarantees enough scroll room to clear the next-slide preview tile, which
+ * floats over the bottom-right corner of the pane and would otherwise
+ * permanently cover the last lines of long notes. */
+body[data-variant="notesteleprompter"] .notes-scroll-spacer {
+  display: block;
+  width: 100%;
+  height: calc(var(--notes-preview-height) * 0.75 + 2rem);
+  flex-shrink: 0;
+}
+
+/* Keep the next-slide preview a compact corner tile regardless of whether the
+ * notes pane is currently hidden — there's no main slide column to size against.
+ * Placed in the bottom-right (rather than the split view's bottom-left) and
+ * shrunk another 25%, since it's just a glance-reference here, not a primary
+ * layout element. */
+body[data-variant="notesteleprompter"].has-next-preview:not(.notes-pane-hidden) .notes-next-preview,
+body[data-variant="notesteleprompter"].has-next-preview.notes-pane-hidden .notes-next-preview {
+  left: auto;
+  right: 0;
+  width: calc(var(--notes-preview-width-hidden) * 0.75);
+  height: calc(var(--notes-preview-height) * 0.75);
+  border-right: 0;
+  border-left: 1px solid rgba(255, 255, 255, 0.12);
+}
+
 @media screen and (max-width: 1024px) {
   .reveal.show-notes {
     max-width: none !important;
@@ -212,5 +264,16 @@ body.notes-heading-only.has-next-preview .notes-heading-display {
   /* Narrow: hide heading display */
   .notes-heading-display {
     display: none !important;
+  }
+
+  /* Teleprompter-only: no split slide column, so notes fill the full viewport
+   * even in narrow mode. */
+  body[data-variant="notesteleprompter"] .reveal.show-notes {
+    margin-top: 0;
+  }
+
+  body[data-variant="notesteleprompter"] .reveal.show-notes .speaker-notes {
+    top: 0;
+    height: 100dvh;
   }
 }

@@ -92,17 +92,18 @@ export async function loadAndPreprocessMarkdown(deck, selectedFile = null) {
     confidencemonitor: 'confidencemonitor.css'
   };
   const variantExtraStylesheetMap = {
-    notes: 'notes-teleprompter.css'
+    notes: 'notes-teleprompter.css',
+    notesteleprompter: 'notes-teleprompter.css'
   };
   const suppressVisualElements = variant === 'lowerthirds' || variant === 'confidencemonitor';
   // Maps the URL variant to the :hide: target name a slide's author would write, e.g.
   // `?variant=confidencemonitor` -> `:hide:confidence:` / `:hide:not:confidence:`.
-  // `remotepreview` (the reveal-remote preview panel) reuses the `notes` hide target so
-  // it honors the same :hide:notes:/:hide:not:notes: directives, without picking up the
-  // rest of the notes-window UI (teleprompter pane, next-slide bar) below.
+  // `remotepreview` (the reveal-remote preview panel) and `notesteleprompter` (the
+  // notes-only teleprompter screen) reuse the `notes` hide target so they honor the
+  // same :hide:notes:/:hide:not:notes: directives as the split-view notes screen.
   const hideRenderVariant = variant === 'confidencemonitor' ? 'confidence'
     : variant === 'lowerthirds' ? 'lowerthirds'
-    : (variant === 'notes' || variant === 'remotepreview') ? 'notes'
+    : (variant === 'notes' || variant === 'remotepreview' || variant === 'notesteleprompter') ? 'notes'
     : 'main';
 
   // Stamp the active variant onto the DOM so variant-specific CSS can react, e.g. notes or lower-thirds mode.
@@ -389,9 +390,12 @@ export async function loadAndPreprocessMarkdown(deck, selectedFile = null) {
     }
     */
   }
-  if (variant === 'notes') {
+  if (variant === 'notes' || variant === 'notesteleprompter') {
     config.showNotes = true;
-    config.controls = true;
+    // The split view still shows the slide, so its nav arrows make sense there.
+    // Teleprompter hides the slide entirely, so the arrows would float over the
+    // notes pane with nothing to point at — keep them off.
+    config.controls = variant !== 'notesteleprompter';
   }
   if (forceControls) {
     config.controls = true;

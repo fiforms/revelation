@@ -25,7 +25,9 @@ const SCREEN_TYPE_VARIANTS = [
   { value: '', label: 'Normal' },
   { value: 'lowerthirds', label: 'Lower Thirds' },
   { value: 'confidencemonitor', label: 'Confidence Monitor' },
-  { value: 'notes', label: 'Notes' }
+  { value: 'notes', label: 'Notes (Split View)' },
+  { value: 'remotepreview', label: 'Notes (Slide Preview)' },
+  { value: 'notesteleprompter', label: 'Notes (Teleprompter)' }
 ];
 
 if(!url_key) {

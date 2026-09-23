@@ -37,7 +37,9 @@ export function formatVariantName(variant) {
   if (!variant) return t('Normal');
   if (variant === 'lowerthirds') return 'Lower Thirds';
   if (variant === 'confidencemonitor') return 'Confidence Monitor';
-  if (variant === 'notes') return 'Notes';
+  if (variant === 'notes') return 'Notes (Split View)';
+  if (variant === 'remotepreview') return 'Notes (Slide Preview)';
+  if (variant === 'notesteleprompter') return 'Notes (Teleprompter)';
   return variant;
 }
 
