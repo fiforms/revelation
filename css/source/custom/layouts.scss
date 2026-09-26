@@ -313,6 +313,20 @@ body.reveal-ready {
     height: calc(100% + 2 * var(--reveal-margin-px-v, 0px));
   }
 
+  // Lower-third's padding-bottom enlarges the section's padding box, which
+  // absolute fit/fill media size against; subtract it so media stays on-slide.
+  section[data-lower-third] img[data-imagefill],
+  section[data-lower-third] video[data-imagefill] {
+    height: calc(100% - 2em);
+    bottom: 2em;
+  }
+
+  section[data-lower-third] img[data-imagefit-fill],
+  section[data-lower-third] video[data-imagefit-fill] {
+    height: calc(100% - 2em + 2 * var(--reveal-margin-px-v, 0px));
+    bottom: calc(2em - var(--reveal-margin-px-v, 0px));
+  }
+
   section:has(iframe.youtube-fit) {
     position: relative;
     height: 100%;
