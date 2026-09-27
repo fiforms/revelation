@@ -72,17 +72,26 @@ part of the model, not a gap in it.
 ## Enforcement mechanisms in use
 
 - **Loopback check** — `isLoopbackAddress(req.socket.remoteAddress)` in
-  [`../vite.plugins.js`](../vite.plugins.js). Used for `/admin`,
-  `/peer/status`, `/peer/command`, `*/index.json`, and the sandbox-origin gate.
+  [`../peer-server.js`](../peer-server.js). Used for `/admin`,
+  `/peer/status`, `*/index.json`, and the sandbox-origin gate. Commands to
+  followers are not sent over HTTP at all: the main process hands them to the
+  Vite process over `parentPort`, so no web page can reach that path.
 - **Secret in the URL path** — `/presentations_<key>/`, `/plugins_<key>/`,
   `/thumbs_<key>/`, `/publish/<publishKey>.html`, `/media-share/<token>`.
   Not enumerable: `serve-static` does not emit directory listings and
   `index: false` is set on the presentations mount.
-- **PIN + lockout** — `enforcePairingPin()`: fail-closed, 3 failures per
-  remote address, 60 s block, `timingSafeEqual` comparison.
+- **PIN + lockout** — `enforcePairingPin()` in [`../peer-server.js`](../peer-server.js):
+  fail-closed, 3 failures per remote address, 60 s block, `timingSafeEqual`
+  comparison. Guards enrollment (`/peer/pair`) only.
+- **Follower key signatures** — after enrollment the master stores each
+  follower's peer public key (`peer-followers.json`). `/peer/socket-info` and
+  `/peer/challenge` need a follower signature over a master-issued, single-use,
+  HMAC-authenticated nonce. The PIN is never sent again, and followers are
+  revoked one at a time from Settings.
 - **RSA challenge/response** — the `/peer-commands` Socket.IO namespace requires
   a server-signed `token:expiresAt:socketPath` bearer payload, using the
-  dedicated peer keypair and a domain-separated signature.
+  dedicated peer keypair and a domain-separated signature. Tokens are
+  server-issued and bound to the follower they were issued to.
 - **Feature flag** — the whole `/peer/*` tree 403s unless
   `config.mdnsPublish === true`.
 - **Bind address** — in `localhost` mode Vite is started without `--host`, so
@@ -102,14 +111,16 @@ part of the model, not a gap in it.
 | `/thumbs_<key>/**` | T1 | key in path — **spawns ffmpeg** (F6, open) |
 | `**/index.json` | T0 | loopback |
 | `/admin/**` | T0 | loopback |
-| `/peer/status`, `/peer/command` | T0 | loopback + `mdnsPublish` |
+| `/peer/status` | T0 | loopback + `mdnsPublish` |
 | `/peer/public-key` | T3 | `mdnsPublish` only — public by design, same data mDNS broadcasts |
-| `/peer/socket-info`, `/peer/challenge` | T4 | `mdnsPublish` + PIN (fail-closed, 3-strike lockout) |
+| `/peer/auth-nonce` | T3 | `mdnsPublish` only — stateless HMAC nonce, no data |
+| `/peer/pair` | T3→T4 | `mdnsPublish` + PIN (fail-closed, 3-strike lockout) |
+| `/peer/socket-info`, `/peer/challenge` | T4 | `mdnsPublish` + enrolled follower key signature over a single-use nonce |
 | `/publish/<publishKey>.html` | T2 | 64-bit key in filename |
 | `/media-share/<token>` | T2 | 192-bit token |
 | `/_remote/ui/**` | T3 | none (static UI only) |
 | `/socket.io` (Reveal Remote) | T3 | none; per-channel UUID | 
-| `/peer-commands` | T4 | RSA bearer |
+| `/peer-commands` | T4 | RSA bearer, token bound to an enrolled follower |
 | `/presenter-plugins-socket` | T2c | room id only — **open by design**, see [the collaboration carve-out](#open-collaboration-plugins--accepted-design) |
 | `http://127.0.0.1:8900/api/**` | T0 + key | loopback bind + `key` |
 

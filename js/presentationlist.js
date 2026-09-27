@@ -361,6 +361,8 @@ const infoPanel = optionsDropdown
       onPeerEvent(event) {
         if (event.type === 'follower-connected') {
           showToast(`Follower connected: ${event.hostname || event.instanceName || event.remoteAddress || 'unknown'}`);
+        } else if (event.type === 'follower-paired') {
+          showToast(`Follower paired: ${event.instanceName || event.instanceId || event.remoteAddress || 'unknown'}`);
         } else if (event.type === 'pin-lockout') {
           const ip = String(event.remoteAddress || 'unknown');
           const retryAfterSec = Number.parseInt(event.retryAfterSec, 10);

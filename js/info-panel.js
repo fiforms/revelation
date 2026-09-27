@@ -48,7 +48,8 @@ export function formatVariantName(variant) {
  * @param {() => object} getConfig  - Returns the current app config object.
  * @param {object} [options]
  * @param {function} [options.onPeerEvent] - Called with each peer event object
- *   (types: 'follower-connected', 'pin-lockout'). Optional.
+ *   (types: 'follower-connected', 'follower-paired', 'pin-lockout',
+ *   'followers-forgotten'). Optional.
  */
 export function createInfoPanel(dropdownEl, getConfig, options = {}) {
   const PEER_STATUS_ENDPOINT = '/peer/status';
@@ -125,6 +126,20 @@ export function createInfoPanel(dropdownEl, getConfig, options = {}) {
 
   // ── Rendering ──────────────────────────────────────────────────────────────
 
+  // Labels are peer-supplied (instance names, hostnames), so never as HTML.
+  function renderLabelList(listEl, labels) {
+    listEl.replaceChildren();
+    if (!labels.length) {
+      listEl.textContent = t('None');
+      return;
+    }
+    labels.forEach((label) => {
+      const div = document.createElement('div');
+      div.textContent = label;
+      listEl.appendChild(div);
+    });
+  }
+
   function renderFollowersRow() {
     if (!isMasterMode()) {
       if (followersRow) followersRow.style.display = 'none';
@@ -133,9 +148,7 @@ export function createInfoPanel(dropdownEl, getConfig, options = {}) {
     ensureFollowersRow();
     followersRow.style.display = 'block';
     followersRow.querySelector('strong').textContent = t('Active Followers:');
-    followersListEl.innerHTML = peerStatusActiveFollowers.length
-      ? peerStatusActiveFollowers.slice(0, 8).map((e) => `<div>${buildFollowerLabel(e)}</div>`).join('')
-      : t('None');
+    renderLabelList(followersListEl, peerStatusActiveFollowers.slice(0, 8).map(buildFollowerLabel));
   }
 
   function renderMastersRow() {
@@ -146,9 +159,7 @@ export function createInfoPanel(dropdownEl, getConfig, options = {}) {
     ensureMastersRow();
     mastersRow.style.display = 'block';
     mastersRow.querySelector('strong').textContent = t('Active Masters:');
-    mastersListEl.innerHTML = activeMasters.length
-      ? activeMasters.slice(0, 8).map((e) => `<div>${buildMasterLabel(e)}</div>`).join('')
-      : t('None');
+    renderLabelList(mastersListEl, activeMasters.slice(0, 8).map(buildMasterLabel));
   }
 
   // ── Polling ────────────────────────────────────────────────────────────────

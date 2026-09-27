@@ -117,7 +117,6 @@ If you run the **Electron GUI** with a reverse proxy in front of it (unusual), a
 | Path | Risk if exposed |
 |------|----------------|
 | `/peer/status` | Exposes the list of connected follower devices |
-| `/peer/command` | Allows broadcasting arbitrary commands to all followers |
 | `/admin` | Exposes the admin UI (static files, but intended for local use only) |
 
 ---
@@ -125,7 +124,7 @@ If you run the **Electron GUI** with a reverse proxy in front of it (unusual), a
 nginx block to add in this scenario:
 
 ```nginx
-location ~ ^/(peer/status|peer/command|admin) {
+location ~ ^/(peer/status|admin) {
     deny all;
     return 403;
 }
@@ -134,6 +133,6 @@ location ~ ^/(peer/status|peer/command|admin) {
 Caddy equivalent:
 
 ```caddy
-@blocked path /peer/status /peer/command /admin*
+@blocked path /peer/status /admin*
 respond @blocked 403
 ```

@@ -7,6 +7,7 @@ const serveStatic = require('serve-static');
 const { Server } = require('socket.io');
 const { v4: uuidv4 } = require('uuid');
 const { toDataURL: qrToDataURL } = require('qrcode');
+const { createPeerServer, isLoopbackAddress, normalizeRemoteAddress } = require('./peer-server.js');
 
 function getLocalIpAddress() {
   const interfaces = os.networkInterfaces();
@@ -24,27 +25,12 @@ const localIp = getLocalIpAddress(); // Gets the LAN IP
 
 const baseDir = __dirname;
 const prefix = 'presentations_';
-const PEER_SOCKET_PATH = '/peer-commands';
-// Bumped when the peer wire protocol changes incompatibly. v1 introduced the
-// dedicated peer keypair and domain-separated signatures (doc/SECURITY.md F2);
-// masters that advertise no version sign with the legacy shared WordPress key
-// and followers must refuse to pair with them.
-const PEER_PROTOCOL_VERSION = 1;
 const PRESENTER_PLUGINS_SOCKET_PATH = '/presenter-plugins-socket';
-let peerCommandIo = null;
 let presenterPluginsIo = null;
 let revealRemoteIo = null;
 const revealRemoteStates = {};
 const revealRemoteMultiplexes = {};
 const revealRemoteHashsecret = uuidv4();
-const PIN_FAILURE_LIMIT = 3;
-const PIN_BLOCK_MS = 60_000;
-const peerPinFailures = new Map();
-const PEER_EVENT_LIMIT = 200;
-let peerEventSeq = 0;
-const peerEventLog = [];
-const peerActiveFollowers = new Map();
-const peerSeenFollowers = new Map();
 
 let presentationsWebPath = '';
 let presentationsDir = '';
@@ -71,6 +57,8 @@ if (process.parentPort) {
       }
     } else if (data.type === 'revoke-media-token') {
       if (typeof data.token === 'string') dynamicMediaFiles.delete(data.token);
+    } else {
+      peerServer.handleParentMessage(data);
     }
   });
 }
@@ -129,6 +117,15 @@ const localIndexFile = isGuiMode && userDataDir
   ? path.join(userDataDir, '.revelation-cache', 'presentations-index.json')
   : '';
 const outputFile = localIndexFile || sharedIndexFile;
+
+// Master side of the peer protocol. See peer-server.js.
+const peerServer = createPeerServer({
+  configPath: userDataDir ? path.join(userDataDir, 'config.json') : null,
+  followersPath: userDataDir ? path.join(userDataDir, 'peer-followers.json') : null,
+  postToParent(message) {
+    process.parentPort?.postMessage(message);
+  }
+});
 const INDEX_REBUILD_DEBOUNCE_MS = 1200;
 
 const readmePresDir = path.join(presentationsDir, 'readme');
@@ -487,7 +484,6 @@ function presentationIndexPlugin() {
       const cssServeDir = isGui ? path.resolve(__dirname, 'dist/css') : path.resolve(__dirname, 'css');
       const revealDistDir = path.resolve(__dirname, 'node_modules/reveal.js/dist');
       const userDataDir = process.env.USER_DATA_DIR;
-      const configPath = userDataDir ? path.join(userDataDir, 'config.json') : null;
 
       if(!isGui) {
         copyFonts();
@@ -717,158 +713,11 @@ function presentationIndexPlugin() {
       });
 
       // Peer pairing + peer command endpoints (served from the same Vite server)
-      ensurePeerCommandServer(server, configPath);
+      peerServer.attachSocketServer(server.httpServer);
       ensurePresenterPluginsServer(server);
       ensureRevealRemoteServer(server);
       server.middlewares.use('/_remote/ui', serveStatic(path.resolve(__dirname, 'node_modules/reveal.js-remote/server-ui'), { fallthrough: true }));
-      server.middlewares.use((req, res, next) => {
-        if (!req.url?.startsWith('/peer/')) return next();
-
-        const config = loadPeerConfig(configPath);
-        if (!config) {
-          res.writeHead(500, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: 'Peer config unavailable' }));
-          return;
-        }
-        if (config.mdnsPublish !== true) {
-          res.writeHead(403, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: 'Peer endpoints disabled (mDNS publishing off)' }));
-          return;
-        }
-
-        const parsedUrl = new URL(req.url, 'http://localhost');
-        const remoteAddress = normalizeRemoteAddress(req.socket?.remoteAddress);
-
-        if (req.method === 'GET' && parsedUrl.pathname === '/peer/status') {
-          if (!isLoopbackAddress(req.socket?.remoteAddress)) {
-            res.writeHead(403, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: 'Forbidden' }));
-            return;
-          }
-          const status = getPeerStatus(parsedUrl.searchParams.get('since'));
-          res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify(status));
-          return;
-        }
-
-        if (req.method === 'GET' && req.url === '/peer/public-key') {
-          // Serves the peer identity only. The WordPress keypair
-          // (config.rsaPublicKey) is deliberately never published here.
-          const publicKey = config.peerRsaPublicKey;
-          const payload = {
-            instanceId: config.mdnsInstanceId,
-            instanceName: config.mdnsInstanceName,
-            hostname: os.hostname(),
-            peerProtocol: PEER_PROTOCOL_VERSION,
-            publicKey,
-            publicKeyFingerprint: fingerprintPublicKey(publicKey || '')
-          };
-          res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify(payload));
-          return;
-        }
-
-        if (req.method === 'GET' && parsedUrl.pathname === '/peer/socket-info') {
-          if (!config.peerRsaPrivateKey) {
-            res.writeHead(500, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: 'Peer private key unavailable' }));
-            return;
-          }
-          if (enforcePairingPin(config, parsedUrl.searchParams.get('pin'), remoteAddress, res)) {
-            return;
-          }
-          const token = crypto.randomBytes(16).toString('hex');
-          const expiresAt = Date.now() + 60_000;
-          const socketPath = PEER_SOCKET_PATH;
-          const payload = buildSocketPayload(token, expiresAt, socketPath);
-          const signature = signPeerSocketPayload(config.peerRsaPrivateKey, payload);
-          const protocol = req.socket?.encrypted ? 'https' : 'http';
-          const socketUrl = `${protocol}://${req.headers.host}`;
-
-          res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ socketUrl, socketPath, token, expiresAt, signature }));
-          return;
-        }
-
-        if (req.method === 'POST' && parsedUrl.pathname === '/peer/command') {
-          if (!peerCommandIo) {
-            res.writeHead(500, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: 'Peer command server unavailable' }));
-            return;
-          }
-          if (!isLoopbackAddress(req.socket?.remoteAddress)) {
-            res.writeHead(403, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: 'Forbidden' }));
-            return;
-          }
-
-          let body = '';
-          req.on('data', (chunk) => {
-            body += chunk.toString();
-          });
-          req.on('end', () => {
-            let data;
-            try {
-              data = JSON.parse(body || '{}');
-            } catch {
-              res.writeHead(400, { 'Content-Type': 'application/json' });
-              res.end(JSON.stringify({ error: 'Invalid JSON' }));
-              return;
-            }
-            const command = data.command;
-            if (!command?.type) {
-              res.writeHead(400, { 'Content-Type': 'application/json' });
-              res.end(JSON.stringify({ error: 'Missing command type' }));
-              return;
-            }
-
-            peerCommandIo.emit('peer-command', command);
-            res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ success: true }));
-          });
-          return;
-        }
-
-        if (req.method === 'POST' && req.url === '/peer/challenge') {
-          let body = '';
-          req.on('data', (chunk) => {
-            body += chunk.toString();
-          });
-          req.on('end', () => {
-            let data;
-            try {
-              data = JSON.parse(body || '{}');
-            } catch {
-              res.writeHead(400, { 'Content-Type': 'application/json' });
-              res.end(JSON.stringify({ error: 'Invalid JSON' }));
-              return;
-            }
-            const challenge = data.challenge;
-            if (enforcePairingPin(config, data.pin, remoteAddress, res)) {
-              return;
-            }
-            if (!challenge || !config.peerRsaPrivateKey) {
-              res.writeHead(400, { 'Content-Type': 'application/json' });
-              res.end(JSON.stringify({ error: 'Missing challenge or private key' }));
-              return;
-            }
-            try {
-              // Domain-separated: the caller's bytes are hashed under a peer
-              // protocol prefix, never signed directly. See doc/SECURITY.md (F2).
-              const signature = signPeerChallenge(config.peerRsaPrivateKey, challenge);
-              res.writeHead(200, { 'Content-Type': 'application/json' });
-              res.end(JSON.stringify({ signature, peerProtocol: PEER_PROTOCOL_VERSION }));
-            } catch (err) {
-              res.writeHead(500, { 'Content-Type': 'application/json' });
-              res.end(JSON.stringify({ error: err.message }));
-            }
-          });
-          return;
-        }
-
-        res.writeHead(404, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'Not found' }));
-      });
+      server.middlewares.use(peerServer.middleware);
 
       // Restrict access to presentation/media indexes to localhost only
       server.middlewares.use((req, res, next) => {
@@ -1052,241 +901,6 @@ function copyFonts() {
   */
 }
 
-function loadPeerConfig(configPath) {
-  if (!configPath || !fs.existsSync(configPath)) return null;
-  try {
-    return JSON.parse(fs.readFileSync(configPath, 'utf-8'));
-  } catch {
-    return null;
-  }
-}
-
-function normalizeRemoteAddress(address) {
-  if (!address) return 'unknown';
-  return address.startsWith('::ffff:') ? address.replace('::ffff:', '') : address;
-}
-
-function normalizePeerInstanceId(value) {
-  const id = String(value || '').trim();
-  return id || 'unknown';
-}
-
-function normalizePeerLabel(value) {
-  const label = String(value || '').trim();
-  return label || '';
-}
-
-function recordPeerEvent(type, payload = {}) {
-  peerEventSeq += 1;
-  peerEventLog.push({
-    id: peerEventSeq,
-    type,
-    at: new Date().toISOString(),
-    ...payload
-  });
-  if (peerEventLog.length > PEER_EVENT_LIMIT) {
-    peerEventLog.splice(0, peerEventLog.length - PEER_EVENT_LIMIT);
-  }
-  return peerEventSeq;
-}
-
-function upsertSeenFollower(instanceId, remoteAddress) {
-  const key = instanceId !== 'unknown' ? `instance:${instanceId}` : `ip:${remoteAddress}`;
-  const now = new Date().toISOString();
-  const existing = peerSeenFollowers.get(key);
-  if (existing) {
-    existing.lastSeen = now;
-    existing.remoteAddress = remoteAddress;
-    existing.connectionCount += 1;
-    return existing;
-  }
-  const created = {
-    key,
-    instanceId,
-    remoteAddress,
-    firstSeen: now,
-    lastSeen: now,
-    connectionCount: 1
-  };
-  peerSeenFollowers.set(key, created);
-  return created;
-}
-
-function getPeerStatus(sinceId = 0) {
-  const parsedSince = Number.parseInt(sinceId, 10);
-  const safeSince = Number.isFinite(parsedSince) && parsedSince > 0 ? parsedSince : 0;
-  const events = safeSince
-    ? peerEventLog.filter((entry) => entry.id > safeSince)
-    : [];
-  const activeFollowers = Array.from(peerActiveFollowers.values())
-    .sort((a, b) => String(a.connectedAt).localeCompare(String(b.connectedAt)));
-  const seenFollowers = Array.from(peerSeenFollowers.values())
-    .sort((a, b) => String(b.lastSeen).localeCompare(String(a.lastSeen)));
-  return {
-    activeFollowers,
-    seenFollowers,
-    events,
-    lastEventId: peerEventSeq
-  };
-}
-
-function getPinFailureState(remoteAddress) {
-  const now = Date.now();
-  const current = peerPinFailures.get(remoteAddress);
-  if (!current) {
-    return { failures: 0, blockedUntil: 0 };
-  }
-  if (current.blockedUntil && current.blockedUntil <= now) {
-    peerPinFailures.delete(remoteAddress);
-    return { failures: 0, blockedUntil: 0 };
-  }
-  return current;
-}
-
-function registerPinFailure(remoteAddress) {
-  const current = getPinFailureState(remoteAddress);
-  const failures = (current.failures || 0) + 1;
-  if (failures >= PIN_FAILURE_LIMIT) {
-    const blockedUntil = Date.now() + PIN_BLOCK_MS;
-    const next = { failures: 0, blockedUntil };
-    peerPinFailures.set(remoteAddress, next);
-    return next;
-  }
-  const next = { failures, blockedUntil: 0 };
-  peerPinFailures.set(remoteAddress, next);
-  return next;
-}
-
-function clearPinFailures(remoteAddress) {
-  if (!remoteAddress) return;
-  peerPinFailures.delete(remoteAddress);
-}
-
-function pinBlockedResponse(state) {
-  const retryAfterSec = Math.max(1, Math.ceil((state.blockedUntil - Date.now()) / 1000));
-  return { retryAfterSec };
-}
-
-function timingSafeEqualString(a, b) {
-  const bufA = Buffer.from(String(a ?? ''), 'utf8');
-  const bufB = Buffer.from(String(b ?? ''), 'utf8');
-  // Length is not hidden, but the PIN is a fixed 6 digits and three wrong
-  // guesses trigger a 60s lockout, so that leak carries no useful signal.
-  if (bufA.length !== bufB.length) return false;
-  return crypto.timingSafeEqual(bufA, bufB);
-}
-
-// Gate a pairing request on the PIN. Returns true when the request has already
-// been answered and the caller must stop; false to continue.
-//
-// Fails CLOSED. The previous check was `if (expectedPin && providedPin !==
-// expectedPin)`, so a missing, empty or non-string PIN skipped verification
-// altogether and handed any LAN caller a signed socket token plus access to the
-// challenge signer. configManager auto-generates a PIN whenever mdnsPublish is
-// enabled, so the normal flow never hit it — but this config is re-read from
-// disk on every request and trusted as found, so a hand-edited file, a failed
-// write, a restored older-schema config or a profile switch was enough to open
-// the endpoints. Authentication must not be structurally fail-open.
-// See doc/SECURITY.md (F4).
-function enforcePairingPin(config, providedPin, remoteAddress, res) {
-  const rawPin = config?.mdnsPairingPin;
-  const expectedPin = (typeof rawPin === 'string' || typeof rawPin === 'number')
-    ? String(rawPin).trim()
-    : '';
-
-  if (!expectedPin) {
-    console.warn(
-      '⚠ Peer pairing request refused: no mdnsPairingPin is configured. ' +
-      'Set a pairing PIN in Settings (or disable Master Mode).'
-    );
-    res.writeHead(503, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ error: 'Pairing is not configured on this device' }));
-    return true;
-  }
-
-  const state = getPinFailureState(remoteAddress);
-  if (state.blockedUntil && state.blockedUntil > Date.now()) {
-    const block = pinBlockedResponse(state);
-    res.writeHead(429, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ error: 'Too many invalid pairing PIN attempts', retryAfterSec: block.retryAfterSec }));
-    return true;
-  }
-
-  if (!timingSafeEqualString(providedPin, expectedPin)) {
-    const next = registerPinFailure(remoteAddress);
-    if (next.blockedUntil && next.blockedUntil > Date.now()) {
-      const block = pinBlockedResponse(next);
-      recordPeerEvent('pin-lockout', { remoteAddress, retryAfterSec: block.retryAfterSec });
-      res.writeHead(429, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: 'Too many invalid pairing PIN attempts', retryAfterSec: block.retryAfterSec }));
-    } else {
-      const remainingAttempts = Math.max(0, PIN_FAILURE_LIMIT - next.failures);
-      res.writeHead(403, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: 'Invalid pairing PIN', remainingAttempts }));
-    }
-    return true;
-  }
-
-  clearPinFailures(remoteAddress);
-  return false;
-}
-
-function isLoopbackAddress(address) {
-  if (!address) return false;
-  const normalized = normalizeRemoteAddress(address);
-  return normalized === '127.0.0.1' || normalized === '::1';
-}
-
-function ensurePeerCommandServer(server, configPath) {
-  if (peerCommandIo || !server.httpServer) return;
-
-  peerCommandIo = new Server(server.httpServer, {
-    path: PEER_SOCKET_PATH,
-    cors: { origin: '*', methods: ['GET', 'POST'] }
-  });
-
-  peerCommandIo.use((socket, next) => {
-    const auth = socket.handshake.auth || {};
-    const { token, expiresAt, signature } = auth;
-    const config = loadPeerConfig(configPath);
-
-    if (!token || !expiresAt || !signature || !config?.peerRsaPublicKey) {
-      return next(new Error('Missing peer auth'));
-    }
-    if (Number(expiresAt) < Date.now()) {
-      return next(new Error('Peer auth expired'));
-    }
-    const payload = buildSocketPayload(token, expiresAt, PEER_SOCKET_PATH);
-    if (!verifyPeerSocketPayload(config.peerRsaPublicKey, payload, signature)) {
-      return next(new Error('Invalid peer signature'));
-    }
-    return next();
-  });
-
-  peerCommandIo.on('connection', (socket) => {
-    const auth = socket.handshake.auth || {};
-    const instanceId = normalizePeerInstanceId(auth.instanceId);
-    const instanceName = normalizePeerLabel(auth.instanceName);
-    const hostname = normalizePeerLabel(auth.hostname);
-    const remoteAddress = normalizeRemoteAddress(socket.handshake.address || socket.request?.socket?.remoteAddress);
-    const connectedAt = new Date().toISOString();
-    peerActiveFollowers.set(socket.id, {
-      socketId: socket.id,
-      instanceId,
-      instanceName,
-      hostname,
-      remoteAddress,
-      connectedAt
-    });
-    upsertSeenFollower(instanceId, remoteAddress);
-    recordPeerEvent('follower-connected', { instanceId, instanceName, hostname, remoteAddress });
-
-    socket.on('disconnect', () => {
-      peerActiveFollowers.delete(socket.id);
-    });
-  });
-}
-
 function sanitizePluginName(value) {
   const plugin = String(value || '').trim().toLowerCase();
   if (!plugin) return '';
@@ -1348,65 +962,6 @@ function ensurePresenterPluginsServer(server) {
       socket.to(activeRoom).emit('presenter-plugin:event', event);
     });
   });
-}
-
-function signChallenge(privateKeyPem, challenge) {
-  const signer = crypto.createSign('RSA-SHA256');
-  signer.update(challenge);
-  signer.end();
-  return signer.sign(privateKeyPem).toString('base64');
-}
-
-function verifySignature(publicKeyPem, payload, signatureBase64) {
-  const verifier = crypto.createVerify('RSA-SHA256');
-  verifier.update(payload);
-  verifier.end();
-  return verifier.verify(publicKeyPem, Buffer.from(signatureBase64, 'base64'));
-}
-
-// --- Domain-separated peer signatures -------------------------------------
-//
-// /peer/challenge signs caller-supplied bytes by design, so it must never
-// produce a signature that is meaningful outside the peer protocol. Signing a
-// prefixed digest rather than the caller's bytes makes the endpoint useless as
-// an oracle for any other verifier. See doc/SECURITY.md (F2).
-//
-// ⚠ These two constructions are byte-identical copies of the ones in
-// ../lib/peerAuth.js (this file runs in the Vite utility process and cannot
-// require from the wrapper). They are wire protocol: change both sides
-// together or pairing breaks.
-
-const PEER_CHALLENGE_DOMAIN = 'revelation-peer-challenge:v1:';
-const PEER_SOCKET_DOMAIN = 'revelation-peer-socket:v1:';
-
-function peerChallengeMessage(challenge) {
-  const digest = crypto.createHash('sha256').update(String(challenge ?? ''), 'utf8').digest('hex');
-  return `${PEER_CHALLENGE_DOMAIN}${digest}`;
-}
-
-function peerSocketMessage(payload) {
-  const digest = crypto.createHash('sha256').update(String(payload ?? ''), 'utf8').digest('hex');
-  return `${PEER_SOCKET_DOMAIN}${digest}`;
-}
-
-function signPeerChallenge(privateKeyPem, challenge) {
-  return signChallenge(privateKeyPem, peerChallengeMessage(challenge));
-}
-
-function signPeerSocketPayload(privateKeyPem, payload) {
-  return signChallenge(privateKeyPem, peerSocketMessage(payload));
-}
-
-function verifyPeerSocketPayload(publicKeyPem, payload, signatureBase64) {
-  return verifySignature(publicKeyPem, peerSocketMessage(payload), signatureBase64);
-}
-
-function buildSocketPayload(token, expiresAt, socketPath) {
-  return `${token}:${expiresAt}:${socketPath}`;
-}
-
-function fingerprintPublicKey(publicKeyPem) {
-  return crypto.createHash('sha256').update(publicKeyPem).digest('hex');
 }
 
 // Helper: Recursive copy
