@@ -62,6 +62,13 @@ function setupBuilderPreviewBridge(deck) {
     postPreviewEvent(eventName, { indices, isOverview });
   };
 
+  // Let the builder open its editor on double-click, except on controls and media.
+  document.addEventListener('dblclick', (event) => {
+    const target = event.target instanceof Element ? event.target : null;
+    if (target?.closest('a, button, input, textarea, select, video, audio, .controls, .progress')) return;
+    postCurrentState('dblclick');
+  });
+
   window.addEventListener('message', (event) => {
     if (event.source !== window.parent) return;
     const data = event.data || {};
