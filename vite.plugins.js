@@ -767,6 +767,33 @@ function presentationIndexPlugin() {
           });
         }
 
+       // Legacy media thumbnails: items imported before the webp → jpg switch
+       // only have `<file>.thumbnail.webp`. Builders always request `.jpg`, so
+       // serve the webp in its place when the jpg is missing. Checks for the jpg
+       // itself because in non-custom mode this runs ahead of Vite's static handler.
+       const mediaThumbPrefix = `${presentationsWebPath}/_media/`;
+       server.middlewares.use((req, res, next) => {
+         if (req.method !== 'GET' && req.method !== 'HEAD') return next();
+         if (!req.url.startsWith(mediaThumbPrefix)) return next();
+         let name = req.url.slice(mediaThumbPrefix.length).split('?')[0];
+         try { name = decodeURIComponent(name); } catch { return next(); }
+         if (!/^[A-Za-z0-9_-][A-Za-z0-9._-]*\.thumbnail\.jpg$/.test(name)) return next();
+
+         const jpgPath = path.join(presentationsDir, '_media', name);
+         const webpPath = jpgPath.replace(/\.jpg$/, '.webp');
+         if (fs.existsSync(jpgPath)) return next();
+         fs.stat(webpPath, (err, stats) => {
+           if (err || !stats.isFile()) return next();
+           res.writeHead(200, {
+             'Content-Type': 'image/webp',
+             'Content-Length': stats.size,
+             'Cache-Control': 'no-cache',
+           });
+           if (req.method === 'HEAD') return res.end();
+           fs.createReadStream(webpPath).on('error', () => res.destroy()).pipe(res);
+         });
+       });
+
        // Serve presentations from a custom path
 
        if(customPath && fs.existsSync(presentationsDir)) {
