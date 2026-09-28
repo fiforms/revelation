@@ -19,6 +19,9 @@ export function revealTweaks(deck) {
     }
 
     deck.on('ready', readyTweaks);       
+    if (new URLSearchParams(window.location.search).get('builderPreview') === '1') {
+      deck.on('ready', () => disableOverviewKeys(deck));
+    }
     deck.on('slidechanged', () => {
       updateAttributionFromCurrentSlide(deck);
       updateHiddenPreviewOverlay(deck);
@@ -92,6 +95,20 @@ export function revealTweaks(deck) {
     hideControlsOnSpeakerNotes();
     doubleClickFullScreen();
     hideCursorOnIdle();
+}
+
+// In the builder preview iframe the builder's Slide Sorter replaces the
+// overview, so ESC (27) and O (79) shouldn't toggle it. A null binding makes
+// Reveal skip its default action for that key.
+function disableOverviewKeys(deck) {
+    const current = deck.getConfig?.().keyboard;
+    deck.configure({
+        keyboard: {
+            ...(current && typeof current === 'object' ? current : {}),
+            27: null,
+            79: null
+        }
+    });
 }
 
 function fixFitMediaPdfLayout(deck) {
