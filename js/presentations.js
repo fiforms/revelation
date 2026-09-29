@@ -156,9 +156,16 @@ function setupBuilderPreviewBridge(deck) {
     postCurrentState('overview');
   });
 
-  // Forward Ctrl+Arrow keys to the parent builder for slide navigation.
+  // Forward Ctrl+Arrow keys to the parent builder for slide navigation, and
+  // Ctrl+Z / Ctrl+Y / Ctrl+Shift+Z to its undo history.
   document.addEventListener('keydown', (event) => {
     if (!event.ctrlKey && !event.metaKey) return;
+    const key = event.key.toLowerCase();
+    if (!event.altKey && (key === 'z' || key === 'y')) {
+      postPreviewEvent('history', { action: key === 'y' || event.shiftKey ? 'redo' : 'undo' });
+      event.preventDefault();
+      return;
+    }
     if (!event.key.startsWith('Arrow')) return;
     postPreviewEvent('keydown', { key: event.key });
     event.preventDefault();
