@@ -36,7 +36,7 @@ if(!url_key) {
 
 document.addEventListener('click', (event) => {
   if (!selectedCardElement) return;
-  const excluded = ['#presentation-list .card', '#sort-menu', '#options-menu', '#media-library-link', '#selected-presentation-panel-host'];
+  const excluded = ['#presentation-list .card', '#sort-menu', '#options-menu', '#media-library-link', '#selected-presentation-panel-host', '.sidebar-flyout'];
   if (excluded.some((sel) => event.target.closest(sel))) return;
   clearSelection();
 });
@@ -987,6 +987,119 @@ function buildFileLineLabel(entry) {
   return `${mdFile} (${flags.join(', ')})`;
 }
 
+const SIDEBAR_PRIMARY_ACTION_IDS = new Set(['slideshow-options', 'handout', 'builder']);
+
+// Place a fixed-position flyout beside its anchor, flipping to the left side and
+// clamping vertically so it stays on screen (the sidebar clips overflow).
+function positionSidebarFlyout(flyout, anchorRect) {
+  const margin = 8;
+  const width = flyout.offsetWidth;
+  const height = flyout.offsetHeight;
+  let left = anchorRect.right + margin;
+  if (left + width > window.innerWidth - margin) {
+    left = Math.max(margin, anchorRect.left - width - margin);
+  }
+  let top = anchorRect.top;
+  if (top + height > window.innerHeight - margin) {
+    top = Math.max(margin, window.innerHeight - height - margin);
+  }
+  flyout.style.left = `${left}px`;
+  flyout.style.top = `${top}px`;
+}
+
+function closeSidebarFlyouts() {
+  document.getElementById('selected-presentation-info-flyout')?.remove();
+  document.getElementById('selected-presentation-more-flyout')?.remove();
+}
+
+function attachInfoFlyout(infoBtn, innerHtml) {
+  if (!infoBtn) return;
+  let hideTimer = null;
+
+  const hide = () => {
+    clearTimeout(hideTimer);
+    document.getElementById('selected-presentation-info-flyout')?.remove();
+    infoBtn.setAttribute('aria-expanded', 'false');
+  };
+  const scheduleHide = () => {
+    clearTimeout(hideTimer);
+    hideTimer = setTimeout(hide, 250);
+  };
+  const show = () => {
+    clearTimeout(hideTimer);
+    if (document.getElementById('selected-presentation-info-flyout')) return;
+    const flyout = document.createElement('div');
+    flyout.id = 'selected-presentation-info-flyout';
+    flyout.className = 'sidebar-flyout selected-presentation-info-flyout';
+    flyout.innerHTML = innerHtml;
+    flyout.addEventListener('mouseenter', () => clearTimeout(hideTimer));
+    flyout.addEventListener('mouseleave', scheduleHide);
+    flyout.querySelectorAll('.selected-presentation-file-link[data-file-md]').forEach((button) => {
+      button.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const mdFile = String(button.dataset.fileMd || '').trim();
+        if (!mdFile || !selectedPresentationBase) return;
+        if (mdFile === selectedSidebarMdFile) return;
+        selectPresentationFile(mdFile);
+      });
+    });
+    document.body.appendChild(flyout);
+    positionSidebarFlyout(flyout, infoBtn.getBoundingClientRect());
+    infoBtn.setAttribute('aria-expanded', 'true');
+  };
+
+  infoBtn.addEventListener('mouseenter', show);
+  infoBtn.addEventListener('mouseleave', scheduleHide);
+  infoBtn.addEventListener('focus', show);
+  infoBtn.addEventListener('blur', scheduleHide);
+  infoBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    show();
+  });
+}
+
+function showMoreOptionsFlyout(anchorBtn, actions) {
+  const existing = document.getElementById('selected-presentation-more-flyout');
+  if (existing) { existing.closeFlyout(); return; }
+  document.getElementById('selected-presentation-info-flyout')?.remove();
+
+  const flyout = document.createElement('div');
+  flyout.id = 'selected-presentation-more-flyout';
+  flyout.className = 'sidebar-flyout selected-presentation-more-flyout';
+  flyout.setAttribute('role', 'menu');
+
+  const close = () => {
+    flyout.remove();
+    document.removeEventListener('click', close);
+    document.removeEventListener('keydown', onKey);
+  };
+  flyout.closeFlyout = close;
+  const onKey = (e) => {
+    if (e.key === 'Escape') close();
+  };
+
+  for (const opt of actions) {
+    const item = document.createElement('button');
+    item.type = 'button';
+    item.className = 'selected-presentation-action-btn';
+    item.setAttribute('role', 'menuitem');
+    item.textContent = opt.label;
+    item.addEventListener('click', (e) => {
+      e.stopPropagation();
+      close();
+      opt.action();
+    });
+    flyout.appendChild(item);
+  }
+
+  document.body.appendChild(flyout);
+  positionSidebarFlyout(flyout, anchorBtn.getBoundingClientRect());
+  setTimeout(() => {
+    document.addEventListener('click', close);
+    document.addEventListener('keydown', onKey);
+  }, 0);
+}
+
 function renderSelectedPresentationPanel(pres, details = null) {
   const host = getSelectedPanelHost();
   if (!host) return;
@@ -1000,66 +1113,78 @@ function renderSelectedPresentationPanel(pres, details = null) {
   const additionalPresentations = detailsLoaded ? (details.additionalPresentations || []) : [];
   const selectedMd = String(effectivePres.md || '').trim();
 
+  closeSidebarFlyouts();
+
   host.innerHTML = `
     <section id="selected-presentation-panel" class="selected-presentation-panel">
-      <div class="selected-presentation-header">${tr('Selected Presentation')}</div>
-      <img class="selected-presentation-thumb" src="${url_prefix}/${effectivePres.slug}/${effectivePres.thumbnail}" alt="${escapeHTML(displayTitle)}">
+      <div class="selected-presentation-thumb-wrap">
+        <img class="selected-presentation-thumb" src="${url_prefix}/${effectivePres.slug}/${effectivePres.thumbnail}" alt="${escapeHTML(displayTitle)}">
+        <button type="button" class="selected-presentation-info-btn" aria-label="${escapeHTML(tr('Presentation details'))}" aria-expanded="false">i</button>
+      </div>
       <div class="selected-presentation-title">${escapeHTML(displayTitle)}</div>
-      <div class="selected-presentation-meta">${escapeHTML(effectivePres.description || '')}</div>
-      <div class="selected-presentation-meta"><strong>${tr('Slug')}:</strong> ${escapeHTML(effectivePres.slug)}</div>
-      <div class="selected-presentation-meta"><strong>${tr('File')}:</strong> ${escapeHTML(selectedMd)}</div>
-      <div class="selected-presentation-meta"><strong>${tr('Author')}:</strong> ${escapeHTML(author)}</div>
-      <div class="selected-presentation-meta"><strong>${tr('Language variants')}:</strong></div>
-      <div class="selected-presentation-file-list selected-presentation-variant-list">
-        ${
-          detailsLoaded
-            ? (languageVariants.length
-              ? languageVariants.map((entry) => {
-                const mdFile = String(entry?.mdFile || '').trim();
-                const isCurrent = mdFile === selectedMd;
-                return `<button type="button" class="selected-presentation-file-link${isCurrent ? ' is-current' : ''}" data-file-md="${escapeHTML(mdFile)}" data-file-group="variant">${escapeHTML(buildFileLineLabel(entry))}</button>`;
-              }).join('')
-              : `<div class="selected-presentation-meta">${tr('Default only')}</div>`)
-            : `<div class="selected-presentation-meta">${tr('Loading...')}</div>`
-        }
-      </div>
-      <div class="selected-presentation-meta"><strong>${tr('Additional Presentations')}:</strong></div>
-      <div class="selected-presentation-file-list selected-presentation-additional-list">
-        ${
-          detailsLoaded
-            ? (additionalPresentations.length
-              ? additionalPresentations.map((entry) => {
-                const mdFile = String(entry?.mdFile || '').trim();
-                const isCurrent = mdFile === selectedMd;
-                return `<button type="button" class="selected-presentation-file-link${isCurrent ? ' is-current' : ''}" data-file-md="${escapeHTML(mdFile)}" data-file-group="additional">${escapeHTML(buildFileLineLabel(entry))}</button>`;
-              }).join('')
-              : `<div class="selected-presentation-meta">${tr('None')}</div>`)
-            : `<div class="selected-presentation-meta">${tr('Loading...')}</div>`
-        }
-      </div>
-      <div class="selected-presentation-help">${tr('Double-click any tile to open immediately.')}</div>
       <div class="selected-presentation-actions"></div>
     </section>
   `;
 
-  host.querySelectorAll('.selected-presentation-file-link[data-file-md]').forEach((button) => {
-    button.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const mdFile = String(button.dataset.fileMd || '').trim();
-      if (!mdFile || !selectedPresentationBase) return;
-      if (mdFile === selectedSidebarMdFile) return;
-      selectPresentationFile(mdFile);
-    });
-  });
+  const infoHtml = `
+    ${effectivePres.description ? `<div class="selected-presentation-meta">${escapeHTML(effectivePres.description)}</div>` : ''}
+    <div class="selected-presentation-meta"><strong>${tr('Slug')}:</strong> ${escapeHTML(effectivePres.slug)}</div>
+    <div class="selected-presentation-meta"><strong>${tr('File')}:</strong> ${escapeHTML(selectedMd)}</div>
+    <div class="selected-presentation-meta"><strong>${tr('Author')}:</strong> ${escapeHTML(author)}</div>
+    <div class="selected-presentation-meta"><strong>${tr('Language variants')}:</strong></div>
+    <div class="selected-presentation-file-list selected-presentation-variant-list">
+      ${
+        detailsLoaded
+          ? (languageVariants.length
+            ? languageVariants.map((entry) => {
+              const mdFile = String(entry?.mdFile || '').trim();
+              const isCurrent = mdFile === selectedMd;
+              return `<button type="button" class="selected-presentation-file-link${isCurrent ? ' is-current' : ''}" data-file-md="${escapeHTML(mdFile)}" data-file-group="variant">${escapeHTML(buildFileLineLabel(entry))}</button>`;
+            }).join('')
+            : `<div class="selected-presentation-meta">${tr('Default only')}</div>`)
+          : `<div class="selected-presentation-meta">${tr('Loading...')}</div>`
+      }
+    </div>
+    <div class="selected-presentation-meta"><strong>${tr('Additional Presentations')}:</strong></div>
+    <div class="selected-presentation-file-list selected-presentation-additional-list">
+      ${
+        detailsLoaded
+          ? (additionalPresentations.length
+            ? additionalPresentations.map((entry) => {
+              const mdFile = String(entry?.mdFile || '').trim();
+              const isCurrent = mdFile === selectedMd;
+              return `<button type="button" class="selected-presentation-file-link${isCurrent ? ' is-current' : ''}" data-file-md="${escapeHTML(mdFile)}" data-file-group="additional">${escapeHTML(buildFileLineLabel(entry))}</button>`;
+            }).join('')
+            : `<div class="selected-presentation-meta">${tr('None')}</div>`)
+          : `<div class="selected-presentation-meta">${tr('Loading...')}</div>`
+      }
+    </div>
+  `;
+  attachInfoFlyout(host.querySelector('.selected-presentation-info-btn'), infoHtml);
 
   const actionsContainer = host.querySelector('.selected-presentation-actions');
-  for (const opt of actions) {
+  const sidebarActions = actions.filter((opt) => opt.id !== 'slideshow-default');
+  const primaryActions = sidebarActions.filter((opt) => SIDEBAR_PRIMARY_ACTION_IDS.has(opt.id));
+  const moreActions = sidebarActions.filter((opt) => !SIDEBAR_PRIMARY_ACTION_IDS.has(opt.id));
+  for (const opt of primaryActions) {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'selected-presentation-action-btn';
     button.textContent = opt.label;
     button.onclick = () => opt.action();
     actionsContainer.appendChild(button);
+  }
+  if (moreActions.length) {
+    const moreBtn = document.createElement('button');
+    moreBtn.type = 'button';
+    moreBtn.className = 'selected-presentation-action-btn';
+    moreBtn.textContent = '\u22ef ' + tr('More Options') + '\u2026 \u25b8';
+    moreBtn.setAttribute('aria-haspopup', 'menu');
+    moreBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      showMoreOptionsFlyout(moreBtn, moreActions);
+    });
+    actionsContainer.appendChild(moreBtn);
   }
 
   if (isStandaloneMode) {
@@ -1114,6 +1239,7 @@ function clearSelection() {
     selectedCardElement.classList.remove('card-selected');
     selectedCardElement = null;
   }
+  closeSidebarFlyouts();
   renderNoSelectionPanel();
   if (isStandaloneMode) {
     setStandaloneSidebarOpen(false);
@@ -1155,18 +1281,21 @@ async function selectPresentation(pres, cardElement) {
 function getPresentationActions(pres, details = null) {
   const options = [
     {
+      id: 'slideshow-default',
       label: '🖥️ ' + tr('Slideshow (Default)'),
       action: () => openPrimaryPresentation(pres)
     },
     {
+      id: 'slideshow-options',
       label: '⚙️ ' + tr('Slideshow') + '...',
       action: () => openSlideshowOptionsLightbox(pres, details)
     },
-    { label: '📄 ' + tr('Handout View'), action: () => handoutView(pres.slug, pres.md) }
+    { id: 'handout', label: '📄 ' + tr('Handout View'), action: () => handoutView(pres.slug, pres.md) }
   ];
 
   if (window.electronAPI?.editPresentation) {
     options.push({
+      id: 'builder',
       label: '🧩 ' + tr('Open Presentation Builder'),
       action: () => window.electronAPI.openPresentationBuilder(pres.slug, pres.md)
     });
