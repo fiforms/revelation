@@ -41,11 +41,12 @@ document.addEventListener('click', (event) => {
   clearSelection();
 });
 
-// VITE Hot Reloading Hook
+// VITE Hot Reloading Hook: the server sends one batched notice per index rebuild.
+// Refresh the list in place rather than reloading, so scroll position, selection
+// and open menus survive the (sometimes frequent, e.g. cloud sync) file changes.
 if (import.meta.hot) {
-  import.meta.hot.on('reload-presentations', () => {
-    console.log('[HMR] Reloading presentation list');
-    location.reload();
+  import.meta.hot.on('presentations-index-updated', (data) => {
+    scheduleSoftRefresh(Array.isArray(data?.changes) ? data.changes : []);
   });
 }
 
@@ -221,66 +222,204 @@ function renderSortMenu() {
   });
 }
 
+const cardEntries = new Map();
+const thumbnailVersions = new Map();
+
+function getThumbnailUrl(slug, thumbnail) {
+  const base = `${url_prefix}/${encodeURIComponent(slug)}/${encodeURI(String(thumbnail ?? ''))}`;
+  const version = thumbnailVersions.get(slug);
+  return version ? `${base}?v=${version}` : base;
+}
+
+function createCardEntry() {
+  const entry = { pres: null };
+  const card = document.createElement('a');
+  card.target = '_blank';
+  card.className = 'card';
+
+  const img = document.createElement('img');
+  card.appendChild(img);
+
+  const content = document.createElement('div');
+  content.className = 'card-content';
+  const titleDiv = document.createElement('div');
+  titleDiv.className = 'card-title';
+  content.appendChild(titleDiv);
+  const descDiv = document.createElement('div');
+  descDiv.className = 'card-desc';
+  content.appendChild(descDiv);
+  card.appendChild(content);
+
+  card.addEventListener('click', (e) => {
+    e.preventDefault();
+    selectPresentation(entry.pres, card);
+  });
+
+  card.addEventListener('dblclick', (e) => {
+    e.preventDefault();
+    openPrimaryPresentation(entry.pres);
+  });
+
+  card.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    showCustomContextMenu(e.pageX, e.pageY, entry.pres);
+  });
+
+  Object.assign(entry, { card, img, titleDiv, descDiv });
+  return entry;
+}
+
+function updateCardEntry(entry, pres) {
+  entry.pres = pres;
+  const displayTitle = String(translatePresentationTitle(pres.title) ?? '');
+  const href = `${url_prefix}/${encodeURIComponent(pres.slug)}/?p=${encodeURIComponent(pres.md)}`;
+  if (entry.card.getAttribute('href') !== href) entry.card.setAttribute('href', href);
+  const src = getThumbnailUrl(pres.slug, pres.thumbnail);
+  // Only touch src when it changes so unchanged thumbnails don't flicker.
+  if (entry.img.getAttribute('src') !== src) entry.img.setAttribute('src', src);
+  entry.img.alt = displayTitle;
+  entry.titleDiv.textContent = displayTitle;
+  entry.descDiv.textContent = String(pres.description ?? '');
+}
+
+// Cards are keyed by slug::md and reused across renders, so a refresh only
+// updates what changed and the page keeps its scroll position.
 function renderPresentationCards() {
   if (!container) return;
 
   if (!presentationItems.length) {
+    cardEntries.clear();
+    selectedCardElement = null;
     container.innerHTML = '<p>' + tr('No presentations available.') + '</p>';
     return;
   }
 
   const sorted = sortPresentations(presentationItems, currentSortMode);
-  container.innerHTML = '';
+  const seenKeys = new Set();
   selectedCardElement = null;
 
-  sorted.forEach((pres) => {
-    const displayTitle = translatePresentationTitle(pres.title);
-    const card = document.createElement('a');
-    card.href = `${url_prefix}/${encodeURIComponent(pres.slug)}/?p=${encodeURIComponent(pres.md)}`;
-    card.target = '_blank';
-    card.className = 'card';
-    if (selectedPresentationBase && selectedPresentationBase.slug === pres.slug && selectedPresentationBase.md === pres.md) {
-      card.classList.add('card-selected');
-      selectedCardElement = card;
+  for (const child of Array.from(container.children)) {
+    if (!child.classList.contains('card')) child.remove();
+  }
+
+  sorted.forEach((pres, index) => {
+    const key = getPresentationKey(pres);
+    seenKeys.add(key);
+    let entry = cardEntries.get(key);
+    if (!entry) {
+      entry = createCardEntry();
+      cardEntries.set(key, entry);
+    }
+    updateCardEntry(entry, pres);
+
+    const isSelected = !!selectedPresentationBase
+      && selectedPresentationBase.slug === pres.slug
+      && selectedPresentationBase.md === pres.md;
+    entry.card.classList.toggle('card-selected', isSelected);
+    if (isSelected) selectedCardElement = entry.card;
+
+    if (container.children[index] !== entry.card) {
+      container.insertBefore(entry.card, container.children[index] || null);
+    }
+  });
+
+  for (const [key, entry] of cardEntries) {
+    if (seenKeys.has(key)) continue;
+    entry.card.remove();
+    cardEntries.delete(key);
+  }
+}
+
+async function fetchPresentationIndex() {
+  const res = await fetch(`${url_prefix}/index.json`, { cache: 'no-store' });
+  if (!res.ok) {
+    if (res.status === 403) {
+      throw new Error(tr('Access denied. This presentation list is restricted.'));
+    }
+    throw new Error(tr("Failed to load presentations") + `: ${res.status} ${res.statusText}`);
+  }
+  const presentations = await res.json();
+  return Array.isArray(presentations) ? presentations : [];
+}
+
+let softRefreshTimer = null;
+let softRefreshRunning = false;
+const pendingChangedSlugs = new Set();
+
+function scheduleSoftRefresh(changes = []) {
+  for (const change of changes) {
+    const slug = String(change?.slug || '').trim();
+    if (slug) pendingChangedSlugs.add(slug);
+  }
+  clearTimeout(softRefreshTimer);
+  softRefreshTimer = setTimeout(softRefreshPresentationList, 300);
+}
+
+async function softRefreshPresentationList() {
+  if (softRefreshRunning) {
+    scheduleSoftRefresh();
+    return;
+  }
+  softRefreshRunning = true;
+  try {
+    let presentations;
+    try {
+      presentations = await fetchPresentationIndex();
+    } catch (err) {
+      // Keep showing the current list; the next change notice will retry.
+      console.warn('[HMR] Presentation list refresh failed:', err);
+      return;
     }
 
-    const img = document.createElement('img');
-    img.src = `${url_prefix}/${encodeURIComponent(pres.slug)}/${encodeURI(String(pres.thumbnail ?? ''))}`;
-    img.alt = String(displayTitle ?? '');
-    card.appendChild(img);
+    const changedSlugs = new Set(pendingChangedSlugs);
+    pendingChangedSlugs.clear();
+    const previousSelectedDetails = selectedPresentationBase
+      ? detailsCache.get(getCurrentSelectionKey()) || null
+      : null;
 
-    const content = document.createElement('div');
-    content.className = 'card-content';
+    const refreshStamp = Date.now();
+    for (const slug of changedSlugs) {
+      thumbnailVersions.set(slug, refreshStamp);
+      for (const key of Array.from(detailsCache.keys())) {
+        if (key.startsWith(`${slug}::`)) detailsCache.delete(key);
+      }
+    }
 
-    const titleDiv = document.createElement('div');
-    titleDiv.className = 'card-title';
-    titleDiv.textContent = String(displayTitle ?? '');
-    content.appendChild(titleDiv);
+    presentationItems = presentations;
+    renderPresentationCards();
+    if (!presentationItems.length) {
+      if (selectedPresentationBase) clearSelection();
+      return;
+    }
 
-    const descDiv = document.createElement('div');
-    descDiv.className = 'card-desc';
-    descDiv.textContent = String(pres.description ?? '');
-    content.appendChild(descDiv);
+    if (!selectedPresentationBase) return;
+    const selectedSlug = selectedPresentationBase.slug;
+    const updatedBase = presentationItems.find((item) =>
+      item.slug === selectedSlug && item.md === selectedPresentationBase.md
+    );
+    if (!updatedBase) {
+      clearSelection();
+      return;
+    }
+    if (!changedSlugs.has(selectedSlug)) return;
 
-    card.appendChild(content);
+    const previousBase = selectedPresentationBase;
+    const selectionKey = getCurrentSelectionKey();
+    selectedPresentationBase = { ...updatedBase };
+    const details = await loadPresentationDetails({ ...updatedBase, md: selectedSidebarMdFile || updatedBase.md });
+    if (!selectedPresentationBase || getCurrentSelectionKey() !== selectionKey) return;
 
-    card.addEventListener('click', (e) => {
-      e.preventDefault();
-      selectPresentation(pres, card);
-    });
-
-    card.addEventListener('dblclick', (e) => {
-      e.preventDefault();
-      openPrimaryPresentation(pres);
-    });
-
-    card.addEventListener('contextmenu', (e) => {
-      e.preventDefault();
-      showCustomContextMenu(e.pageX, e.pageY, pres);
-    });
-
-    container.appendChild(card);
-  });
+    // Leave the panel (and any open fly-out) alone unless something it shows changed.
+    const panelChanged = JSON.stringify(details) !== JSON.stringify(previousSelectedDetails)
+      || previousBase.title !== updatedBase.title
+      || previousBase.description !== updatedBase.description
+      || previousBase.thumbnail !== updatedBase.thumbnail;
+    if (panelChanged) {
+      renderSelectedPresentationPanel(selectedPresentationBase, details);
+    }
+  } finally {
+    softRefreshRunning = false;
+  }
 }
 
 function applySortMode(mode, { persist = false, closeMenu = false } = {}) {
@@ -315,19 +454,9 @@ if (window.translationsLoaded) {
 renderSortMenu();
 initSortMenuOffsetTracking();
 
-fetch(`${url_prefix}/index.json`)
-  .then((res) => {
-    if (!res.ok) {
-      if (res.status === 403) {
-        throw new Error(tr('Access denied. This presentation list is restricted.'));
-      } else {
-        throw new Error(tr("Failed to load presentations") + `: ${res.status} ${res.statusText}`);
-      }
-    }
-    return res.json();
-  })
+fetchPresentationIndex()
   .then((presentations) => {
-    presentationItems = Array.isArray(presentations) ? presentations : [];
+    presentationItems = presentations;
     renderSortMenu();
     renderPresentationCards();
     if (!selectedPresentationBase) {
@@ -675,7 +804,7 @@ async function loadPresentationDetails(pres) {
   }
 
   try {
-    const response = await fetch(`${url_prefix}/${pres.slug}/${pres.md}`);
+    const response = await fetch(`${url_prefix}/${pres.slug}/${pres.md}`, { cache: 'no-cache' });
     if (response.ok) {
       const markdown = await response.text();
       const metadata = extractFrontMatter(markdown);
@@ -1118,7 +1247,7 @@ function renderSelectedPresentationPanel(pres, details = null) {
   host.innerHTML = `
     <section id="selected-presentation-panel" class="selected-presentation-panel">
       <div class="selected-presentation-thumb-wrap">
-        <img class="selected-presentation-thumb" src="${url_prefix}/${effectivePres.slug}/${effectivePres.thumbnail}" alt="${escapeHTML(displayTitle)}">
+        <img class="selected-presentation-thumb" src="${escapeHTML(getThumbnailUrl(effectivePres.slug, effectivePres.thumbnail))}" alt="${escapeHTML(displayTitle)}">
         <button type="button" class="selected-presentation-info-btn" aria-label="${escapeHTML(tr('Presentation details'))}" aria-expanded="false">i</button>
       </div>
       <div class="selected-presentation-title">${escapeHTML(displayTitle)}</div>
@@ -1342,7 +1471,7 @@ function getPresentationActions(pres, details = null) {
           const result = await window.electronAPI.deletePresentation(pres.slug, pres.md);
           if (result?.success) {
             showToast(`🗑️ ${tr('Deleted')}: ${pres.title}`);
-            window.location = window.location.href;
+            scheduleSoftRefresh([{ slug: pres.slug }]);
           } else if (!result?.canceled) {
             alert(`❌ ${tr('Delete failed')}: ${result?.error || tr('Unknown error')}`);
           }

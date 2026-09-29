@@ -604,6 +604,39 @@ function presentationIndexPlugin() {
 
     let mdRebuildDebounceTimer = null;
     const pendingMdReloads = new Map();
+    // Last-seen content hash per markdown file (relative path). Cloud sync clients
+    // often touch files (mtime/attributes) without changing them; those events are
+    // dropped so they don't trigger index rebuilds or reloads.
+    const mdContentHashes = new Map();
+
+    const hashFileContent = (filePath) => {
+      try {
+        return crypto.createHash('sha1').update(fs.readFileSync(filePath)).digest('hex');
+      } catch {
+        return null;
+      }
+    };
+
+    const seedMdContentHashes = (dir, depth = 0) => {
+      if (depth > 5) return;
+      let entries = [];
+      try {
+        entries = fs.readdirSync(dir, { withFileTypes: true });
+      } catch {
+        return;
+      }
+      for (const entry of entries) {
+        if (entry.name.startsWith('.')) continue;
+        const fullPath = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          seedMdContentHashes(fullPath, depth + 1);
+        } else if (entry.isFile() && entry.name.endsWith('.md')) {
+          const hash = hashFileContent(fullPath);
+          if (hash) mdContentHashes.set(toPosixPath(path.relative(presentationsDir, fullPath)), hash);
+        }
+      }
+    };
+    setImmediate(() => seedMdContentHashes(presentationsDir));
 
     const flushMdRebuild = () => {
       mdRebuildDebounceTimer = null;
@@ -614,6 +647,7 @@ function presentationIndexPlugin() {
       pendingMdReloads.clear();
 
       for (const item of pending) {
+        if (!item.mdFile) continue;
         console.log(`Triggering reload-presentations for slug: ${item.slug}, md: ${item.mdFile}`);
         server.ws.send({
           type: 'custom',
@@ -621,6 +655,14 @@ function presentationIndexPlugin() {
           data: { slug: item.slug, mdFile: item.mdFile }
         });
       }
+
+      // One batched notice per rebuild, so the presentation list can soft-refresh
+      // once instead of reacting to every file.
+      server.ws.send({
+        type: 'custom',
+        event: 'presentations-index-updated',
+        data: { changes: pending }
+      });
     };
 
     const scheduleMdRebuild = () => {
@@ -634,12 +676,19 @@ function presentationIndexPlugin() {
     };
 
     const queueMdReload = (event, filePath) => {
-      console.log(`📦 ${event.toUpperCase()}:`, filePath);
       const relative = toPosixPath(path.relative(presentationsDir, filePath));
       const [slug, ...rest] = relative.split('/');
       if (!slug || !rest.length) return;
+      if (event === 'unlink') {
+        mdContentHashes.delete(relative);
+      } else {
+        const hash = hashFileContent(filePath);
+        if (hash && mdContentHashes.get(relative) === hash) return;
+        if (hash) mdContentHashes.set(relative, hash);
+      }
+      console.log(`📦 ${event.toUpperCase()}:`, filePath);
       const mdFile = rest.join('/');
-      pendingMdReloads.set(relative, { slug, mdFile });
+      pendingMdReloads.set(relative, { slug, mdFile, event });
       scheduleMdRebuild();
     };
 
@@ -677,9 +726,14 @@ function presentationIndexPlugin() {
       .on('unlinkDir', dirPath => {
         if (dirPath.includes(presentationsDir)) {
           console.log('📁 Folder deleted:', dirPath);
-          safeGeneratePresentationIndex('watcher:unlinkDir');
-          console.log('Triggering full-reload');
-          server.ws.send({ type: 'full-reload' });
+          const relative = toPosixPath(path.relative(presentationsDir, dirPath));
+          const [slug] = relative.split('/');
+          if (!slug || slug === '..') return;
+          for (const key of mdContentHashes.keys()) {
+            if (key.startsWith(`${relative}/`)) mdContentHashes.delete(key);
+          }
+          pendingMdReloads.set(`${relative}/`, { slug, mdFile: null, event: 'unlinkDir' });
+          scheduleMdRebuild();
         }
       });
 
