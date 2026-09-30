@@ -2,12 +2,22 @@ const os = require('os');
 const fs = require('fs');
 const crypto = require('crypto');
 const path = require('path');
-const matter = require('gray-matter');
+const yaml = require('js-yaml');
 const serveStatic = require('serve-static');
 const { Server } = require('socket.io');
 const { v4: uuidv4 } = require('uuid');
 const { toDataURL: qrToDataURL } = require('qrcode');
 const { createPeerServer, isLoopbackAddress, normalizeRemoteAddress } = require('./peer-server.js');
+
+// Same front-matter rule as extractFrontMatter() in js/compiler/markdown-compiler.js,
+// so the presentation list sees the metadata the renderer sees. Throws on malformed YAML.
+function readFrontMatterData(md) {
+  const match = md.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?/);
+  if (!match) return {};
+  // loadAll() yields [] for an empty/comment-only block, where load() throws in js-yaml 5.
+  const [data] = yaml.loadAll(match[1]);
+  return data && typeof data === 'object' ? data : {};
+}
 
 function getLocalIpAddress() {
   const interfaces = os.networkInterfaces();
@@ -305,7 +315,7 @@ function generatePresentationIndex() {
         let data;
         try {
           // Attempt to read YAML front matter
-          data = matter(fileContent).data || {};
+          data = readFrontMatterData(fileContent);
         } catch (err) {
           console.error(`⚠ Malformed YAML in ${dir}/${mdFile}: ${err.message}`);
 
