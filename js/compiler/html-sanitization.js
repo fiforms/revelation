@@ -6,6 +6,11 @@
  */
 const URL_ATTR_NAMES = new Set(['href', 'src', 'xlink:href', 'formaction', 'action', 'poster']);
 const BLOCKED_TAGS = new Set(['script', 'object', 'embed', 'applet', 'base', 'meta']);
+// SVG animation elements rewrite another element's attribute at runtime, so
+// `<animate attributeName="href" values="javascript:...">` sets a script URL
+// that the per-attribute checks below never see.
+const SVG_ANIMATION_TAGS = new Set(['animate', 'set', 'animatemotion', 'animatetransform']);
+const SVG_ANIMATION_VALUE_ATTRS = new Set(['values', 'from', 'to', 'by']);
 
 // Remove blocked tags (paired and self-closing/open forms) from a raw HTML
 // string, repeating until the result stops changing. The repeat closes the
@@ -144,6 +149,26 @@ function sanitizeHTMLFragmentFallback(html) {
   return source;
 }
 
+// True when an SVG animation element targets a URL, event-handler, or style
+// attribute, or animates to a dangerous URL value. Attribute names are compared
+// case-insensitively because SVG keeps camelCase names like `attributeName`.
+function isDangerousSVGAnimation(el) {
+  for (const attr of Array.from(el.attributes || [])) {
+    const name = attr.name.toLowerCase();
+    if (name === 'attributename') {
+      const target = String(attr.value || '').trim().toLowerCase();
+      if (URL_ATTR_NAMES.has(target) || target.endsWith(':href') || target.startsWith('on') || target === 'style') {
+        return true;
+      }
+    } else if (SVG_ANIMATION_VALUE_ATTRS.has(name)) {
+      if (String(attr.value || '').split(';').some((part) => isDangerousURL(part))) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 // Sanitize a single parsed/live element in place: drop blocked tags entirely,
 // strip event handlers and dangerous URL/style attributes, and harden links.
 function sanitizeElement(el) {
@@ -151,6 +176,12 @@ function sanitizeElement(el) {
   if (BLOCKED_TAGS.has(tagName)) {
     el.remove();
     console.log(`Removed blocked <${tagName}> element from HTML fragment.`);
+    return;
+  }
+
+  if (SVG_ANIMATION_TAGS.has(tagName) && isDangerousSVGAnimation(el)) {
+    el.remove();
+    console.log(`Removed <${tagName}> element animating a URL or event-handler attribute.`);
     return;
   }
 
