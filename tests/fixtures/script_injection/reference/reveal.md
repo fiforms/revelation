@@ -371,8 +371,3 @@ Text after direct script tag.
 ## Test 57: Data image PNG (safe format)
 
 ![](data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==)
-
-
----
-
-

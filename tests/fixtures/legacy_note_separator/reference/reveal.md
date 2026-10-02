@@ -12,8 +12,3 @@ Legacy note content.
 
 This should remain body text in legacy mode.
 
-
-
----
-
-

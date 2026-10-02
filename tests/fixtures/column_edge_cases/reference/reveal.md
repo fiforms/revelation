@@ -23,8 +23,3 @@ Unclosed columns before break.
 
 After warning path.
 
-
-
----
-
-

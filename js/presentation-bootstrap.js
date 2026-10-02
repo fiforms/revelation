@@ -156,7 +156,6 @@ export async function loadAndPreprocessMarkdown(deck, selectedFile = null) {
   // Normalize newlines and split front matter so metadata drives both compilation and runtime behavior.
   const normalizedMarkdown = String(rawMarkdown ?? '').replace(/\r\n?/g, '\n');
   const { metadata, content } = extractFrontMatter(normalizedMarkdown);
-  const contentWithBlankSlide = `${content}\n\n---\n\n`;
 
   // For confidence monitor, analyze which slides have text so we can suppress visuals selectively.
   const perSlideSuppress = (variant === 'confidencemonitor')
@@ -334,7 +333,7 @@ export async function loadAndPreprocessMarkdown(deck, selectedFile = null) {
 
   // Compile REVELation markdown into Reveal-ready markdown with the current runtime/compiler options.
   const partProcessedMarkdown = preprocessMarkdown(
-    contentWithBlankSlide,
+    content,
     macros,
     false,
     metadata.media,

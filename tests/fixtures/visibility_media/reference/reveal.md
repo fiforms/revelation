@@ -21,12 +21,5 @@ Slide after hidden.
 <a target="_blank">bad</a>
 <a href="https://example.com" target="_blank">good</a>
 
-
 <!-- .slide: data-background-video="../_media/clouds.mp4" data-background-video-loop data-background-video-muted -->
-
-
----
-
-<!-- .slide: data-background-video="../_media/clouds.mp4" data-background-video-loop data-background-video-muted -->
-
 

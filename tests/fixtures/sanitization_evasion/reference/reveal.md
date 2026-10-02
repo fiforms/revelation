@@ -8,8 +8,3 @@
 
 Visible text.
 
-
-
----
-
-

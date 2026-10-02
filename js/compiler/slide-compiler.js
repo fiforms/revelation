@@ -80,8 +80,10 @@ export function createSlideCompiler(options = {}) {
   }
 
   // Decide whether the current line should end the slide, either explicitly or via auto-slide behavior.
-  function shouldFinalize(line, index, totalLines, autoSlide) {
-    return autoSlide || line === '---' || line === '***' || line.match(/^[Nn][Oo][Tt][Ee]\:/) || index >= totalLines - 1;
+  // The end of the document is not handled here: the last line is ordinary slide
+  // content, and `finalizeSlide(null, ...)` closes the final slide after the loop.
+  function shouldFinalize(line, autoSlide) {
+    return autoSlide || line === '---' || line === '***' || line.match(/^[Nn][Oo][Tt][Ee]\:/);
   }
 
   // Discard the buffered current slide when a hide directive removes it from output.
@@ -101,12 +103,12 @@ export function createSlideCompiler(options = {}) {
   }
 
   // Consume lines while inside a hidden slide until the parser reaches the next boundary.
-  function handleHiddenSlide(line, index, totalLines, autoSlide) {
+  function handleHiddenSlide(line, autoSlide) {
     if (!slideHidden) {
       return { skipLine: false, exitedHiddenSlide: false };
     }
 
-    if (!shouldFinalize(line, index, totalLines, autoSlide)) {
+    if (!shouldFinalize(line, autoSlide)) {
       return { skipLine: true, exitedHiddenSlide: false };
     }
 
@@ -180,8 +182,11 @@ export function createSlideCompiler(options = {}) {
   }
 
   // Finalize a slide by applying sticky state, footer markup, and break markers.
+  // Pass `line = null` to close the last slide at the end of the document, which
+  // emits the same decorations but no trailing separator.
   function finalizeSlide(line, autoSlide, columnPipeState) {
-    const breakType = getBreakType(line, autoSlide);
+    const atEnd = line === null;
+    const breakType = atEnd ? null : getBreakType(line, autoSlide);
     let nextColumnPipeState = columnPipeState;
 
     if (nextColumnPipeState !== 0) {
@@ -282,7 +287,7 @@ export function createSlideCompiler(options = {}) {
     } else if (line === '---' || line === '***') {
       processedLines.push(line);
       currentSlideBreakIndex = processedLines.length - 1;
-    } else {
+    } else if (!atEnd) {
       processedLines.push(line);
       currentSlideBreakIndex = processedLines.length - 1;
     }
@@ -295,6 +300,23 @@ export function createSlideCompiler(options = {}) {
     blankslide = !autoSlide;
 
     return { nextColumnPipeState };
+  }
+
+  // Close out the document. A slide still hidden at the end is dropped along with
+  // the separator that opened it, so no empty trailing slide is left behind.
+  function finishDocument(columnPipeState) {
+    if (slideHidden) {
+      if (currentSlideBreakIndex >= 0) {
+        processedLines.length = currentSlideBreakIndex;
+        while (processedLines.length > 0 && processedLines[processedLines.length - 1] === '') {
+          processedLines.pop();
+        }
+      }
+      currentSlideLines.length = 0;
+      slideHidden = false;
+      return { nextColumnPipeState: 0 };
+    }
+    return finalizeSlide(null, false, columnPipeState);
   }
 
   // Apply a single operation emitted by a parser module.
@@ -368,6 +390,7 @@ export function createSlideCompiler(options = {}) {
     setPendingAutoStackTransition,
     applyOperation,
     applyOperations,
-    finalizeSlide
+    finalizeSlide,
+    finishDocument
   };
 }

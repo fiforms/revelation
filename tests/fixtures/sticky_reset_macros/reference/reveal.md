@@ -18,8 +18,3 @@ Slide two should still inherit hero.
 
 Slide three should not inherit hero.
 
-
-
----
-
-

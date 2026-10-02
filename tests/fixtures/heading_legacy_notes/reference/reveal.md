@@ -27,8 +27,3 @@ Note:
 
 <div>Safe text</div>
 
-
-
----
-
-

@@ -109,18 +109,8 @@ Test expects:
 - No breaks to existing functionality
 
 
-
 <!-- .slide: data-background-video="somevideo.mp4" data-background-video-loop data-background-video-muted -->
 <!-- .slide: data-darkbg -->
 <!-- .slide: data-lighttext -->
 <!-- .slide: data-lower-third -->
 <!-- .slide: data-user-lovely-theme -->
-
----
-
-<!-- .slide: data-background-video="somevideo.mp4" data-background-video-loop data-background-video-muted -->
-<!-- .slide: data-darkbg -->
-<!-- .slide: data-lighttext -->
-<!-- .slide: data-lower-third -->
-<!-- .slide: data-user-lovely-theme -->
-

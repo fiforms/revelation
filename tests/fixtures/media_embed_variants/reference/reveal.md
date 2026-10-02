@@ -12,10 +12,3 @@
 
 <!-- .slide: data-background-audio-loop="song.mp3" -->
 <!-- .slide: data-background-audio-stop -->
-
-
----
-
-:audio:play:song.mp3:
-
-

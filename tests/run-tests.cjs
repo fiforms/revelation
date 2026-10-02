@@ -286,9 +286,8 @@ function isCommentOnlyMarkdown(markdown) {
 function buildRevealMarkdown(rawMarkdown) {
   const normalized = normalizeText(rawMarkdown);
   const { metadata, content } = extractFrontMatter(normalized);
-  const withBlankSlide = `${content}\n\n---\n\n`;
   const partiallyProcessed = preprocessMarkdown(
-    withBlankSlide,
+    content,
     metadata.macros || {},
     false,
     metadata.media,

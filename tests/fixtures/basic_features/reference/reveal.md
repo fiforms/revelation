@@ -38,20 +38,9 @@ Paragraph with [local link](attrib_ai_sticky.md).
 
 Ending text.
 
-
 <!-- .slide: data-transition="fade" -->
 
 
 <div class="slide-attribution">
 <div class="attribution">Hero image by Example</div>
 </div>
-
----
-
-<!-- .slide: data-transition="fade" -->
-
-
-<div class="slide-attribution">
-<div class="attribution">Hero image by Example</div>
-</div>
-

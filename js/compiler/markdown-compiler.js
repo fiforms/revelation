@@ -609,7 +609,7 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
     const trimmedMediaLine = line.trim();
     const isNoteSeparatorLine = trimmedMediaLine.toLowerCase() === NOTE_SEPARATOR_CURRENT || trimmedMediaLine.toLowerCase() === NOTE_SEPARATOR_LEGACY.toLowerCase();
     const autoSlide = compiler.detectAutoSlide(line);
-    const hiddenResult = compiler.handleHiddenSlide(line, index, lines.length, autoSlide);
+    const hiddenResult = compiler.handleHiddenSlide(line, autoSlide);
     if (hiddenResult.skipLine) continue;
     if (hiddenResult.exitedHiddenSlide && autoSlide) {
       // A heading that ends a hidden run already got its boundary written by
@@ -661,12 +661,6 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
           const figureHtml = `<figure class="${figureClasses}"${extraFigureAttrs}><img src="${src}" alt="${altText}">${captionHtml}</figure>`;
           applyOperations([rememberSuppressionsOp(line), appendLineOp(figureHtml)]);
           compiler.markContentLine(figureHtml);
-          // If the caption line is the last line of the file it will be skipped and never trigger
-          // shouldFinalize naturally, so we finalise the current slide explicitly right now.
-          if (index + 1 >= totalLines - 1) {
-            const finalizeResult = compiler.finalizeSlide('', false, columnPipeState);
-            columnPipeState = finalizeResult.nextColumnPipeState;
-          }
           skipNextLine = true;
           continue;
         }
@@ -679,7 +673,7 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
     // Mark visible content so heading-based auto-slide insertion knows whether the slide is blank.
     compiler.markContentLine(line);
     // Finalize the current slide when we hit a real or synthetic boundary.
-    if (compiler.shouldFinalize(line, index, lines.length, autoSlide)) {
+    if (compiler.shouldFinalize(line, autoSlide)) {
       const finalizeResult = compiler.finalizeSlide(line, autoSlide, columnPipeState);
       columnPipeState = finalizeResult.nextColumnPipeState;
       slideIdx++;
@@ -723,6 +717,7 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
       applyOperations(ops);
     }
   }
+  compiler.finishDocument(columnPipeState);
   return processedLines.join('\n');
 }
 

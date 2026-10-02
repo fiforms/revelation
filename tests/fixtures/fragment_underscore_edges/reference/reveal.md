@@ -14,8 +14,3 @@ This line becomes fragment <!-- .element: data-parentfragment="fragment" -->
 
 Trailing pluses in prose C++ should stay literal.
 
-
-
----
-
-

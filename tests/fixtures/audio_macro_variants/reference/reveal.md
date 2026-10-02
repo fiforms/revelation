@@ -18,8 +18,3 @@
 
 Broken command should not emit markup.
 
-
-
----
-
-

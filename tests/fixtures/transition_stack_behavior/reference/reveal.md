@@ -23,12 +23,4 @@ Second child should not get a new marker.
 
 Separate horizontal slide.
 
-
 <!-- .slide: data-transition="zoom" -->
-
-<div class="revelation-stack-attrs" data-stack-attrs="data-transition%3D%22zoom%22" hidden></div>
-
----
-
-<!-- .slide: data-transition="zoom" -->
-

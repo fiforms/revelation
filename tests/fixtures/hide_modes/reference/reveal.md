@@ -32,8 +32,3 @@ Body text.
 
 Child body.
 
-
-
----
-
-

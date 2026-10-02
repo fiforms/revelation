@@ -64,8 +64,3 @@ Here is another paragraph
 that should appear
 all together <!-- .element: data-parentfragment="fragment" -->
 
-
-
----
-
-

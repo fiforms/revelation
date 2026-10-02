@@ -15,13 +15,6 @@ Visible text should survive.
 
 Notes should survive too.
 
-
 <div class="slide-attribution">
 <div class="attribution">Source</div>
 </div>
-
----
-
-<!-- .slide: data-background-image="hero.jpg" -->
-
-

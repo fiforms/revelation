@@ -18,12 +18,5 @@
 
 <!-- .slide: data-background-audio-stop -->
 
-
 {{audio:loop:media:intro}}
-
-
----
-
-{{audio:loop:media:intro}}
-
 

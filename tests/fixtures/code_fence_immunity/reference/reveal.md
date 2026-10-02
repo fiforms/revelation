@@ -20,8 +20,3 @@ Note:
 
 Tail text.
 
-
-
----
-
-

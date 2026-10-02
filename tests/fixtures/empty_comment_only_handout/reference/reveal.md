@@ -19,12 +19,4 @@ Notes-only slide should remain in handout.
 
 Visible slide.
 
-
 <!-- .slide: data-transition="fade" -->
-
-<div class="revelation-stack-attrs" data-stack-attrs="data-transition%3D%22fade%22" hidden></div>
-
----
-
-<!-- .slide: data-transition="fade" -->
-

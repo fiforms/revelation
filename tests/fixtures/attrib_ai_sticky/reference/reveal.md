@@ -43,8 +43,3 @@ Slide four local markers only.
 ***
 
 Slide five has no markers (no need to rest)
-
-
----
-
-

@@ -26,8 +26,3 @@ Column D row three. Must stay a vertical sibling within column D, not start a ne
 
 Column E content.
 
-
-
----
-
-

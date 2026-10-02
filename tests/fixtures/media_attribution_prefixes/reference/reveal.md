@@ -11,11 +11,6 @@
 <!-- .slide: data-background-audio-start="../_media/intro.mp3" -->
 
 
-
 <div class="slide-attribution">
 <div class="attribution">Audio © Intro Artist (CC0)</div>
 </div>
-
----
-
-

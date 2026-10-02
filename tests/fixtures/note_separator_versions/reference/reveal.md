@@ -14,8 +14,3 @@ Note:
 
 Still body text for 0.2.7.
 
-
-
----
-
-
