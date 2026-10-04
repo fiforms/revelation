@@ -346,3 +346,61 @@ body {
     .slideshow-options-btn-primary:hover {
       background: #0f73d3;
     }
+
+.opened-presentation-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.88);
+  z-index: 2100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.opened-presentation-dialog {
+  width: min(560px, 94vw);
+  max-height: 94vh;
+  overflow-y: auto;
+}
+
+.opened-presentation-badge {
+  font-size: 0.78rem;
+  color: #9ec5ff;
+  margin-bottom: 0.6rem;
+}
+
+.opened-presentation-thumb {
+  width: 100%;
+  border-radius: 8px;
+  margin-bottom: 0.7rem;
+  background: #1a1a1a;
+}
+
+.opened-presentation-description {
+  color: #c9c9c9;
+  font-size: 0.9rem;
+  margin-bottom: 0.7rem;
+}
+
+.opened-presentation-note,
+.opened-presentation-warning {
+  font-size: 0.82rem;
+  color: #d8d8d8;
+  background: #1c2733;
+  border: 1px solid #2f4460;
+  border-radius: 8px;
+  padding: 0.55rem 0.7rem;
+  margin-bottom: 0.7rem;
+}
+
+.opened-presentation-warning {
+  background: #33290f;
+  border-color: #6b5a22;
+}
+
+.opened-presentation-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}

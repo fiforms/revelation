@@ -1648,3 +1648,77 @@ function showToast(message) {
     toast.addEventListener('transitionend', () => toast.remove(), { once: true });
   }, 5000);
 }
+
+// ---------------------------------------------------------------------------
+// Presentation opened from a .revel file: shown in a lightbox over the list, read-only
+// until the user imports it into the library.
+// ---------------------------------------------------------------------------
+function closeOpenedPresentationLightbox() {
+  document.getElementById('opened-presentation-overlay')?.remove();
+}
+
+function renderOpenedPresentationLightbox(opened) {
+  closeOpenedPresentationLightbox();
+  if (!opened) return;
+
+  const pres = { slug: opened.slug, md: opened.md, title: opened.title, description: opened.description, thumbnail: opened.thumbnail };
+  const overlay = document.createElement('div');
+  overlay.id = 'opened-presentation-overlay';
+  overlay.className = 'opened-presentation-overlay';
+  const existingNote = opened.existingSlug
+    ? `<div class="opened-presentation-warning">${tr('A presentation with the same identity is already in your library.')}
+         <a href="#" id="opened-open-existing">${tr('Show existing copy')}</a></div>`
+    : '';
+  overlay.innerHTML = `
+    <div class="slideshow-options-dialog opened-presentation-dialog" role="dialog" aria-modal="true" aria-labelledby="opened-presentation-title">
+      <div class="opened-presentation-badge">${tr('Opened from file')} · ${escapeHTML(opened.sourceName)}</div>
+      <img class="opened-presentation-thumb" src="${escapeHTML(getThumbnailUrl(opened.slug, opened.thumbnail))}" alt="" onerror="this.style.display='none'">
+      <div class="slideshow-options-title" id="opened-presentation-title">${escapeHTML(translatePresentationTitle(opened.title))}</div>
+      <div class="opened-presentation-description">${escapeHTML(opened.description)}</div>
+      ${existingNote}
+      <div class="opened-presentation-note">${tr('This presentation is read-only. Click Import to add it to your library. After importing, changes are saved only in your local presentation library, not back to the original file. Export it again to update the file.')}</div>
+      <div class="opened-presentation-actions">
+        <button type="button" id="opened-import" class="slideshow-options-btn slideshow-options-btn-primary">${tr('Import to Library')}</button>
+        <button type="button" id="opened-show" class="slideshow-options-btn">${tr('Slideshow')}</button>
+        <button type="button" id="opened-show-advanced" class="slideshow-options-btn">${tr('Advanced Show Options')}</button>
+        <button type="button" id="opened-handout" class="slideshow-options-btn">${tr('Handout View')}</button>
+        <button type="button" id="opened-builder" class="slideshow-options-btn">${tr('View in Builder (read-only)')}</button>
+        <button type="button" id="opened-close" class="slideshow-options-btn">${tr('Close without importing')}</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  overlay.querySelector('#opened-show').addEventListener('click', () => openPrimaryPresentation(pres));
+  overlay.querySelector('#opened-show-advanced').addEventListener('click', () => openSlideshowOptionsLightbox(pres));
+  overlay.querySelector('#opened-handout').addEventListener('click', () => handoutView(pres.slug, pres.md));
+  overlay.querySelector('#opened-builder').addEventListener('click', () => {
+    window.electronAPI.openPresentationBuilder(pres.slug, pres.md);
+  });
+  overlay.querySelector('#opened-close').addEventListener('click', () => {
+    window.electronAPI.dismissOpenedPresentation();
+  });
+  overlay.querySelector('#opened-open-existing')?.addEventListener('click', (event) => {
+    event.preventDefault();
+    window.electronAPI.dismissOpenedPresentation().then(() => {
+      scheduleSoftRefresh([]);
+    });
+  });
+  overlay.querySelector('#opened-import').addEventListener('click', async (event) => {
+    const button = event.currentTarget;
+    button.disabled = true;
+    const result = await window.electronAPI.importOpenedPresentation();
+    if (result?.success) {
+      showToast(`${tr('Imported')}: ${result.slug}. ${tr('Changes are saved only in your local library; export again to update the original file.')}`);
+      scheduleSoftRefresh([]);
+    } else {
+      button.disabled = false;
+      showToast(result?.error || tr('Import failed'));
+    }
+  });
+}
+
+if (window.electronAPI?.getOpenedPresentation) {
+  window.electronAPI.getOpenedPresentation().then(renderOpenedPresentationLightbox);
+  window.electronAPI.onOpenedPresentationChanged(renderOpenedPresentationLightbox);
+}

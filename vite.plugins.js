@@ -281,6 +281,8 @@ function generatePresentationIndex() {
     }
     const dirs = topLevelEntries.filter((dir) => {
       if (!dir || dir.startsWith('.')) return false;
+      // Transient read-only copy of a .revel file opened from the OS; never listed in the library.
+      if (dir === '_current_open') return false;
       if (isLegacyLockOrTempEntry(dir)) return false;
       try {
         return fs.lstatSync(path.join(presentationsDir, dir)).isDirectory();
