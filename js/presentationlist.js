@@ -1694,8 +1694,11 @@ function renderOpenedPresentationLightbox(opened) {
         <button type="button" id="opened-show" class="slideshow-options-btn">${tr('Slideshow')}</button>
         <button type="button" id="opened-show-advanced" class="slideshow-options-btn">${tr('Advanced Show Options')}</button>
         <button type="button" id="opened-handout" class="slideshow-options-btn">${tr('Handout View')}</button>
+        <button type="button" id="opened-export" class="slideshow-options-btn">${tr('Export Presentation…')}</button>
         <button type="button" id="opened-builder" class="slideshow-options-btn">${tr('View in Builder (read-only)')}</button>
-        <button type="button" id="opened-close" class="slideshow-options-btn">${tr('Close without importing')}</button>
+      </div>
+      <div class="opened-presentation-footer">
+        <button type="button" id="opened-close" class="slideshow-options-btn slideshow-options-btn-danger">${tr('Close without importing')}</button>
       </div>
     </div>
   `;
@@ -1704,6 +1707,10 @@ function renderOpenedPresentationLightbox(opened) {
   overlay.querySelector('#opened-show').addEventListener('click', () => openPrimaryPresentation(pres));
   overlay.querySelector('#opened-show-advanced').addEventListener('click', () => openSlideshowOptionsLightbox(pres));
   overlay.querySelector('#opened-handout').addEventListener('click', () => handoutView(pres.slug, pres.md));
+  // Export works on the read-only copy without importing it, for example to make a PDF or PowerPoint.
+  overlay.querySelector('#opened-export').addEventListener('click', () => {
+    window.electronAPI.showExportWindow(pres.slug, pres.md);
+  });
   overlay.querySelector('#opened-builder').addEventListener('click', () => {
     window.electronAPI.openPresentationBuilder(pres.slug, pres.md);
   });

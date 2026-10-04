@@ -347,6 +347,16 @@ body {
       background: #0f73d3;
     }
 
+    .slideshow-options-btn-danger {
+      background: #b3261e;
+      border-color: #d9534f;
+      color: #fff;
+    }
+
+    .slideshow-options-btn-danger:hover {
+      background: #c9302c;
+    }
+
 .opened-presentation-overlay {
   position: fixed;
   inset: 0;
@@ -403,4 +413,15 @@ body {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
+}
+
+// Pinned to the bottom-right of the dialog, and kept in view if the dialog scrolls.
+.opened-presentation-footer {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  justify-content: flex-end;
+  margin: 0.8rem -1rem -1rem;
+  padding: 0.7rem 1rem 1rem;
+  background: #121212;
 }
