@@ -1658,6 +1658,10 @@ function closeOpenedPresentationLightbox() {
 }
 
 function renderOpenedPresentationLightbox(opened) {
+  // A slideshow-options dialog opened from the previous file would launch the wrong presentation.
+  if (document.getElementById('opened-presentation-overlay')) {
+    document.getElementById('slideshow-options-overlay')?.remove();
+  }
   closeOpenedPresentationLightbox();
   if (!opened) return;
 
