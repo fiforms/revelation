@@ -556,6 +556,15 @@ Like `![fit]()`, this works with both images and videos, and supports all the sa
 ![fill](immersive-image.jpg)
 ```
 
+#### `fill:background` — background contained in the slide
+
+`![fill:background](image.jpg)` sets the slide background like `![background]()`, but instead of covering the whole viewport the image is **contained** within the slide rectangle (the same area `![fill]()` uses), never cropped. Pair it with a `![fill]()` overlay of the same aspect ratio and the two register exactly, at any window size or zoom. Add `:sticky` (`![fill:background:sticky](...)`) to carry it across slides. Videos work too. Outside the slide rectangle the background colour/theme shows through.
+
+```markdown
+![fill:background](layout-with-important-edges.jpg)
+![fill](matching-overlay.png)
+```
+
 ---
 
 ### 5.6 Multiple column layour

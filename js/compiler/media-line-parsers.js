@@ -93,7 +93,7 @@ export function createMediaLineParsers(context) {
     if (forHandout && isVideoSource(src)) {
       return true;
     }
-    if (forHandout && keyword === 'background') {
+    if (forHandout && (keyword === 'background' || (keyword === 'fill' && /^background\b/i.test(modifier)))) {
       return true;
     }
 

@@ -458,8 +458,25 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
         ? `<video src="${src}" controls playsinline data-imagefit data-imagefill></video>`
         : `![](<${src}>)<!-- .element data-imagefit data-imagefill-->`;
     };
-    magicImageHandlers.fill = (src, modifier) => {
+    magicImageHandlers.fill = (src, modifier, attribution) => {
       const isVideo = /\.(webm|mp4|mov|m4v)$/i.test(src);
+      // `![fill:background](...)` is a background contained within the slide rectangle
+      // (instead of covering the viewport) so it lines up with a following `![fill](...)` overlay.
+      const [fillTarget, fillOption] = String(modifier || '').trim().toLowerCase().split(':');
+      if (fillTarget === 'background') {
+        // "slide-contain" is not a valid CSS background-size, so Reveal's inline style is ignored
+        // and layouts.scss sizes the background to the slide via the attribute selector instead.
+        const tag = isVideo
+          ? `<!-- .slide: data-background-video="${src}" data-background-video-loop data-background-video-muted data-background-size="slide-contain" -->`
+          : `<!-- .slide: data-background-image="${src}" data-background-size="slide-contain" -->`;
+        slideLocalSuppressions.add('background');
+        if (fillOption === 'sticky') {
+          thismacros.push(tag);
+          if (attribution) thismacros.push(`{{attrib:${attribution}}}`);
+          lastmacros.length = 0;
+        }
+        return tag;
+      }
       return isVideo
         ? `<video src="${src}" controls playsinline data-imagefit-fill></video>`
         : `<img src="${src}" alt="" data-imagefit-fill>`;
@@ -569,7 +586,7 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
     if (suppressThisSlide) {
       const isAttribLine = /^\s*:ATTRIB:.*$/i.test(line) || /^\s*:AI:\s*$/i.test(line);
       const hasMarkdownImage = /!\[[^\]]*]\([^)]*\)/.test(line);
-      const hasFillMedia = /!\[fill(?::[^\]]*?)?\]\([^)]*\)/i.test(line);
+      const hasFillMedia = /!\[fill(?::(?!background)[^\]]*?)?\]\([^)]*\)/i.test(line);
       const hasHtmlVisual = /<\s*(img|iframe|figure)\b/i.test(line);
       const hasBackgroundData = /data-background-(image|audio|audio-start|audio-loop|audio-stop)/i.test(line);
       if (!isNoteSeparator && !isHideMacro && (isStickyMacro || isAttribLine || (hasMarkdownImage && !hasFillMedia) || hasHtmlVisual || hasBackgroundData)) {

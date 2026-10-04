@@ -303,6 +303,23 @@ body.reveal-ready {
     object-fit: contain;
   }
 
+  // ![fill:background] — background sized to the slide rectangle (content area plus margins,
+  // scaled like the slide) rather than the viewport, so it registers with a ![fill] overlay.
+  .slide-background[data-background-size="slide-contain"] > .slide-background-content {
+    top: 50%;
+    left: 50%;
+    width: calc((var(--slide-width) + 2 * var(--reveal-margin-px-h, 0px)) * var(--slide-scale, 1));
+    height: calc((var(--slide-height) + 2 * var(--reveal-margin-px-v, 0px)) * var(--slide-scale, 1));
+    transform: translate(-50%, -50%);
+    background-size: contain;
+    background-position: center;
+    background-repeat: no-repeat;
+
+    video {
+      object-fit: contain;
+    }
+  }
+
   section img[data-imagefit-fill] {
     width: calc(100% + 2 * var(--reveal-margin-px-h, 0px));
     height: calc(100% + 2 * var(--reveal-margin-px-v, 0px));
