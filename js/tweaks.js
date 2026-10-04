@@ -1,3 +1,5 @@
+import { styleSpeakerView } from './speaker-view-style.js';
+
 
 export function revealTweaks(deck) {
 
@@ -947,6 +949,7 @@ function hideControlsOnSpeakerNotes() {
       if (!edata || typeof edata !== 'object') return;
       if (edata.namespace === 'reveal-notes' && edata.type === 'connected') {
         console.log('Speaker Notes Connected, hiding controls');
+        styleSpeakerView(event.source);
         document.querySelector('.controls')?.classList.add('hide-when-notes');
         document.querySelector('.progress')?.classList.add('hide-when-notes');
       }

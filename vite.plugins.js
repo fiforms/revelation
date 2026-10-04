@@ -478,9 +478,39 @@ function configurePublicRelayServer(server) {
   console.log('   disabled: presentations, plugins, thumbnails, media, admin, peer endpoints, file watching, Vite static root');
 }
 
+// Reveal's speaker view is an about:blank popup whose page is one big inline
+// <script> written in by plugin/notes. It inherits presentation.html's CSP, so
+// that script must be allowed by hash. Computing it from the installed plugin
+// keeps the hash correct across reveal.js upgrades.
+const NOTES_HASH_PLACEHOLDER = "'sha256-NOTES_VIEW_SCRIPT_HASH'";
+
+function computeNotesViewScriptHash() {
+  try {
+    const src = fs.readFileSync(path.resolve(__dirname, 'node_modules/reveal.js/dist/plugin/notes.mjs'), 'utf8');
+    const start = src.indexOf('write("');
+    if (start < 0) throw new Error('speaker view markup not found');
+    let end = start + 7;
+    while (end < src.length && !(src[end] === '"' && src[end - 1] !== '\\')) end++;
+    // The markup is a plain double-quoted JS string literal; let the JS parser unescape it.
+    const html = require('vm').runInNewContext(src.slice(start + 6, end + 1));
+    const script = html.match(/<script>([\s\S]*?)<\/script>/);
+    if (!script) throw new Error('inline script not found');
+    return `'sha256-${crypto.createHash('sha256').update(script[1]).digest('base64')}'`;
+  } catch (err) {
+    console.warn(`⚠️  Could not compute speaker-view CSP hash (${err.message}); the speaker view will be blocked.`);
+    return '';
+  }
+}
+
 function presentationIndexPlugin() {
+  let notesViewScriptHash;
   return {
     name: 'generate-presentation-index',
+    transformIndexHtml(html) {
+      if (!html.includes(NOTES_HASH_PLACEHOLDER)) return html;
+      notesViewScriptHash ??= computeNotesViewScriptHash();
+      return html.replace(NOTES_HASH_PLACEHOLDER, notesViewScriptHash);
+    },
     buildStart() {
       if (isPublicServerMode) return;
       safeGeneratePresentationIndex('buildStart');
