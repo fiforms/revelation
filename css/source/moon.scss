@@ -9,6 +9,7 @@
 @import "reveal.js/css/theme/template/mixins";
 @import "reveal.js/css/theme/template/settings";
 @import "./custom/layouts.scss";
+.reveal { @include rv-text-colors-dark; }
 
 @import 'reveal.js/css/theme/moon';
 

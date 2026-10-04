@@ -1,0 +1,34 @@
+/**
+ * Inline text colors for `[text]{.red}` spans (compiled to <span class="text-red">).
+ * Shared by the slideshow themes (via layouts.scss) and the handout.
+ */
+
+// Inline text colors for `[text]{.red}` spans (compiled to <span class="text-red">).
+// Colors are CSS variables so each theme (or slide) decides what "red" means.
+// Defaults suit light backgrounds; dark themes include rv-text-colors-dark.
+@mixin rv-text-colors-light {
+  --rv-text-red: #c62828;
+  --rv-text-green: #2e7d32;
+  --rv-text-blue: #1565c0;
+  --rv-text-purple: #7b1fa2;
+  --rv-text-highlight: #a66f00;
+  --rv-text-muted: #6b6b6b;
+}
+
+@mixin rv-text-colors-dark {
+  --rv-text-red: #ff6b6b;
+  --rv-text-green: #6fcf8a;
+  --rv-text-blue: #6cb4ff;
+  --rv-text-purple: #c792ea;
+  --rv-text-highlight: #ffd54f;
+  --rv-text-muted: #9aa0a6;
+}
+
+@mixin rv-text-color-classes {
+  .text-red { color: var(--rv-text-red); }
+  .text-green { color: var(--rv-text-green); }
+  .text-blue { color: var(--rv-text-blue); }
+  .text-purple { color: var(--rv-text-purple); }
+  .text-highlight { color: var(--rv-text-highlight); }
+  .text-muted { color: var(--rv-text-muted); }
+}

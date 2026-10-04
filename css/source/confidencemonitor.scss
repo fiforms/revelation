@@ -44,6 +44,7 @@ $active-color: #42affa;
 @include mixins.light-bg-text-color(rgb(48, 48, 48));
 
 @import "./custom/layouts.scss";
+.reveal { @include rv-text-colors-dark; }
 
 #fixed-overlay-wrapper {
     background: rgba(48, 48, 48, 0.2);

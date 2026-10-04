@@ -2,6 +2,21 @@
  * Layouts Customized for media-rich backgrounds
  */
 
+@import "./text-colors.scss";
+
+.reveal {
+  @include rv-text-colors-light;
+
+  // Slides that force a background mode override the theme palette.
+  section[data-darkbg] { @include rv-text-colors-dark; }
+  section[data-lightbg] { @include rv-text-colors-light; }
+
+  // The speaker notes pane is always dark, whatever the theme.
+  .speaker-notes { @include rv-text-colors-dark; }
+
+  @include rv-text-color-classes;
+}
+
 // Fixing FOUC (Flash of Unstyled Content)
 body.hidden {
   opacity: 0;

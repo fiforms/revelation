@@ -97,6 +97,28 @@ __underline__
 ~~strikethrough~~
 ```
 
+#### Text Colors
+
+Wrap text in brackets and follow it with a color class (Pandoc-style bracketed span):
+
+```markdown
+This is [important]{.red} and this is [fine]{.green}.
+```
+
+| Class | Aliases | Notes |
+| --- | --- | --- |
+| `.red` | | |
+| `.green` | | |
+| `.blue` | | |
+| `.purple` | | |
+| `.highlight` | `.yellow`, `.orange`, `.gold` | Gold/amber family; exact shade is theme-specific |
+| `.muted` | `.grey`, `.gray`, `.silver` | De-emphasized text |
+
+Colors are defined by the theme, so "red" is a darker red on light themes and a softer red on dark themes
+(slides using `darkbg`/`lightbg` follow their forced background mode). Unknown class names are left as written,
+inline code is never converted, and spans can contain other formatting: `[**bold red**]{.red}`.
+The long form `<span class="text-red">…</span>` is equivalent. Inline `style` colors still work but are not themed.
+
 #### Verse Headings and References
 
 REVELation Markdown uses single underscores to deliniate verse headings or references:

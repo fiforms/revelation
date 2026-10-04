@@ -37,6 +37,7 @@ $heading4-size: 2.0em;
 @import "reveal.js/css/theme/template/mixins";
 @import "reveal.js/css/theme/template/settings";
 @import "./custom/layouts.scss";
+.reveal { @include rv-text-colors-dark; }
 
 // Include theme-specific fonts
 @import url(./fonts/inter/inter.css);

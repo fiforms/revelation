@@ -1,4 +1,7 @@
+@import "./custom/text-colors.scss";
+
 body {
+  @include rv-text-colors-light;
   font-family: "Georgia", serif;
   background: #f9f9f9;
   color: #222;
@@ -177,3 +180,5 @@ figure.captioned-image {
     color: #333;
   }
 }
+
+@include rv-text-color-classes;

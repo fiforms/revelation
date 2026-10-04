@@ -241,6 +241,24 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
     (_, prefix, inner) => `${prefix}<u>${inner}</u>`
   );
 
+  // Convert Pandoc-style bracketed spans like `[text]{.red}` into class-only spans.
+  // Only the allowlisted color names below are translated; anything else is left as written.
+  const colorSpanClasses = {
+    red: 'text-red', green: 'text-green', blue: 'text-blue', purple: 'text-purple',
+    highlight: 'text-highlight', yellow: 'text-highlight', orange: 'text-highlight', gold: 'text-highlight',
+    muted: 'text-muted', grey: 'text-muted', gray: 'text-muted', silver: 'text-muted'
+  };
+  // Inline `code` segments are passed through untouched so the syntax can be documented.
+  const convertColorSpans = (value) => String(value ?? '').split(/(`[^`]*`)/).map((part) => (
+    part.startsWith('`') ? part : part.replace(
+      /\[([^\[\]]+)\]\{\.([A-Za-z]+)\}/g,
+      (match, inner, name) => {
+        const cls = colorSpanClasses[name.toLowerCase()];
+        return cls ? `<span class="${cls}">${inner}</span>` : match;
+      }
+    )
+  )).join('');
+
   // Shared iframe sandbox policy for generated embeds such as YouTube and web snapshots.
   const iframeSandboxAttr = 'sandbox="allow-scripts allow-same-origin allow-forms"';
   const magicImageHandlers = {};
@@ -697,7 +715,7 @@ export function preprocessMarkdown(md, userMacros = {}, forHandout = false, medi
       continue;
     }
     // Fallback path: treat the line as ordinary markdown content plus fragment/cite transforms.
-    let transformedLine = convertUnderscoreCites(convertDoubleUnderscoreUnderlines(line));
+    let transformedLine = convertColorSpans(convertUnderscoreCites(convertDoubleUnderscoreUnderlines(line)));
     if (/^\s*<cite>.*<\/cite>\s{2,}$/.test(transformedLine)) {
       transformedLine = transformedLine.replace(/\s+$/, '');
     }

@@ -11,6 +11,7 @@
 @import "reveal.js/css/theme/template/mixins";
 @import "reveal.js/css/theme/template/settings";
 @import "./custom/layouts.scss";
+.reveal { @include rv-text-colors-dark; }
 
 // Font
 @import url(https://fonts.googleapis.com/css?family=League+Gothic);
