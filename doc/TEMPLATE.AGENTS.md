@@ -243,6 +243,7 @@ GET /api/mdvalidate/report?slug=advent-week-3&mdFile=presentation_es.md&key=your
 9. For specific texts such as Bible Passages or Hymns, use the provided API and DO NOT guess or provide the text from your training data.
 10. If a requests should be filled using the API but the API is unavailable, stop and ask the user to start the REVELation application and/or update settings. 
 11. After making changes to any files, always use the Presentation Validator API (see below) to validate the markdown, then fix any errors before finishing your process. You are, of course, welcome to validate the markdown before changes as well, or at any time, to flag any possible problems early. Calling the validator is also a good sanity check to insure that the API itself is working. Finished markdown should always pass all validation checks unless the user indicates otherwise (i.e. known missing files that the user specifically plans to add). 
+12. Keep the markdown clean and pretty. **Do not litter it with inline HTML** (e.g. `<span style="font-size:...">`, `<font>`, `<div style="color:...">`, `<br>` spacing hacks) to adjust font sizes, colors, or layout. If text looks too big or too small, suggest a cleaner fix (see "Prefer Clean Markdown Over HTML" below), starting with changing the presentation `width`/`height` in front matter, which scales everything seamlessly.
 
 ---
 
@@ -863,6 +864,17 @@ Raw HTML is allowed. Sanitization removes: `<script>`, `<object>`, `<embed>`, `<
 SVG is also allowed as it is interpreted by the browser the same way as HTML. 
 
 Avoid using HTML formatting in slides unless specifically requested to do so.
+
+#### Prefer Clean Markdown Over HTML
+
+The goal is markdown that stays readable and pretty in the editor. Do not use `<span>`, `<font>`, inline `style=` attributes, or similar tags to change font sizes, set custom colors, or tweak formatting, even if the user complains that text is too large, too small, or plain. Instead, suggest an elegant solution and offer to apply it:
+
+1. **Change the presentation dimensions** (`width` / `height` in front matter). A larger width/height makes all text relatively smaller across the whole presentation; a smaller one makes it larger. Everything scales together, with no per-slide hacks.
+2. **Pick a different theme** (see Theme Selections) for colors and typography.
+3. **Use heading levels, `**bold**`, `_text_`, `__underline__`, columns, and fragments** to create emphasis and hierarchy.
+4. **Split the content** across more slides if a slide is crowded, rather than shrinking the font to fit.
+
+If the user still wants a specific one-off style after hearing the alternatives, or explicitly asks for HTML, go ahead, but keep it minimal and local. Record the preference in CUSTOM_INSTRUCTIONS.md if it is a standing one.
 
 ### Language Variants
 
