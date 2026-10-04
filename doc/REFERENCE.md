@@ -75,3 +75,5 @@ Plugin-specific syntax and behavior lives with the plugin source:
 ## Wrapper Documentation
 
 Electron wrapper docs are in the outer repository.
+- `.revel` presentation file format specification: `doc/dev/REVEL_FORMAT.md` (outer repository)
+- How the wrapper implements `.revel`: `doc/dev/REVEL_IMPLEMENTATION.md` (outer repository)

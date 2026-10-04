@@ -153,6 +153,8 @@
         "Read-only: import this presentation to edit it": "Solo lectura: importe esta presentación para editarla",
         "Read-only: import this presentation to save changes.": "Solo lectura: importe esta presentación para guardar los cambios.",
         "Read-only: this presentation was opened from a file. Import it into your library to edit it. After importing, changes are saved only in your local library, not back to the original file; export again to update the file.": "Solo lectura: esta presentación se abrió desde un archivo. Impórtela a su biblioteca para editarla. Después de importar, los cambios se guardan solo en su biblioteca local, no en el archivo original; expórtela de nuevo para actualizar el archivo.",
-        "Advanced Show Options": "Opciones avanzadas de presentación"
+        "Advanced Show Options": "Opciones avanzadas de presentación",
+        "This file was made by a newer version of REVELation ({version}) and may not display correctly.": "Este archivo fue creado con una versión más reciente de REVELation ({version}) y es posible que no se muestre correctamente.",
+        "Some files were left out of this presentation because their type is not allowed in .revel files (scripts, executables, archives).": "Algunos archivos se omitieron de esta presentación porque su tipo no está permitido en archivos .revel (scripts, ejecutables, archivos comprimidos)."
     }
 }

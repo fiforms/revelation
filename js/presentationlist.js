@@ -1669,6 +1669,12 @@ function renderOpenedPresentationLightbox(opened) {
     ? `<div class="opened-presentation-warning">${tr('A presentation with the same identity is already in your library.')}
          <a href="#" id="opened-open-existing">${tr('Show existing copy')}</a></div>`
     : '';
+  const skippedNote = opened.skippedCount > 0
+    ? `<div class="opened-presentation-warning">${tr('Some files were left out of this presentation because their type is not allowed in .revel files (scripts, executables, archives).')}</div>`
+    : '';
+  const versionNote = opened.newerVersion
+    ? `<div class="opened-presentation-warning">${escapeHTML(tr('This file was made by a newer version of REVELation ({version}) and may not display correctly.').replace('{version}', opened.newerVersion.fileVersion))}</div>`
+    : '';
   overlay.innerHTML = `
     <div class="slideshow-options-dialog opened-presentation-dialog" role="dialog" aria-modal="true" aria-labelledby="opened-presentation-title">
       <div class="opened-presentation-badge">${tr('Opened from file')} · ${escapeHTML(opened.sourceName)}</div>
@@ -1676,6 +1682,8 @@ function renderOpenedPresentationLightbox(opened) {
       <div class="slideshow-options-title" id="opened-presentation-title">${escapeHTML(translatePresentationTitle(opened.title))}</div>
       <div class="opened-presentation-description">${escapeHTML(opened.description)}</div>
       ${existingNote}
+      ${skippedNote}
+      ${versionNote}
       <div class="opened-presentation-note">${tr('This presentation is read-only. Click Import to add it to your library. After importing, changes are saved only in your local presentation library, not back to the original file. Export it again to update the file.')}</div>
       <div class="opened-presentation-actions">
         <button type="button" id="opened-import" class="slideshow-options-btn slideshow-options-btn-primary">${tr('Import to Library')}</button>
