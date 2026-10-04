@@ -96,6 +96,10 @@ information.
 
 Save the API server port and the user's key in CUSTOM_INSTRUCTIONS.md
 
+**Always use `127.0.0.1` as the host. Never use `0.0.0.0`** (or `localhost`, which may resolve
+to IPv6 `::1`). The API server binds only to `127.0.0.1`, and `0.0.0.0` is a bind-all address,
+not a valid destination, so requests to it fail or return confusing errors.
+
 You can then access this API at the following URL's:
 
 ### Bible Verse API
