@@ -1153,6 +1153,23 @@ function mkRevealRemoteHash(remoteId, multiplexId) {
     .digest('hex');
 }
 
+// Host-supplied remote buttons (see addRemoteButton in reveal.js-remote's plugin).
+// Mirrors sanitizeButtons in reveal.js-remote's server: clamp what a presenter
+// can put on remote screens. The remote UI renders labels as plain text.
+const REVEAL_REMOTE_MAX_BUTTONS = 12;
+function sanitizeRevealRemoteButtons(data) {
+  const list = data && Array.isArray(data.buttons) ? data.buttons : [];
+  return list
+    .filter((b) => b && typeof b.id === 'string' && b.id !== '')
+    .slice(0, REVEAL_REMOTE_MAX_BUTTONS)
+    .map((b) => ({
+      id: b.id.slice(0, 64),
+      label: String(b.label ?? b.id).slice(0, 40),
+      title: typeof b.title === 'string' ? b.title.slice(0, 120) : '',
+      disabled: !!b.disabled
+    }));
+}
+
 function initRevealRemotePresenter(socket, initialData, baseUrl) {
   let remoteId = null;
   let multiplexId = null;
@@ -1207,6 +1224,13 @@ function initRevealRemotePresenter(socket, initialData, baseUrl) {
     socket.to('remote-' + remoteId).emit('notes_changed', data);
   });
 
+  socket.on('buttons_changed', (data) => {
+    if (!revealRemoteStates[remoteId]) revealRemoteStates[remoteId] = {};
+    const buttons = { buttons: sanitizeRevealRemoteButtons(data) };
+    revealRemoteStates[remoteId].buttons = buttons;
+    socket.to('remote-' + remoteId).emit('buttons_changed', buttons);
+  });
+
   socket.on('multiplex', (data) => {
     revealRemoteMultiplexes[multiplexId] = data;
     socket.to('multiplex-' + multiplexId).emit('multiplex', data);
@@ -1225,6 +1249,7 @@ function initRevealRemoteControl(socket, data) {
   if (revealRemoteStates[id]) {
     if (revealRemoteStates[id].notes) socket.emit('notes_changed', revealRemoteStates[id].notes);
     if (revealRemoteStates[id].state) socket.emit('state_changed', revealRemoteStates[id].state);
+    if (revealRemoteStates[id].buttons) socket.emit('buttons_changed', revealRemoteStates[id].buttons);
     if (revealRemoteStates[id].multiplexUrl) socket.emit('presentation_url', { url: revealRemoteStates[id].multiplexUrl });
   }
 

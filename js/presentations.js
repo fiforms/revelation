@@ -248,6 +248,20 @@ pluginLoader('presentations',`/plugins_${key}`).then(async function() {
     if (builderPreviewPeerEnabled) {
       remotePlugin.setMultiplexPaused(true);
     }
+    // Peer controls on the phone remote (they live here because they are specific
+    // to the desktop app; reveal.js-remote only provides the generic button API).
+    if (!isFollower && !builderPreviewMode && window.electronAPI?.sendPeerCommand
+        && typeof remotePlugin.addRemoteButton === 'function') {
+      const label = (text) => (typeof tr === 'function' ? tr(text) : text);
+      remotePlugin.addRemoteButton(
+        { id: 'peer-push', label: label('Peer Push'), title: label('Send this presentation to peers') },
+        sendPresentationToPeers
+      );
+      remotePlugin.addRemoteButton(
+        { id: 'peer-close', label: label('Peer Close'), title: label('Close presentations on peers') },
+        closePresentationsOnPeers
+      );
+    }
     plugins.push(remotePlugin);
     // Always add remote zoom to track/apply zoom state
     // On presenter: extracts zoom state from standard Zoom plugin, sends to followers
