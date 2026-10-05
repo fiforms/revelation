@@ -472,6 +472,43 @@ Example changing transition duration:
 # Slow fade slide
 ```
 
+---
+
+### 4.4 Slide transitions
+
+`data-transition` (per slide or stack) and `config.transition` (whole presentation) accept the six reveal.js built-ins plus the REVELation transitions below. Pick one in the metadata editor (**Setup** tab, with a **Preview Transition** button) or in the builder's transition dialog, or write it by hand:
+
+```markdown
+<!-- .slide: data-transition="page-turn" -->
+:transition:cube-3d:
+{{transition:fade}}   <!-- sticky: applies to the following slides -->
+```
+
+| Name | Effect |
+| --- | --- |
+| `none`, `fade`, `slide`, `convex`, `concave`, `zoom` | reveal.js built-ins |
+| `fade-out-in` | **Fade Out, Then In.** The old slide fades out completely, then the new one fades in. The slide background shows in between. |
+| `blur` | **Blur Fade.** The old slide blurs away while the new one sharpens in. |
+| `blur-out-in` | **Blur Out, Then In.** Like Blur Fade, but staged: the new slide starts sharpening near the end of the old one's blur (20% overlap), and it runs 1.5x longer. |
+| `flip` | The slide flips around like a card. |
+| `wipe` | The new slide is uncovered left to right (top to bottom in a vertical stack) while the old one fades out. |
+| `iris` | The new slide opens from the center like a camera iris. |
+| `fall` | The old slide tips over from its bottom edge while the new one drops in from above. |
+| `page-turn` | **Page Turn.** The old slide swings toward you on a hinge at its left edge (top edge in a vertical stack), darkening and fading as it turns. Turning back shows it returning. |
+| `cube-3d` | **Cube 3D.** Slides are the faces of a cube seen from outside. |
+| `cube-3d-inverted` | **Cube 3D (Inverted).** The cube seen from inside. |
+| `carousel` | Slides sit back in depth like a gallery and glide past each other. |
+| `spin` | The slide rotates and shrinks away while the new one spins in. |
+
+Notes:
+
+- **In and out:** every transition except `fade` and `none` can be used on its own, or as `name-in` / `name-out` to set the arriving and leaving slide separately, such as `data-transition="flip-in zoom-out"`. reveal.js does not provide in/out versions of `fade` or `none`: a leaving slide tagged `fade-out` or `none-out` simply falls back to reveal's default opacity fade.
+- **Speed:** `data-transition-speed` (`default`, `fast`, `slow`) and `config.transitionSpeed` apply to all of them. Page Turn runs 1.75x as long as reveal's normal duration, and the staged fades split the duration between the two slides.
+- **Presentation-wide extras:** `page-turn` and `cube-3d` also use shared styles (perspective, shadows) that only apply when the transition is set for the whole presentation with `config.transition`. Used on a single slide with `data-transition`, they still move correctly but without those extras.
+- **Backgrounds:** `config.backgroundTransition` accepts only the reveal.js built-ins. Backgrounds have their own transition, so a staged fade shows whatever the background is doing in between.
+- **Display variants:** the confidence monitor and lower-thirds variants replace or strip transitions (hard cuts), whatever is set here.
+- **Compatibility:** these names are resolved by REVELation. Stock reveal.js does not recognize them, and an unrecognized name is a plain jump with no animation. The list lives in `js/transitions.js`.
+
 ***
 
 <a id="5-revelation-markdown-extensions"></a>

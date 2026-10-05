@@ -492,6 +492,14 @@ Choose an appropriate transition from this list:
  - concave: 3D transition (interior look), use for special effect
  - zoom: Most dramatic Zoom / Exploding transition, use for special effect
  - none: Simple cut transition, suitable anywhere
+ - fade-out-in: Old slide fades out fully, then the new one fades in; good for changes of topic
+ - blur-out-in / blur: Soft blur dissolve; calm, good for reflective content
+ - page-turn: Page swings away like a book; use sparingly
+ - cube-3d / cube-3d-inverted: Slides are faces of a cube (outside / inside view), use for special effect
+ - flip, wipe, iris, fall, carousel, spin: Dramatic effects, use for special effect only
+
+Prefer `fade` for most slides, and prefer setting the transition for the entire show in YAML front matter
+rather than specifying on every slide. Use special transitions sparingly, per slide, for emphasis.
 
 For individual slide transitions, "in" and "out" transitions can be selected independently, like:
 
@@ -634,7 +642,7 @@ Set `newSlideOnHeading: false` unless you explicitly want H1/H2/H3 to create sli
 
 ```yaml
 config:
-  transition: fade        # none | fade | slide | convex | concave | zoom
+  transition: fade        # none | fade | slide | convex | concave | zoom | fade-out-in | blur | blur-out-in | flip | wipe | iris | fall | page-turn | cube-3d | cube-3d-inverted | carousel | spin
   controls: false
   slideNumber: c          # false | true | "c" | "c/t" | "h/v" | "h.v"
   hash: true

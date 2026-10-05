@@ -165,6 +165,10 @@ scrollspeed: 2.1
 For translation workflow and synchronized multi-language show setup, see:
 - [VARIANTS_REFERENCE.md](VARIANTS_REFERENCE.md)
 
+### Slide transitions
+
+`config.transition` also accepts the REVELation transitions (for example `page-turn`, `cube-3d`, `fade-out-in`). See [Slide transitions](MARKDOWN_REFERENCE.md#44-slide-transitions) in the Markdown reference.
+
 ### Auto-animate easing
 
 `config.autoAnimateEasing` (and a slide's `data-auto-animate-easing`) accepts a preset name or any CSS easing function. REVELation replaces a preset name with its CSS before handing the setting to Reveal.js; any other value is passed through unchanged.

@@ -157,6 +157,10 @@ scrollspeed: 2.1
 Para flujo de traducción y configuración sincronizada multi-idioma en presentaciones, consulte:
 - [VARIANTS_REFERENCE.md](VARIANTS_REFERENCE.md)
 
+### Transiciones de diapositiva
+
+`config.transition` también acepta las transiciones de REVELation (por ejemplo `page-turn`, `cube-3d`, `fade-out-in`). Consulta [Transiciones de diapositiva](MARKDOWN_REFERENCE.md#44-transiciones-de-diapositiva) en la referencia de Markdown.
+
 ### Curva de animación automática
 
 `config.autoAnimateEasing` (y `data-auto-animate-easing` en una diapositiva) acepta un nombre predefinido o cualquier función de suavizado CSS. REVELation reemplaza el nombre por su CSS antes de pasarlo a Reveal.js; cualquier otro valor se pasa sin cambios.

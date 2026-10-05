@@ -414,6 +414,44 @@ Ejemplo cambiando duración de transición:
 
 ---
 
+### 4.4 Transiciones de diapositiva
+
+`data-transition` (por diapositiva o grupo) y `config.transition` (toda la presentación) aceptan las seis transiciones integradas de reveal.js más las de REVELation que se listan abajo. Elige una en el editor de metadatos (pestaña **Setup**, con un botón **Preview Transition**) o en el diálogo de transición del constructor, o escríbela a mano:
+
+```markdown
+<!-- .slide: data-transition="page-turn" -->
+:transition:cube-3d:
+{{transition:fade}}   <!-- persistente: aplica a las diapositivas siguientes -->
+```
+
+| Nombre | Efecto |
+| --- | --- |
+| `none`, `fade`, `slide`, `convex`, `concave`, `zoom` | Integradas de reveal.js |
+| `fade-out-in` | **Desvanecer y luego aparecer.** La diapositiva anterior se desvanece por completo y después aparece la nueva. Entre ambas se ve el fondo. |
+| `blur` | **Desenfoque.** La anterior se desenfoca mientras la nueva se enfoca. |
+| `blur-out-in` | **Desenfocar y luego enfocar.** Como Desenfoque, pero escalonada: la nueva empieza a enfocarse cerca del final de la anterior (20 % de solapamiento) y dura 1.5 veces más. |
+| `flip` | La diapositiva gira como una carta. |
+| `wipe` | La nueva se descubre de izquierda a derecha (de arriba abajo en un grupo vertical) mientras la anterior se desvanece. |
+| `iris` | La nueva se abre desde el centro como el diafragma de una cámara. |
+| `fall` | La anterior se inclina desde su borde inferior mientras la nueva cae desde arriba. |
+| `page-turn` | **Pasar página.** La anterior gira hacia ti sobre una bisagra en su borde izquierdo (borde superior en un grupo vertical), oscureciéndose y desvaneciéndose. Al retroceder se ve volver. |
+| `cube-3d` | **Cubo 3D.** Las diapositivas son las caras de un cubo visto desde fuera. |
+| `cube-3d-inverted` | **Cubo 3D (invertido).** El cubo visto desde dentro. |
+| `carousel` | Las diapositivas quedan al fondo como una galería y se deslizan una junto a otra. |
+| `spin` | La diapositiva gira y se encoge mientras entra la nueva girando. |
+
+Notas:
+
+- **Entrada y salida:** todas las transiciones excepto `fade` y `none` sirven solas o como `name-in` / `name-out` para definir por separado la diapositiva que entra y la que sale, por ejemplo `data-transition="flip-in zoom-out"`. reveal.js no ofrece versiones de entrada/salida de `fade` ni `none`: una diapositiva saliente marcada `fade-out` o `none-out` recurre al desvanecimiento de opacidad predeterminado de reveal.
+- **Velocidad:** `data-transition-speed` (`default`, `fast`, `slow`) y `config.transitionSpeed` se aplican a todas. Pasar página dura 1.75 veces la duración normal de reveal, y los desvanecimientos escalonados reparten la duración entre las dos diapositivas.
+- **Grupos verticales:** todas tienen versión vertical. Las bisagras y distancias se miden respecto a la pantalla, así que las diapositivas cortas se mueven igual que las largas.
+- **Extras para toda la presentación:** `page-turn` y `cube-3d` usan además estilos compartidos (perspectiva, sombras) que solo se aplican si la transición se define para toda la presentación con `config.transition`. En una sola diapositiva con `data-transition` se mueven correctamente pero sin esos extras.
+- **Fondos:** `config.backgroundTransition` solo acepta las integradas de reveal.js. Los fondos tienen su propia transición, así que un desvanecimiento escalonado muestra lo que esté haciendo el fondo entre ambas.
+- **Variantes de pantalla:** las variantes de monitor de confianza y tercios inferiores reemplazan o eliminan las transiciones (cortes directos), sin importar lo definido aquí.
+- **Compatibilidad:** REVELation resuelve estos nombres. Reveal.js estándar no los reconoce, y un nombre desconocido es un salto sin animación. La lista está en `js/transitions.js`.
+
+---
+
 <a id="5-revelation-markdown-extensions"></a>
 
 ## 5. Extensiones Markdown de REVELation
