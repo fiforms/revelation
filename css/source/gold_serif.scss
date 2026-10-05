@@ -1,0 +1,147 @@
+/**
+ * NAME: Gold Serif
+ * AUTHOR: Daniel McFeeters
+ *
+ * Dark theme with warm gold Cormorant Garamond lettering and a soft glow.
+ * Built for media-rich backgrounds; derived from REVELation Dark.
+ */
+
+@use "sass:color";
+
+$background: #1a1a1a;
+$background-color: #1a1a1a;
+
+$gold-light: #fff1c7;
+$gold: #f5cf7a;
+$gold-bright: #fae0a1;
+$gold-deep: #c98f2e;
+$gold-glow: rgba(255, 190, 90, 0.45);
+
+$main-color: $gold;
+$heading-color: $gold;
+
+$main-font-size: 46px;
+$main-font: 'Cormorant Garamond', 'Noto Serif Greek', 'Noto Serif Hebrew', 'Palatino Linotype', Palatino, Georgia, serif;
+$heading-font: $main-font;
+$heading-text-shadow: none;
+$heading-letter-spacing: 0.01em;
+$heading-text-transform: none;
+$heading-font-weight: 600;
+$link-color: $gold-bright;
+$link-color-hover: $gold-light;
+$selection-background-color: rgba( $gold-deep, 0.75 );
+
+$heading1-size: 2.8em;
+$heading2-size: 2.4em;
+$heading3-size: 2.2em;
+$heading4-size: 2.0em;
+
+@import 'reveal.js/dist/reveal.css';
+@import "reveal.js/css/theme/template/mixins";
+@import "reveal.js/css/theme/template/settings";
+@import "./custom/layouts.scss";
+.reveal { @include rv-text-colors-dark; }
+
+@import url(./fonts/cormorant_garamond/cormorant_garamond.css);
+@import url(./fonts/playfair_display_sc/playfair_display_sc.css);
+@import url(./fonts/beau_rivage/beau_rivage.css);
+@import url(./fonts/noto_serif/noto_serif.css);
+
+@include light-bg-text-color(#222);
+
+@mixin bodyBackground() {
+	@include radial-gradient( #141414, #222222 );
+}
+
+@import "reveal.js/css/theme/template/theme";
+
+#fixed-overlay-wrapper {
+    background: rgba(0, 0, 0, 0.2);
+    color: white;
+}
+
+// Body text: warm gold serif with a soft glow
+.reveal .slides {
+    font-weight: 500;
+    color: $gold;
+    text-shadow:
+        0 0 10px $gold-glow,
+        1px 1px 3px rgba(0, 0, 0, 0.85);
+}
+
+// Headings: gold gradient lettering
+.reveal h1,
+.reveal h2,
+.reveal h3,
+.reveal h4,
+.reveal h5,
+.reveal h6 {
+    background: linear-gradient(to bottom, $gold-light 0%, $gold 45%, $gold-deep 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: none;
+    filter: drop-shadow(0 0 10px $gold-glow) drop-shadow(2px 3px 3px rgba(0, 0, 0, 0.85));
+}
+
+// H1/H3: Playfair Display SC (already small-caps, so no text-transform)
+.reveal h1,
+.reveal h3 {
+    font-family: 'Playfair Display SC', 'Cormorant Garamond', Georgia, serif;
+    text-transform: none;
+}
+.reveal h1 { font-weight: 700; }
+.reveal h3 { font-weight: 400; }
+
+// H2/H4: Beau Rivage script (single weight)
+.reveal h2,
+.reveal h4 {
+    font-family: 'Beau Rivage', 'Cormorant Garamond', Georgia, serif;
+    font-weight: 400;
+    letter-spacing: 0.02em;
+}
+
+.reveal h5 {
+    font-size: 1.6em;
+    font-weight: 400;
+}
+
+.reveal em,
+.reveal i {
+    font-style: italic;
+    color: $gold;
+}
+
+.reveal strong,
+.reveal b {
+    font-weight: 700;
+    color: $gold-bright;
+}
+
+// {{darkbg}} slides: the base theme forces white text; keep it gold
+.reveal section[data-darkbg] p,
+.reveal section[data-darkbg] ul,
+.reveal section[data-darkbg] ol,
+.reveal section[data-darkbg] li,
+.reveal section[data-darkbg] cite.attrib {
+    color: $gold !important;
+}
+
+section[data-darktext],
+section[data-darktext] p,
+section[data-darktext] li {
+    text-shadow: 1px 1px 3px rgba(255,255,255,0.7);
+}
+
+.info-head, .info-body {
+    background-color: rgba(0, 0, 0, 0.5);
+    padding: 1rem;
+    border-radius: 8px;
+}
+
+.reveal h2.countdown {
+    margin: 0.25em 0;
+    padding: 0.15em 0.45em;
+    border-radius: 0.2em;
+    background: rgba(0, 0, 0, 0.2);
+}

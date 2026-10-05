@@ -1,0 +1,16 @@
+/* Cormorant Garamond — Variable */
+@font-face {
+    font-family: 'Cormorant Garamond';
+    src: url('./CormorantGaramond-Variable.ttf') format('truetype');
+    font-weight: 300 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Cormorant Garamond';
+    src: url('./CormorantGaramond-Italic-Variable.ttf') format('truetype');
+    font-weight: 300 700;
+    font-style: italic;
+    font-display: swap;
+}
