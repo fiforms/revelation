@@ -32,6 +32,7 @@ import {
 } from './compiler/compiler-utils.js';
 import { ensureHiddenSlidePreviewStyles, createAlternativeSelector } from './loader-dom.js';
 import { resolveEasing, resolveSlideEasings } from './easings.js';
+import { installTransitionStyles, installTransitionDirection, installSlideTopVariables } from './transitions.js';
 
 let style_path = '/css/';
 
@@ -495,6 +496,11 @@ export async function loadAndPreprocessMarkdown(deck, selectedFile = null) {
       deck.on('slidechanged', updateSpeakerNoteHeading);
     }
   });
+
+  // Generated CSS for transitions beyond reveal.js's built-ins (see transitions.js).
+  installTransitionStyles();
+  installTransitionDirection(deck);
+  installSlideTopVariables(deck);
 
   // Hand off to Reveal after all markdown, DOM, and runtime config preparation is complete.
   deck.initialize(config);
