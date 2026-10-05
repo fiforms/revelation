@@ -24,8 +24,12 @@ export function revealTweaks(deck) {
     if (new URLSearchParams(window.location.search).get('builderPreview') === '1') {
       deck.on('ready', () => disableOverviewKeys(deck));
     }
+    // Exports, captures, PDF and speaker-view thumbnails need the overlays present at once
+    const overlayQuery = new URLSearchParams(window.location.search);
+    const staticOverlays = isThumbnail || overlayQuery.has('print-pdf') ||
+      overlayQuery.get('exportMode') === '1' || overlayQuery.get('staticOverlays') === '1';
+    installFixedOverlayFades(deck, { animate: !staticOverlays });
     deck.on('slidechanged', () => {
-      updateAttributionFromCurrentSlide(deck);
       updateHiddenPreviewOverlay(deck);
       ensureLinksOpenExternally(deck);
       updateFixedOverlayVisibility(deck);
@@ -678,7 +682,13 @@ function scrubBackgroundVideos(isThumbnail) {
     }
 }
 
+// Credit line, AI badge and tint, all immediately (ready, overview, anything not animated).
 function updateAttributionFromCurrentSlide(deck) {
+    updateAttributionOverlays(deck);
+    updateTintFromCurrentSlide(deck);
+}
+
+function updateAttributionOverlays(deck) {
     const currentSlide = deck.getCurrentSlide();
     if (!currentSlide) {
       return;
@@ -705,7 +715,13 @@ function updateAttributionFromCurrentSlide(deck) {
         aiOverlay.style.display = 'none';
       }
     }
+}
 
+function updateTintFromCurrentSlide(deck) {
+    const currentSlide = deck.getCurrentSlide();
+    if (!currentSlide) {
+      return;
+    }
     const tintcolor = currentSlide.getAttribute('data-tint-color');
     const tint = document.getElementById('fixed-tint-wrapper');
     const tintFadeMs = 300;
@@ -763,6 +779,87 @@ function updateAttributionFromCurrentSlide(deck) {
         tint.style.display = 'none';
       }, tintFadeMs);
     }
+}
+
+// ---- Fading the fixed credit line and AI badge with slide changes and blanking ----
+//
+// These overlays live outside the slides, so reveal never transitions them. On a slide
+// change they fade out quickly, swap content while hidden, and fade back in slowly once the
+// slide transition has finished. Blanking (B / pause) fades them out with everything else.
+const FIXED_FADE_IDS = ['fixed-overlay-wrapper', 'fixed-ai-wrapper'];
+const FIXED_FADE_OUT_MS = 150;
+const FIXED_FADE_IN_MS = 700;
+const FIXED_FADE_PAUSE_MS = 1000; // matches reveal's own pause-overlay fade (1s ease)
+const FIXED_FADE_MAX_WAIT_MS = 4000;
+
+function setFixedOverlayOpacity(visible, ms) {
+  FIXED_FADE_IDS.forEach((id) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.style.transition = `opacity ${ms}ms ease`;
+    // '' falls back to the stylesheet opacity (the AI badge is deliberately translucent)
+    el.style.opacity = visible ? '' : '0';
+  });
+}
+
+// Resolves when the CSS transitions on the slides involved in this change have finished.
+function slideTransitionsSettled(event) {
+  const targets = new Set();
+  [event?.currentSlide, event?.previousSlide].forEach((slide) => {
+    if (!slide) return;
+    targets.add(slide);
+    // In a vertical stack the parent section can carry the horizontal movement too
+    const parent = slide.parentElement;
+    if (parent && parent.tagName === 'SECTION') targets.add(parent);
+  });
+  // getAnimations() flushes style, so transitions that just started are included
+  const pending = [...targets]
+    .flatMap((el) => (typeof el.getAnimations === 'function' ? el.getAnimations() : []))
+    .filter((animation) => typeof CSSTransition !== 'undefined' && animation instanceof CSSTransition)
+    .map((animation) => animation.finished);
+  const settled = pending.length ? Promise.allSettled(pending) : Promise.resolve();
+  return Promise.race([settled, new Promise((resolve) => setTimeout(resolve, FIXED_FADE_MAX_WAIT_MS))]);
+}
+
+function installFixedOverlayFades(deck, { animate }) {
+  const state = { token: 0, paused: false };
+
+  deck.on('slidechanged', (event) => {
+    // Tint has its own cross-fade, so it updates right away
+    updateTintFromCurrentSlide(deck);
+
+    if (!animate) {
+      updateAttributionOverlays(deck);
+      return;
+    }
+
+    const token = ++state.token;
+    const settled = slideTransitionsSettled(event);
+    setFixedOverlayOpacity(false, FIXED_FADE_OUT_MS);
+
+    setTimeout(() => {
+      if (token !== state.token) return;
+      updateAttributionOverlays(deck); // swap content while invisible
+      settled.then(() => {
+        if (token !== state.token || state.paused) return;
+        setFixedOverlayOpacity(true, FIXED_FADE_IN_MS);
+      });
+    }, FIXED_FADE_OUT_MS);
+  });
+
+  if (!animate) return;
+
+  deck.on('paused', () => {
+    state.paused = true;
+    state.token += 1;
+    setFixedOverlayOpacity(false, FIXED_FADE_PAUSE_MS);
+  });
+  deck.on('resumed', () => {
+    state.paused = false;
+    state.token += 1;
+    updateAttributionOverlays(deck); // the slide may have changed while blanked
+    setFixedOverlayOpacity(true, FIXED_FADE_IN_MS);
+  });
 }
 
 function ensureHiddenPreviewOverlay() {

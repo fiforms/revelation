@@ -87,7 +87,9 @@ export async function loadAndPreprocessMarkdown(deck, selectedFile = null) {
   // Read URL-level runtime switches such as `?variant=notes` or `?ccli=123456`.
   const urlParams = new URLSearchParams(window.location.search);
   const variant = (urlParams.get('variant') || '').trim().toLowerCase();
-  const forceNoTransitions = variant === 'lowerthirds';
+  // `noTransitions=1` is sent by image/thumbnail capture so a screenshot never lands mid-transition.
+  const captureNoTransitions = urlParams.get('noTransitions') === '1';
+  const forceNoTransitions = variant === 'lowerthirds' || captureNoTransitions;
   const ccliFromUrl = (urlParams.get('ccli') || '').trim();
   const variantThemeMap = {
     lowerthirds: 'lowerthirds.css',
@@ -419,6 +421,17 @@ export async function loadAndPreprocessMarkdown(deck, selectedFile = null) {
   if (forceNoTransitions) {
     config.transition = 'none';
     config.backgroundTransition = 'none';
+  }
+  if (captureNoTransitions) {
+    // Stack-level transitions and auto-animate are not covered by stripping slide attributes,
+    // so also turn them off outright: every slide must appear in its final state at once.
+    config.autoAnimate = false;
+    const noTransitionStyle = document.createElement('style');
+    noTransitionStyle.id = 'revelation-no-transitions';
+    noTransitionStyle.textContent =
+      '.reveal .slides section, .reveal .backgrounds, .reveal .backgrounds .slide-background, ' +
+      '.reveal .slide-background-content { transition: none !important; }';
+    document.head.appendChild(noTransitionStyle);
   }
   if (variant === 'confidencemonitor') {
     config.transition = 'none';
