@@ -290,6 +290,7 @@ if (!mdFile) {
           output.push('<section class="slide">');
 	  const presParams = new URLSearchParams();
 	  presParams.set('p', resolvedMdFile);
+	  presParams.set('noShuffle', '1'); // the link targets a slide by position
 	  if (selectedLang) {
 	    presParams.set('lang', selectedLang);
 	  }

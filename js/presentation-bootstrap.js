@@ -380,6 +380,12 @@ export async function loadAndPreprocessMarkdown(deck, selectedFile = null) {
 
   // Build the final Reveal config from front matter plus runtime flags like notes mode or forced controls.
   const config = metadata.config || {};
+  // Shuffle is for live presentations only. Anything that addresses slides by position
+  // (thumbnails, image/PDF export, handout links, the builder preview) keeps authored order.
+  if (isExportMode || urlParams.has('print-pdf') || urlParams.get('builderPreview') === '1' ||
+      urlParams.get('noShuffle') === '1') {
+    config.shuffle = false;
+  }
   if (urlParams.has('remoteMultiplexId')) {
     config.scrollActivationWidth = null;
   }
