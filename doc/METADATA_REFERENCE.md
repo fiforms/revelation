@@ -165,6 +165,26 @@ scrollspeed: 2.1
 For translation workflow and synchronized multi-language show setup, see:
 - [VARIANTS_REFERENCE.md](VARIANTS_REFERENCE.md)
 
+### Auto-animate easing
+
+`config.autoAnimateEasing` (and a slide's `data-auto-animate-easing`) accepts a preset name or any CSS easing function. REVELation replaces a preset name with its CSS before handing the setting to Reveal.js; any other value is passed through unchanged.
+
+| Preset | Effect |
+|--------|--------|
+| `ease` (default), `linear`, `ease-in`, `ease-out`, `ease-in-out` | Standard CSS keywords |
+| `smooth` | Gentle ease in and out |
+| `snappy` | Fast start, soft landing |
+| `overshoot` | Runs well past the target, then settles |
+| `bouncy` | Bounces off the target several times (uses CSS `linear()`) |
+| `anticipate` | Pulls back slightly, then overshoots |
+
+```yaml
+config:
+  autoAnimateEasing: bouncy
+```
+
+The presets are defined in `js/easings.js`. Presentations that store the name only resolve it inside REVELation; stock Reveal.js would not recognize `bouncy`.
+
 ---
 
 <a id="metadata-media-aliases"></a>

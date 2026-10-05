@@ -31,6 +31,7 @@ import {
   NOTE_SEPARATOR_CURRENT
 } from './compiler/compiler-utils.js';
 import { ensureHiddenSlidePreviewStyles, createAlternativeSelector } from './loader-dom.js';
+import { resolveEasing, resolveSlideEasings } from './easings.js';
 
 let style_path = '/css/';
 
@@ -389,6 +390,10 @@ export async function loadAndPreprocessMarkdown(deck, selectedFile = null) {
     }
     */
   }
+  // Named easing presets (e.g. "bouncy") become CSS easing functions; other values pass through.
+  if (config.autoAnimateEasing) {
+    config.autoAnimateEasing = resolveEasing(config.autoAnimateEasing);
+  }
   if (variant === 'notes' || variant === 'notesteleprompter') {
     config.showNotes = true;
     // The split view still shows the slide, so its nav arrows make sense there.
@@ -437,6 +442,9 @@ export async function loadAndPreprocessMarkdown(deck, selectedFile = null) {
   // After Reveal applies <!-- .element: --> attributes, lift data-parentfragment
   // values onto the nearest block-level parent (<li> or <p>) so the whole item
   // or paragraph animates as a fragment rather than just the inner inline element.
+  // Per-slide data-auto-animate-easing may also use preset names.
+  deck.on('ready', () => resolveSlideEasings());
+
   deck.on('ready', () => {
     // Defense-in-depth: Reveal's markdown plugin renders slide HTML straight into
     // the document via innerHTML, so re-sanitize the rendered tree to strip any

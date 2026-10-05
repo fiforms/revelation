@@ -157,6 +157,26 @@ scrollspeed: 2.1
 Para flujo de traducción y configuración sincronizada multi-idioma en presentaciones, consulte:
 - [VARIANTS_REFERENCE.md](VARIANTS_REFERENCE.md)
 
+### Curva de animación automática
+
+`config.autoAnimateEasing` (y `data-auto-animate-easing` en una diapositiva) acepta un nombre predefinido o cualquier función de suavizado CSS. REVELation reemplaza el nombre por su CSS antes de pasarlo a Reveal.js; cualquier otro valor se pasa sin cambios.
+
+| Nombre | Efecto |
+|--------|--------|
+| `ease` (predeterminado), `linear`, `ease-in`, `ease-out`, `ease-in-out` | Palabras clave estándar de CSS |
+| `smooth` | Entrada y salida suaves |
+| `snappy` | Inicio rápido, llegada suave |
+| `overshoot` | Se pasa del destino y luego se asienta |
+| `bouncy` | Rebota varias veces contra el destino (usa CSS `linear()`) |
+| `anticipate` | Retrocede un poco y luego se pasa |
+
+```yaml
+config:
+  autoAnimateEasing: bouncy
+```
+
+Los nombres están definidos en `js/easings.js`. Una presentación que guarda el nombre solo lo resuelve dentro de REVELation; Reveal.js estándar no reconocería `bouncy`.
+
 ---
 
 <a id="metadata-media-aliases"></a>
