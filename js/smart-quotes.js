@@ -1,3 +1,7 @@
+// smart-quotes.js — converts straight quotes to typographic quotes in compiled markdown.
+// Fenced code blocks, code spans, HTML tags/comments and :macros: are masked first and restored
+// afterwards. Applied by presentation-bootstrap.js unless front matter sets
+// `convertSmartQuotes: false`. Tested via tests/run-tests.cjs (smart_quotes_protection).
 export default function convertSmartQuotes(text) {
   const codeSpans = [];
   const codeBlocks = [];

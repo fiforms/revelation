@@ -1,3 +1,27 @@
+/**
+ * Client plugin loader (browser).
+ *
+ * pluginLoader(page, prefix) is called once per page (`presentations.js` -> 'presentations',
+ * `presentationlist.js` -> 'presentationlist', `media-core.js` -> media pages). It:
+ *   1. resets `window.RevelationPlugins = {}`;
+ *   2. under file:// shows a notice and loads nothing;
+ *   3. takes the plugin list from `window.__offlinePluginList` (offline/standalone exports) or
+ *      fetches `${prefix}/plugins.json` (prefix is `/plugins_<key>`; written by the wrapper's
+ *      pluginDirector, served by vite.plugins.js in custom-path mode);
+ *   4. for every entry `{ baseURL, clientHookJS, priority, config }` injects
+ *      `<script type="module" src="baseURL/clientHookJS">`.
+ *
+ * Contract for a plugin's client script: on load it must register
+ * `window.RevelationPlugins[<name>] = { init?({pluginName, baseURL, page, config}),
+ * getRevealPlugins?(isRemote), preprocessMarkdown?(md, ctx), ... }`. The loader calls init()
+ * and stamps `.priority` (lower runs first; default 100 in the compiler). Other hooks are
+ * pulled by their consumers: preprocessMarkdown by js/compiler/markdown-compiler.js,
+ * getRevealPlugins by js/presentations.js, builder hooks by the builder plugins.
+ * Failures (bad baseURL, 404, no registration) never reject: the returned promise is
+ * Promise.allSettled over all plugin loads.
+ * NOTE: when the key is missing from the page URL the fetch goes to `/plugins_null/...`,
+ * fails, and the page simply runs with no plugins.
+ */
 export function pluginLoader(page, prefix) {
   window.RevelationPlugins = {};
 

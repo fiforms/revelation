@@ -1,3 +1,5 @@
+// sidebarloader.js — inside Electron only (window.electronAPI present), injects the wrapper's
+// sidebar (/admin/sidebar.css and /admin/sidebar.js, served from http_admin/ via /admin).
 if (window.electronAPI) {
   const head = document.head;
 

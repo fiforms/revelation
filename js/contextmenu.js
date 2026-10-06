@@ -1,3 +1,9 @@
+/**
+ * Right-click menu inside a running presentation (contextMenu(deck)), plus the peer helpers
+ * sendPresentationToPeers()/closePresentationsOnPeers() used by that menu and by presentations.js
+ * for the phone-remote buttons. Peer commands go through window.electronAPI.sendPeerCommand
+ * (Electron) or, in the PIP window iframe, postMessage to pip.html's parent handler.
+ */
 export function contextMenu(deck) {
     document.addEventListener('contextmenu', function (e) {
       e.preventDefault();

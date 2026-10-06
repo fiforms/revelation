@@ -1,3 +1,16 @@
+// translate.js — tiny i18n layer, loaded as a classic (non-module) script by every page.
+//
+// Exposes: window.translations ({lang: {english key: translation}}), window.tr(key),
+// window.loadTranslations(), window.translatePage(lang), and fires `translations-loaded`
+// (detail.language) after DOMContentLoaded. The language is the first two letters of
+// navigator.language only (no app/user override); English returns the key unchanged, and a
+// missing translation warns and falls back to the key. Keys are the English strings.
+// Source files: /js/translations.json by default, `<this script's dir>/translations.json` for
+// offline/hosted exports (window.offlineMarkdown / __revelationHostedRoute); the wrapper's admin
+// pages (http_admin/*.js) push extra URLs onto window.translationsources before
+// DOMContentLoaded; sources are deep-merged per language. Elements with a `data-translate` attribute are translated in place (the element's
+// innerHTML is the key) once, then the attribute is removed.
+//
 // Search the dom for all elements with a data-translate attribute
 // and replace their inner text with the corresponding translation
 // from the translations object.

@@ -1,3 +1,14 @@
+/**
+ * Runtime DOM behaviors layered on top of Reveal (called from presentations.js and the offline
+ * bundle). `revealTweaks(deck)` wires, among other things: PDF/print layout fixes, fit-media
+ * video controls, the confidence-monitor video timer, external-link handling, per-stack
+ * attributes, background audio, countdown macros, cursor auto-hide, attribution / AI-badge /
+ * tint overlays with fades, hidden-slide preview overlay, magic-slide indicators, speaker-view
+ * tweaks and double-click fullscreen. `initVideoSync(deck, remotePlugin)` mirrors presenter
+ * video play/pause/seek to multiplex followers via reveal-remote.
+ * `isThumbnail` is true when the URL contains `backgroundTransition=none`, which is what Reveal's
+ * own speaker view appends to its preview iframes (not sent by the wrapper).
+ */
 import { styleSpeakerView } from './speaker-view-style.js';
 
 

@@ -1,4 +1,7 @@
-// js/media-library.js
+// media-library.js — page script for media-library.html (the standalone media library).
+// Adds the "back to presentations" link (hidden inside Electron), reloads on the Vite
+// `reload-media` HMR event, and hands the grid to initMediaLibrary() in media-core.js, which
+// does the real work. Requires ?key=<presentations key>.
 import { initMediaLibrary } from './media-core.js';
 
 const container = document.getElementById('media-grid-container'); // existing div in media-library.html

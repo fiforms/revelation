@@ -1,3 +1,6 @@
+// splashscreen.js — "Created with REVELation Snapshot Presenter" overlay for exported
+// presentations. Only shown when window.splashScreenEnabled is set by the exported HTML;
+// version text comes from window.exportedAppVersion. Dismisses on click/keypress or after 5 s.
 (function() {
   if(!window.splashScreenEnabled) return;
   const splash = document.createElement('div');

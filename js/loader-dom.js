@@ -1,3 +1,5 @@
+// loader-dom.js — DOM-only helpers for presentation-bootstrap.js: the hidden-slide preview
+// overlay styles and the "Select Version" picker shown for `alternatives:` decks.
 export function ensureHiddenSlidePreviewStyles() {
   if (typeof document === 'undefined') return;
   if (document.getElementById('revelation-hidden-slide-preview-styles')) return;

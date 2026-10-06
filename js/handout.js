@@ -1,3 +1,14 @@
+/**
+ * Handout page (handout.html, reached via /presentations_<key>/<slug>/handout?p=<md>[&lang=xx]).
+ *
+ * Separate render path from the live deck: fetches the markdown, runs the SAME compiler
+ * (extractFrontMatter + preprocessMarkdown with forHandout=true), splits it into slides/notes
+ * with presentation-segments.js, renders each part with `marked`, and sanitizes the result with
+ * sanitizeRenderedHTML(). Slide numbers link back to `index.html?p=...#h/v`. No Reveal, no plugin
+ * loader (window.RevelationPlugins is not populated here, so plugin markdown preprocessors do not
+ * run), no media index. Handles `alternatives:` language files and `imports:` macros/media
+ * (logic duplicated from presentation-bootstrap.js).
+ */
 import {
   extractFrontMatter,
   preprocessMarkdown,

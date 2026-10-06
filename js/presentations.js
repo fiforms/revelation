@@ -1,3 +1,19 @@
+/**
+ * Presentation page controller (presentation.html; also the body of the offline bundle).
+ *
+ * Boot order: expose socket.io-client -> read key from /presentations_<key>/ in the path ->
+ * pluginLoader('presentations', /plugins_<key>) -> build the Reveal plugin list (Markdown,
+ * Notes, Zoom, Search, SlideLabels, plus RevealRemote/RemoteZoomSync when
+ * window.revealRemoteServer is set (reveal-remote.js), plus plugin getRevealPlugins()) ->
+ * `new Reveal(...)` -> loadAndPreprocessMarkdown() (presentation-bootstrap.js; compiles the
+ * markdown and calls deck.initialize) -> tweaks/context menu.
+ * Also here: the builder-preview postMessage bridge (token-gated, ?builderPreview=1), the
+ * inter-presentation `.md` link handler, notes/teleprompter pane behavior (?variant=notes |
+ * notesteleprompter), next-slide preview, and the Vite HMR hot-reload hook
+ * (`reload-presentations`, deferred while media is playing).
+ * URL switches handled across the runtime: variant, lang, p, remoteMultiplexId, builderPreview,
+ * noShuffle, noTransitions, forceControls, exportMode, media, ccli.
+ */
 import Reveal from 'reveal.js';
 import { io as socketIoClient } from 'socket.io-client';
 import Markdown from 'reveal.js/plugin/markdown';

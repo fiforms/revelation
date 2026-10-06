@@ -1,3 +1,14 @@
+/**
+ * Library page controller (presentations.html): the card list of presentations.
+ *
+ * Data comes from <presentations>/index.json (built by vite.plugins.js; loopback-only), refreshed
+ * in place on the Vite `presentations-index-updated` event. Per-presentation details (author,
+ * language variants, additional files) are read by fetching the .md and parsing its front matter
+ * client-side (extractFrontMatter below, a third copy of the front-matter parser). Provides sort
+ * modes, selection side panel / flyouts, slideshow-options lightbox, handout/PDF/peer actions,
+ * and (Electron only) the info panel and toasts via window.electronAPI. All metadata is
+ * rendered through escapeHTML(). Requires ?key=.
+ */
 import { pluginLoader } from './pluginloader.js';
 import { createInfoPanel } from './info-panel.js';
 import * as yaml from 'js-yaml';
