@@ -1693,7 +1693,7 @@ function renderOpenedPresentationLightbox(opened) {
   overlay.innerHTML = `
     <div class="slideshow-options-dialog opened-presentation-dialog" role="dialog" aria-modal="true" aria-labelledby="opened-presentation-title">
       <div class="opened-presentation-badge">${tr('Opened from file')} · ${escapeHTML(opened.sourceName)}</div>
-      <img class="opened-presentation-thumb" src="${escapeHTML(getThumbnailUrl(opened.slug, opened.thumbnail))}" alt="" onerror="this.style.display='none'">
+      <img class="opened-presentation-thumb" src="${escapeHTML(getThumbnailUrl(opened.slug, opened.thumbnail))}" alt="">
       <div class="slideshow-options-title" id="opened-presentation-title">${escapeHTML(translatePresentationTitle(opened.title))}</div>
       <div class="opened-presentation-description">${escapeHTML(opened.description)}</div>
       ${existingNote}
@@ -1715,6 +1715,8 @@ function renderOpenedPresentationLightbox(opened) {
   `;
   document.body.appendChild(overlay);
 
+  // Not an inline onerror=: the page's CSP blocks inline handlers.
+  overlay.querySelector('.opened-presentation-thumb')?.addEventListener('error', (e) => { e.target.style.display = 'none'; });
   overlay.querySelector('#opened-show').addEventListener('click', () => openPrimaryPresentation(pres));
   overlay.querySelector('#opened-show-advanced').addEventListener('click', () => openSlideshowOptionsLightbox(pres));
   overlay.querySelector('#opened-handout').addEventListener('click', () => handoutView(pres.slug, pres.md));
