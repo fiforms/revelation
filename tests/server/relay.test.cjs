@@ -23,7 +23,7 @@ test('the landing page says only that the relay is alive', async () => {
 
 test('everything outside the remote UI is a flat 404, including Vite internals and project files', async () => {
   const paths = [
-    '/presentations.html', '/presentation.html', '/handout.html', '/vite.plugins.js', '/package.json',
+    '/presentations.html', '/presentation.html', '/handout.html', '/pip.html', '/js/pip.js', '/js/pip-core.js', '/vite.plugins.js', '/package.json',
     '/@fs/etc/hosts', `/@fs${REVELATION_ROOT}/package.json`, '/@vite/client', '/node_modules/vite/package.json',
     '/admin/', '/media-share/' + 'a'.repeat(48), '/publish/x.rev', '/css/black.css', '/js/presentations.js',
     '/presentations_x/index.json', '/plugins_x/', '/thumbs_x/a.png', '/_media/index.json', '/src/../package.json'

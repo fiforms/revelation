@@ -27,6 +27,8 @@ closes. That is what the tests build on.
 | File | Module | Covers |
 |------|--------|--------|
 | `config.test.cjs` | `config.js` | mode selection, option/env precedence, GUI index paths, lazy `ffmpegBin`, no `process.env` access |
+| `pip-core.test.cjs` | `js/pip-core.js` | which URL `pip.html` may embed (absolute http/https only, obfuscated `javascript:` refused), colour validation, and which `postMessage` events are acted on (sender and origin checks, peer-URL validation) |
+| `pip-page.test.cjs` | `js/pip.js` | the page script run against a fake DOM: what reaches the iframe, which messages reach `electronAPI`, the fallbacks |
 | `network.test.cjs` | `network.js` | the loopback decision: which addresses count, mapped IPv6, missing values |
 | `peer-protocol.test.cjs` | `peer-protocol.js` | **known-answer vectors** for every wire string (hashes computed independently), domain separation, non-throwing verify; the module may require only `crypto` |
 | `access-gates.test.cjs` | `access-gates.js` | loopback gates driven with **fake remote addresses** (IPv4, IPv6, mapped, missing), so no LAN interface is needed |
@@ -46,6 +48,7 @@ process would.
 | File | Covers |
 |------|--------|
 | `custom-gui.test.cjs` | the wrapper's configuration end to end: index generation and cache, loopback gates from a real non-loopback address, `Origin: null`, URL rewrites, CSP hash, `/media-share`, `/thumbs`, `/publish`, `/admin`, watcher-driven reindexing |
+| `pip.test.cjs` | `pip.html` as served: strict CSP, no inline script, modules served; (also listed in the relay 404 surface) |
 | `relay.test.cjs` | public relay mode: deny-by-default 404 surface, no peer endpoints, remote UI, both sockets |
 | `sockets.test.cjs` | Reveal Remote broker and presenter-plugin rooms through the full server |
 | `modes.test.cjs` | a relay, a custom-path and a standalone server in one process; isolation; `close()` releases everything |

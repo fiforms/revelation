@@ -100,12 +100,23 @@ part of the model, not a gap in it.
 - **CSP** — `presentation.html` ships
   `script-src 'self'; object-src 'none'; base-uri 'self'`, which is what keeps
   injected markup from becoming code execution (see F3 in CHANGELOG.md).
+- **`pip.html` (picture-in-picture shell)** — reachable without a key (T3) and opened by the
+  wrapper in a window that has the presentation preload, so it is treated as a trust boundary.
+  Its `?src=` must be an absolute `http:`/`https:` URL (`js/pip-core.js`; `javascript:`,
+  `data:`, `blob:`, `file:` and relative values are refused), its `?color=` must be a valid
+  CSS colour, and it acts on a `postMessage` only if the sender is the embedded frame or the
+  page itself *and* the origin is the page's own, so an external page shown in the frame
+  cannot make the presenter push a URL to paired peers or close the window. The page has no
+  inline script and a meta CSP (`default-src 'none'; script-src 'self'; frame-src http: https:;
+  …`) as a backstop. Tests: `tests/unit/pip-core.test.cjs`, `pip-page.test.cjs`,
+  `tests/server/pip.test.cjs`.
 
 ## Endpoint map
 
 | Path | Reachable by | Gate |
 |---|---|---|
 | `/`, `/presentation.html`, `/presentations.html`, `/@fs/*`, `/node_modules/*` | T3 | none (Vite dev-server root) |
+| `/pip.html`, `/js/pip*.js` | T3 | none, but the page validates its own input and ships a CSP (see "Enforcement mechanisms"); not served by the public relay |
 | `/presentations_<key>/**` | T1 | key in path |
 | `/plugins_<key>/**` | T1 | key in path — **serves server-side plugin source** (F7, open) |
 | `/thumbs_<key>/**` | T1 | key in path — **spawns ffmpeg** (F6, open) |

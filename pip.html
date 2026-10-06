@@ -4,6 +4,12 @@
   <meta charset="UTF-8" />
   <title>REVELation PIP</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- This page is served without a key and runs with the wrapper's presentation preload. Only its own
+       script runs (no inline script, so a javascript: or data: URL cannot execute here), and it may
+       frame only http(s) pages. connect-src is for Vite's own HMR client, which the dev server injects;
+       the page script makes no requests. The checks in js/pip-core.js are the first line; this is the
+       backstop. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; connect-src 'self' ws: wss:; frame-src http: https:; base-uri 'none'; object-src 'none'; form-action 'none'" />
   <style>
     :root {
       --pip-color: #00ff00;
@@ -65,129 +71,6 @@
       <iframe id="presentationFrame" title="Presentation"></iframe>
     </div>
   </div>
-  <script>
-    // Picture-in-picture shell: embeds the presentation URL from ?src= in an iframe next to a
-    // chroma-key area (opened by the wrapper's lib/presentationWindow.js). Query: src, side
-    // (left|right), color, start (on|off). NOTE: `src` is assigned to the iframe unvalidated,
-    // and the page has no CSP (a `javascript:` src would run in this origin); the
-    // postMessage handler below also does not check event.source.
-    const params = new URLSearchParams(window.location.search);
-    const src = params.get('src');
-    const side = (params.get('side') || 'left').toLowerCase();
-    const color = params.get('color') || '#00ff00';
-    const start = (params.get('start') || 'off').toLowerCase();
-
-    if (side === 'left') {
-      document.body.classList.add('pip-left');
-    }
-    if (start === 'on') {
-      document.body.classList.add('pip-mode');
-    }
-    document.documentElement.style.setProperty('--pip-color', color);
-
-    const frame = document.getElementById('presentationFrame');
-    if (!src) {
-      const error = document.createElement('div');
-      error.className = 'pip-error';
-      error.textContent = 'Missing presentation source.';
-      document.body.appendChild(error);
-    } else {
-      frame.src = src;
-    }
-
-    const togglePip = () => {
-      document.body.classList.toggle('pip-mode');
-    };
-
-    const handleKey = (event) => {
-      if (event.key === 'x' || event.key === 'X') {
-        event.preventDefault();
-        togglePip();
-      }
-    };
-
-    const forwardKeyToIframe = (event) => {
-      if (!frame?.contentWindow) return;
-      if (event.key === 'x' || event.key === 'X') return;
-      try {
-        const targetDoc = frame.contentWindow.document;
-        const forwarded = new KeyboardEvent('keydown', {
-          key: event.key,
-          code: event.code,
-          keyCode: event.keyCode,
-          which: event.which,
-          ctrlKey: event.ctrlKey,
-          altKey: event.altKey,
-          shiftKey: event.shiftKey,
-          metaKey: event.metaKey,
-          bubbles: true
-        });
-        targetDoc.dispatchEvent(forwarded);
-      } catch (err) {
-        // Cross-origin or blocked; ignore.
-      }
-    };
-
-    window.addEventListener('keydown', handleKey, true);
-    window.addEventListener('keydown', forwardKeyToIframe, true);
-
-    window.addEventListener('message', (event) => {
-      if (!event?.data) return;
-      if (event.data === 'pip-toggle') {
-        togglePip();
-      }
-      if (event.data === 'pip-close-presentation') {
-        if (window.electronAPI?.closePresentation) {
-          window.electronAPI.closePresentation();
-        } else {
-          window.close();
-        }
-      }
-      if (event.data?.type === 'pip-send-to-peers') {
-        const url = event.data?.payload?.url;
-        if (url && window.electronAPI?.sendPeerCommand) {
-          window.electronAPI.sendPeerCommand({
-            type: 'open-presentation',
-            payload: { url }
-          });
-        }
-      }
-      if (event.data?.type === 'pip-close-on-peers') {
-        if (window.electronAPI?.sendPeerCommand) {
-          window.electronAPI.sendPeerCommand({
-            type: 'close-presentation',
-            payload: {}
-          });
-        }
-      }
-    });
-
-    const attachIframeKeyListener = () => {
-      try {
-        if (frame?.contentWindow) {
-          const forwardToggle = (event) => {
-            if (event.key === 'x' || event.key === 'X') {
-              event.preventDefault();
-              window.postMessage('pip-toggle', '*');
-            }
-          };
-          frame.contentWindow.addEventListener('keydown', forwardToggle, true);
-          frame.contentWindow.document.addEventListener('keydown', forwardToggle, true);
-        }
-      } catch (err) {
-        // Cross-origin presentations may block key interception.
-      }
-    };
-
-    frame.addEventListener('load', attachIframeKeyListener);
-
-    document.getElementById('chromaArea').addEventListener('mousedown', () => {
-      try {
-        frame?.contentWindow?.focus();
-      } catch (err) {
-        // Ignore focus failures.
-      }
-    });
-  </script>
+  <script type="module" src="/js/pip.js"></script>
 </body>
 </html>
