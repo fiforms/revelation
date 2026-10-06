@@ -38,7 +38,6 @@ assets/tmp/
 assets/oldcss/
 
 # Generated output for llm helper
-revelation_file_summary.txt
 
 # Test Comparison Files
 tests/_actual/
