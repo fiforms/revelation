@@ -10,7 +10,15 @@ if (window.electronAPI) {
   head.appendChild(css);
 
   // Load sidebar.js
-  const js = document.createElement('script');
-  js.src = '/admin/sidebar.js';
-  head.appendChild(js);
+  // sidebar.js inserts into document.body immediately, so wait until the body exists.
+  const loadSidebarJs = () => {
+    const js = document.createElement('script');
+    js.src = '/admin/sidebar.js';
+    head.appendChild(js);
+  };
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', loadSidebarJs, { once: true });
+  } else {
+    loadSidebarJs();
+  }
 }
