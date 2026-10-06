@@ -1105,6 +1105,19 @@ function getSelectedPanelHost() {
   return host;
 }
 
+// sidebar.js (injected by sidebarloader.js) can finish after the panel is first rendered, in which
+// case the host was parked under the <h1>. Move it into the sidebar slot once that appears.
+if (window.electronAPI && !document.getElementById('sidebar-current-presentation')) {
+  const slotObserver = new MutationObserver(() => {
+    const slot = document.getElementById('sidebar-current-presentation');
+    if (!slot) return;
+    slotObserver.disconnect();
+    const host = document.getElementById('selected-presentation-panel-host');
+    if (host && host.parentElement !== slot) slot.prepend(host);
+  });
+  slotObserver.observe(document.documentElement, { childList: true, subtree: true });
+}
+
 function makeEffectivePresentation(basePres, details = null) {
   const selectedMd = String(details?.selectedMdFile || selectedSidebarMdFile || basePres.md || '').trim() || basePres.md;
   return {
