@@ -19,7 +19,7 @@ import {
   segmentPresentation,
   stripSlideSeparatorsOutsideCodeBlocks
 } from './compiler/presentation-segments.js';
-import { resolveExternalFilePath } from './compiler/compiler-utils.js';
+import { resolveExternalFilePath, sanitizeMarkdownFilename } from './compiler/compiler-utils.js';
 import { marked } from 'marked';
 
 function escapeHTML(text) {
@@ -30,7 +30,8 @@ function escapeHTML(text) {
 }
 
 const urlParams = new URLSearchParams(window.location.search);
-const mdFile = urlParams.get('p');
+// ?p= is fetched, so it must be a local .md name (a URL here would render another origin's markdown).
+const mdFile = sanitizeMarkdownFilename(urlParams.get('p'));
 const selectedLang = String(urlParams.get('lang') || '').trim().toLowerCase();
 const SAFE_MD_LINK_RE = /^(?:\.\/)?(?:[a-zA-Z0-9_.-]+\/)*[a-zA-Z0-9_.-]+\.md$/;
 const optionsToggleButton = document.getElementById('handout-options-toggle');
