@@ -12,6 +12,9 @@
 //   - Changing the PIN affects new pairings only. Access is revoked by
 //     forgetting the follower here (Settings → Peer Pairing on the master).
 //
+// The signature constructions live in ./peer-protocol.js, which the wrapper's follower side
+// (lib/peerAuth.js) loads too, so the two sides cannot drift apart.
+//
 // This file runs in the Vite utility process, which is the only writer of the
 // follower store. The Electron main process reads the store to display it and
 // asks this process (via parentPort) to forget followers and to fan commands
@@ -24,14 +27,20 @@ const path = require('path');
 const os = require('os');
 const crypto = require('crypto');
 const { Server } = require('socket.io');
+const { isLoopbackAddress, normalizeRemoteAddress } = require('./network');
+// The signature constructions are shared with the wrapper's follower side (lib/peerAuth.js).
+const {
+  PEER_PROTOCOL_VERSION,
+  fingerprintPublicKey,
+  signChallenge: signRaw,
+  verifyChallenge: verifyRaw,
+  peerChallengeMessage,
+  peerSocketMessage,
+  peerFollowerAuthMessage,
+  buildSocketPayload
+} = require('./peer-protocol');
 
 const PEER_SOCKET_PATH = '/peer-commands';
-// Bumped when the peer wire protocol changes incompatibly.
-//   v1: dedicated peer keypair and domain-separated signatures (doc/SECURITY.md F2).
-//   v2: PIN used only for enrollment; followers authenticate with their own key.
-// Followers refuse to pair with a master advertising any other version.
-const PEER_PROTOCOL_VERSION = 2;
-
 const PIN_FAILURE_LIMIT = 3;
 const PIN_BLOCK_MS = 60_000;
 const PEER_EVENT_LIMIT = 200;
@@ -41,81 +50,7 @@ const MAX_BODY_BYTES = 64 * 1024;
 const MAX_FOLLOWERS = 256;
 const FOLLOWER_ID_RE = /^[A-Za-z0-9_-]{1,128}$/;
 
-// --- Domain-separated peer signatures -------------------------------------
-//
-// /peer/challenge signs caller-supplied bytes by design, so it must never
-// produce a signature that is meaningful outside the peer protocol. Signing a
-// prefixed digest rather than the caller's bytes makes the endpoint useless as
-// an oracle for any other verifier. See doc/SECURITY.md (F2).
-//
-// The follower-auth domain matters for the same reason in the other
-// direction: an instance can be both a master and a follower with one peer
-// keypair, so its challenge signatures must never pass as follower auth.
-//
-// ⚠ These constructions are byte-identical copies of the ones in the wrapper's
-// lib/peerAuth.js (this file runs in the Vite utility process and cannot
-// require from the wrapper). They are wire protocol: change both sides
-// together or pairing breaks.
-
-const PEER_CHALLENGE_DOMAIN = 'revelation-peer-challenge:v1:';
-const PEER_SOCKET_DOMAIN = 'revelation-peer-socket:v1:';
-const PEER_FOLLOWER_AUTH_DOMAIN = 'revelation-peer-follower-auth:v2:';
-
-function sha256Hex(value) {
-  return crypto.createHash('sha256').update(String(value ?? ''), 'utf8').digest('hex');
-}
-
-function signRaw(privateKeyPem, message) {
-  const signer = crypto.createSign('RSA-SHA256');
-  signer.update(message);
-  signer.end();
-  return signer.sign(privateKeyPem).toString('base64');
-}
-
-function verifyRaw(publicKeyPem, message, signatureBase64) {
-  try {
-    const verifier = crypto.createVerify('RSA-SHA256');
-    verifier.update(message);
-    verifier.end();
-    return verifier.verify(publicKeyPem, Buffer.from(String(signatureBase64 || ''), 'base64'));
-  } catch {
-    return false;
-  }
-}
-
-function peerChallengeMessage(challenge) {
-  return `${PEER_CHALLENGE_DOMAIN}${sha256Hex(challenge)}`;
-}
-
-function peerSocketMessage(payload) {
-  return `${PEER_SOCKET_DOMAIN}${sha256Hex(payload)}`;
-}
-
-function peerFollowerAuthMessage({ purpose, masterId, followerId, nonce, extra = '' }) {
-  const fields = [purpose, masterId, followerId, nonce, extra].map((v) => String(v ?? ''));
-  return `${PEER_FOLLOWER_AUTH_DOMAIN}${sha256Hex(fields.join('\n'))}`;
-}
-
-function buildSocketPayload(token, expiresAt, socketPath) {
-  return `${token}:${expiresAt}:${socketPath}`;
-}
-
-function fingerprintPublicKey(publicKeyPem) {
-  return crypto.createHash('sha256').update(publicKeyPem).digest('hex');
-}
-
 // --- Small helpers ---------------------------------------------------------
-
-function normalizeRemoteAddress(address) {
-  if (!address) return 'unknown';
-  return address.startsWith('::ffff:') ? address.replace('::ffff:', '') : address;
-}
-
-function isLoopbackAddress(address) {
-  if (!address) return false;
-  const normalized = normalizeRemoteAddress(address);
-  return normalized === '127.0.0.1' || normalized === '::1';
-}
 
 function normalizeLabel(value, maxLength = 128) {
   return String(value ?? '').trim().slice(0, maxLength);
@@ -735,7 +670,5 @@ module.exports = {
   PEER_PROTOCOL_VERSION,
   PEER_SOCKET_PATH,
   createPeerServer,
-  isLoopbackAddress,
-  normalizeRemoteAddress,
   peerFollowerAuthMessage
 };

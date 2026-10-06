@@ -1,4 +1,4 @@
-// The master side of the peer protocol (peer-server.js) over real HTTP and Socket.IO, with a
+// The master side of the peer protocol (server/peer-server.js) over real HTTP and Socket.IO, with a
 // follower implemented here from the documented wire format (doc/dev/PEERING.md in the wrapper
 // repo): enrollment with the PIN, per-request signed nonces, socket tokens, lockout, forgetting.
 // createPeerServer() is a factory, so this mounts its middleware on a plain http server.
@@ -10,7 +10,7 @@ const http = require('http');
 const os = require('os');
 const path = require('path');
 const { io } = require('socket.io-client');
-const peer = require('../../peer-server.js');
+const peer = require('../../server/peer-server.js');
 
 const PIN = '123456';
 const MASTER_ID = 'master-instance-1';

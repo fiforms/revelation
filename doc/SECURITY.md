@@ -72,7 +72,7 @@ part of the model, not a gap in it.
 ## Enforcement mechanisms in use
 
 - **Loopback check** — `isLoopbackAddress(req.socket.remoteAddress)` in
-  [`../peer-server.js`](../peer-server.js). Used for `/admin`,
+  [`../server/network.js`](../server/network.js). Used for `/admin`,
   `/peer/status`, `*/index.json`, and the sandbox-origin gate. Commands to
   followers are not sent over HTTP at all: the main process hands them to the
   Vite process over `parentPort`, so no web page can reach that path.
@@ -80,7 +80,7 @@ part of the model, not a gap in it.
   `/thumbs_<key>/`, `/publish/<publishKey>.html`, `/media-share/<token>`.
   Not enumerable: `serve-static` does not emit directory listings and
   `index: false` is set on the presentations mount.
-- **PIN + lockout** — `enforcePairingPin()` in [`../peer-server.js`](../peer-server.js):
+- **PIN + lockout** — `enforcePairingPin()` in [`../server/peer-server.js`](../server/peer-server.js):
   fail-closed, 3 failures per remote address, 60 s block, `timingSafeEqual`
   comparison. Guards enrollment (`/peer/pair`) only.
 - **Follower key signatures** — after enrollment the master stores each

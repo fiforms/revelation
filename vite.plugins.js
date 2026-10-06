@@ -15,7 +15,9 @@
 //   server/presenter-plugins-broker.js  /presenter-plugins-socket
 //   server/reveal-remote-broker.js ...  /socket.io (Reveal Remote)
 //   server/public-relay.js .......... public relay mode
-//   peer-server.js .................. peer pairing endpoints + /peer-commands socket
+//   server/peer-server.js ........... peer pairing endpoints + /peer-commands socket
+//   server/peer-protocol.js ......... the peer signature constructions (shared with the wrapper)
+//   server/network.js ............... isLoopbackAddress / normalizeRemoteAddress
 //
 // USE
 //   vite.config.js:  plugins: [require('./vite.plugins.js')()]      // configured from the environment
@@ -41,7 +43,7 @@ const fs = require('fs');
 const crypto = require('crypto');
 const path = require('path');
 const serveStatic = require('serve-static');
-const { createPeerServer } = require('./peer-server.js');
+const { createPeerServer } = require('./server/peer-server.js');
 const { resolveServerConfig } = require('./server/config.js');
 const { createPresentationIndex, createIndexRoute } = require('./server/presentation-index.js');
 const { createPresentationWatcher, DEFAULT_DEBOUNCE_MS } = require('./server/presentation-watcher.js');
@@ -108,7 +110,7 @@ function computeNotesViewScriptHash() {
 //   6  URL rewrite: /presentations_<key>/<slug>/[index.html]    (rewrite only)
 //        -> /presentation.html?slug=&key= ; .../handout[.html] -> /handout.html?slug=&key=
 //   -  sockets attached to the HTTP server (not middleware):
-//        /peer-commands            T4  RSA bearer token (peer-server.js)
+//        /peer-commands            T4  RSA bearer token (server/peer-server.js)
 //        /presenter-plugins-socket T2c room id only, open by design (server/presenter-plugins-broker.js)
 //        /socket.io                T3  Reveal Remote, per-channel UUID (section 7)
 //   7  /_remote/ui  static remote-control web UI                none (static)
@@ -138,7 +140,7 @@ function createRuntime(options) {
   const mediaShare = createMediaShare();
   const presenterPlugins = createPresenterPluginsBroker();
   const revealRemote = createRevealRemoteBroker();
-  // Master side of the peer protocol. See peer-server.js.
+  // Master side of the peer protocol. See server/peer-server.js.
   const peerServer = createPeerServer({
     configPath: config.userDataDir ? path.join(config.userDataDir, 'config.json') : null,
     followersPath: config.userDataDir ? path.join(config.userDataDir, 'peer-followers.json') : null,

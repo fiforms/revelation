@@ -1,5 +1,5 @@
 // server/access-gates.js — the loopback-only gates in front of local-machine routes.
-// Each factory returns a Connect middleware; `isLoopbackAddress` is the one from peer-server.js
+// Each factory returns a Connect middleware; `isLoopbackAddress` is the one from network.js
 // (127.0.0.1 / ::1 only). NOTE: behind a same-machine reverse proxy every forwarded request
 // presents 127.0.0.1, so these gates pass for the whole internet; public relay mode exists for that
 // deployment and removes every route these gates protect (see server/public-relay.js).
@@ -9,7 +9,7 @@
 //   createIndexJsonGate()      any path ending /index.json (presentations + _media) is loopback only.
 //   createAdminGate()          /admin (the wrapper's http_admin pages) is loopback only.
 // Mounted by vite.plugins.js in the order documented in its header.
-const { isLoopbackAddress, normalizeRemoteAddress } = require('../peer-server.js');
+const { isLoopbackAddress, normalizeRemoteAddress } = require('./network');
 
 function createSandboxOriginGate() {
   return (req, res, next) => {

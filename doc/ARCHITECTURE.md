@@ -41,7 +41,9 @@ Source layout:
 | ---- | ---- |
 | `vite.config.js`, `vite.plugins.js` | Vite config and the server back end (one Vite plugin, `createRevelationPlugin(options)`), which composes the modules in `server/` |
 | `server/*.js` | The server's parts, each a factory that can be required and tested alone: `config` (mode and paths), `presentation-index`, `presentation-watcher`, `media-share`, `thumbnails`, `access-gates`, `presenter-plugins-broker`, `reveal-remote-broker`, `public-relay` |
-| `peer-server.js` | Peer pairing HTTP endpoints and the `/peer-commands` socket (master side) |
+| `server/peer-server.js` | Peer pairing HTTP endpoints and the `/peer-commands` socket (master side) |
+| `server/peer-protocol.js` | The peer signature constructions (domains, nonces, sign/verify), shared with the wrapper's follower side |
+| `server/network.js` | `isLoopbackAddress` / `normalizeRemoteAddress` |
 | `js/presentations.js`, `js/presentation-bootstrap.js` | Presentation page controller and markdown loading/compilation bootstrap |
 | `js/compiler/` | Markdown compiler (front matter, macros, media, slide assembly, sanitization) |
 | `js/pluginloader.js` | Browser-side plugin loader |
@@ -121,7 +123,7 @@ The Vite server is the whole back end. The middleware stack in registration orde
 | `/css` | Compiled themes (`dist/css` in GUI mode, `css/` otherwise) | none |
 | `/presentations_<key>/<slug>/` | Rewritten to `presentation.html` / `handout.html` | key in path |
 | `/_remote/ui/**` | Static remote-control web UI | none |
-| `/peer/*` | Peer pairing and auth (see `peer-server.js`) | `mdnsPublish`, PIN or follower signature |
+| `/peer/*` | Peer pairing and auth (see `server/peer-server.js`) | `mdnsPublish`, PIN or follower signature |
 | `**/index.json` | Presentation and media indexes | loopback only |
 | `<presentations>/_media/*.thumbnail.jpg` | Legacy `.webp` fallback | key in path |
 | `/presentations_<key>/`, `/plugins_<key>/` (custom path mode) | Static presentation and plugin trees | key in path |
@@ -134,7 +136,7 @@ Three Socket.IO servers share the one HTTP server, each on its own `path` (they 
 | ---- | ---- | ------- | ---- |
 | `/socket.io` | `server/reveal-remote-broker.js` | Reveal Remote broker: `presenter`, `remote`, `follower` roles | channel UUIDs |
 | `/presenter-plugins-socket` | `server/presenter-plugins-broker.js` | Collaboration plugin rooms (`presenter-plugin:join` / `presenter-plugin:event`) | room id only |
-| `/peer-commands` | `peer-server.js` | Master-to-follower slide-sync commands | RSA-signed bearer token |
+| `/peer-commands` | `server/peer-server.js` | Master-to-follower slide-sync commands | RSA-signed bearer token |
 
 The plugin also watches the presentations directory (chokidar) and pushes Vite HMR custom events: `reload-presentations`, `presentations-index-updated`, `reload-media`. `presentations/index.json` (library list) and `_media/index.json` (media sidecar aggregate) are generated here.
 

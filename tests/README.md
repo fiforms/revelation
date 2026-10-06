@@ -27,6 +27,8 @@ closes. That is what the tests build on.
 | File | Module | Covers |
 |------|--------|--------|
 | `config.test.cjs` | `config.js` | mode selection, option/env precedence, GUI index paths, lazy `ffmpegBin`, no `process.env` access |
+| `network.test.cjs` | `network.js` | the loopback decision: which addresses count, mapped IPv6, missing values |
+| `peer-protocol.test.cjs` | `peer-protocol.js` | **known-answer vectors** for every wire string (hashes computed independently), domain separation, non-throwing verify; the module may require only `crypto` |
 | `access-gates.test.cjs` | `access-gates.js` | loopback gates driven with **fake remote addresses** (IPv4, IPv6, mapped, missing), so no LAN interface is needed |
 | `presentation-index.test.cjs` | `presentation-index.js` | index entries and every exclusion rule, README deck refresh, media index, GUI index route |
 | `presentation-watcher.test.cjs` | `presentation-watcher.js` | debounce, batching, unchanged-content filter, folder removal, `close()` (fake chokidar, recording `send`) |
@@ -47,7 +49,7 @@ process would.
 | `relay.test.cjs` | public relay mode: deny-by-default 404 surface, no peer endpoints, remote UI, both sockets |
 | `sockets.test.cjs` | Reveal Remote broker and presenter-plugin rooms through the full server |
 | `modes.test.cjs` | a relay, a custom-path and a standalone server in one process; isolation; `close()` releases everything |
-| `peer.test.cjs` | `peer-server.js` on a plain `http.Server`: pairing, PIN lockout, nonces, signatures, socket grants |
+| `peer.test.cjs` | `server/peer-server.js` on a plain `http.Server`: pairing, PIN lockout, nonces, signatures, socket grants |
 
 Notes:
 
