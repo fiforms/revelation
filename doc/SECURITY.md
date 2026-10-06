@@ -54,7 +54,7 @@ part of the model, not a gap in it.
 |---|---|---|---|
 | `config.key` | 64 bits (`crypto`) | `/presentations_<key>/`, `/plugins_<key>/`, `/thumbs_<key>/`, API server on :8900 | **Every shared presentation link** (`/presentation.html?slug=…&key=…`) |
 | `presentationPublishKey` | 64 bits (`crypto`) | `/publish/<key>.html` | The URL-publish screen link |
-| `mdnsPairingPin` | 6 digits (`crypto`) | `/peer/socket-info`, `/peer/challenge` | Shown in the presenter info panel |
+| `mdnsPairingPin` | 6 digits (`crypto`) | `/peer/pair` only (v2 protocol; `/peer/socket-info` and `/peer/challenge` require a follower signature instead) | Shown in the presenter info panel |
 | `rsaPrivateKey` | RSA | WordPress publish auth only | Never served |
 | `peerRsaPrivateKey` | RSA | Peer pairing and peer socket auth | Never served |
 | Reveal-remote `remoteId` | UUIDv4 | Remote-control channel for one deck | Presenter's remote QR code |
@@ -181,8 +181,8 @@ serves only:
 Everything else returns a flat `404`. The mode does not gate the local-machine
 features — it **never registers them**: no presentations, plugins, thumbnails
 (so no `ffmpeg`), media tokens, `/publish`, `/admin`, `/peer/*`, `index.json`,
-file watching, or Vite static root and `/@fs`. `ensurePeerCommandServer` is
-not started either, since peer pairing authenticates against a `config.json` a
+file watching, or Vite static root and `/@fs`. `peerServer.attachSocketServer()` and the `/peer/*` middleware are
+not mounted either, since peer pairing authenticates against a `config.json` a
 relay has no business holding. The presentations directory is never resolved,
 so a relay needs no presentation data on disk at all.
 
