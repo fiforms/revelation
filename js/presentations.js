@@ -25,6 +25,7 @@ import RevealRemoteZoomSync from 'reveal.js-remote/plugin/remotezoomsync.js';
 import SlideLabels from './slide-labels/plugin.js';
 
 import { loadAndPreprocessMarkdown } from './presentation-bootstrap.js';
+import { isSafeMarkdownPath } from './compiler/compiler-utils.js';
 import { revealTweaks, initVideoSync } from './tweaks.js';
 import { contextMenu, sendPresentationToPeers, closePresentationsOnPeers } from './contextmenu.js';
 import { pluginLoader } from './pluginloader.js';
@@ -46,7 +47,6 @@ const builderPreviewMode = urlParams.get('builderPreview') === '1';
 const builderPreviewPeerEnabled = builderPreviewMode && urlParams.get('builderPreviewPeer') === '1';
 const builderPreviewToken = urlParams.get('builderPreviewToken') || '';
 const PREVIEW_BRIDGE = 'revelation-builder-preview-bridge';
-const SAFE_MD_LINK_RE = /^(?:\.\/)?(?:[a-zA-Z0-9_.-]+\/)*[a-zA-Z0-9_.-]+\.md$/;
 
 // 'notes' (split view) and 'notesteleprompter' (teleprompter-only) both drive the
 // speaker-notes pane, auto-scroll, and next-slide preview UI in this file.
@@ -216,14 +216,14 @@ function setupInterPresentationLinkHandler() {
       // Existing generated links like index.html?p=foo.md
       if (isIndexPath && parsed.searchParams.has('p')) {
         const p = parsed.searchParams.get('p') || '';
-        if (!SAFE_MD_LINK_RE.test(p)) return null;
+        if (!isSafeMarkdownPath(p)) return null;
         return { mdFile: p, hash: parsed.hash || '' };
       }
 
       // Authoring contract: [Next](something.md)
       const pathWithoutLeadingDot = trimmed.startsWith('./') ? trimmed.slice(2) : trimmed;
       const [candidatePath, hashPart = ''] = pathWithoutLeadingDot.split('#', 2);
-      if (!SAFE_MD_LINK_RE.test(candidatePath)) return null;
+      if (!isSafeMarkdownPath(candidatePath)) return null;
       return { mdFile: candidatePath, hash: hashPart ? `#${hashPart}` : '' };
     } catch {
       return null;

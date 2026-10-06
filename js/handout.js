@@ -19,7 +19,7 @@ import {
   segmentPresentation,
   stripSlideSeparatorsOutsideCodeBlocks
 } from './compiler/presentation-segments.js';
-import { resolveExternalFilePath, sanitizeMarkdownFilename } from './compiler/compiler-utils.js';
+import { resolveExternalFilePath, sanitizeMarkdownFilename, isSafeMarkdownPath } from './compiler/compiler-utils.js';
 import { marked } from 'marked';
 
 function escapeHTML(text) {
@@ -33,7 +33,6 @@ const urlParams = new URLSearchParams(window.location.search);
 // ?p= is fetched, so it must be a local .md name (a URL here would render another origin's markdown).
 const mdFile = sanitizeMarkdownFilename(urlParams.get('p'));
 const selectedLang = String(urlParams.get('lang') || '').trim().toLowerCase();
-const SAFE_MD_LINK_RE = /^(?:\.\/)?(?:[a-zA-Z0-9_.-]+\/)*[a-zA-Z0-9_.-]+\.md$/;
 const optionsToggleButton = document.getElementById('handout-options-toggle');
 const optionsPanel = document.getElementById('handout-options');
 
@@ -94,13 +93,13 @@ function resolveHandoutMarkdownTarget(href) {
     const isHandoutPath = /^handout(?:\.html)?$/i.test(rawPath);
     if ((isIndexPath || isHandoutPath) && parsed.searchParams.has('p')) {
       const p = parsed.searchParams.get('p') || '';
-      if (!SAFE_MD_LINK_RE.test(p)) return null;
+      if (!isSafeMarkdownPath(p)) return null;
       return { mdFile: p, hash: parsed.hash || '' };
     }
 
     const local = trimmed.startsWith('./') ? trimmed.slice(2) : trimmed;
     const [candidatePath, hashPart = ''] = local.split('#', 2);
-    if (!SAFE_MD_LINK_RE.test(candidatePath)) return null;
+    if (!isSafeMarkdownPath(candidatePath)) return null;
     return { mdFile: candidatePath, hash: hashPart ? `#${hashPart}` : '' };
   } catch {
     return null;
@@ -143,7 +142,7 @@ function findAlternativeMarkdownFile(metadata = {}, language = '') {
   for (const [candidate, langCode] of Object.entries(alternatives)) {
     const key = String(candidate || '').trim();
     const safe = key.startsWith('./') ? key.slice(2) : key;
-    if (!SAFE_MD_LINK_RE.test(safe)) continue;
+    if (!isSafeMarkdownPath(safe)) continue;
     if (String(key || '').trim().toLowerCase() === 'self') continue;
     if (String(langCode || '').trim().toLowerCase() === requestedLang) {
       return safe;

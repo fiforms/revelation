@@ -70,6 +70,21 @@ export function getNoteSeparator(metadata = {}) {
   return usesNewNoteSeparator(metadata) ? NOTE_SEPARATOR_CURRENT : NOTE_SEPARATOR_LEGACY;
 }
 
+// The one rule for "is this a safe relative markdown path": optional leading "./", then plain
+// segments of [A-Za-z0-9_.-], no "." or ".." segments, no leading "/", ending in ".md" (any case).
+// Pure predicate (no ?/# stripping, no logging); use sanitizeMarkdownFilename for untrusted input
+// that may carry a query or hash. Shared by the link handlers in presentations.js and handout.js.
+export function isSafeMarkdownPath(value) {
+  if (typeof value !== 'string') return false;
+  const normalized = value.startsWith('./') ? value.slice(2) : value;
+  if (!normalized) return false;
+  const segments = normalized.split('/');
+  if (segments.some((segment) => !/^[a-zA-Z0-9_.-]+$/.test(segment) || segment === '.' || segment === '..')) {
+    return false;
+  }
+  return /\.md$/i.test(segments[segments.length - 1]);
+}
+
 // Accept only safe relative markdown filenames when decks reference other decks by path.
 export function sanitizeMarkdownFilename(filename) {
   const raw = String(filename || '').trim();
@@ -82,22 +97,12 @@ export function sanitizeMarkdownFilename(filename) {
     return null;
   }
 
-  const segments = normalized.split('/');
-  const validSegment = /^[a-zA-Z0-9_.-]+$/;
-  if (
-    segments.some((segment) => !segment || segment === '.' || segment === '..' || !validSegment.test(segment))
-  ) {
+  if (!isSafeMarkdownPath(normalized)) {
     console.warn(`Blocked invalid markdown filename: ${filename}`);
     return null;
   }
 
-  const leaf = segments[segments.length - 1] || '';
-  if (!/\.md$/i.test(leaf)) {
-    console.warn(`Blocked invalid markdown filename: ${filename}`);
-    return null;
-  }
-
-  return segments.join('/');
+  return normalized;
 }
 
 // Resolve relative paths for external files (macros, etc.)

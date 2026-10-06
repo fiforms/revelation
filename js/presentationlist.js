@@ -12,6 +12,7 @@
 import { pluginLoader } from './pluginloader.js';
 import { createInfoPanel } from './info-panel.js';
 import { parseYamlOrEmpty } from './yaml-parse.js';
+import { isSafeMarkdownPath } from './compiler/compiler-utils.js';
 
 const urlParams = new URLSearchParams(window.location.search);
 const url_key = urlParams.get('key');
@@ -758,8 +759,8 @@ function extractFrontMatter(raw = '') {
 
 function isValidMarkdownPath(mdFile = '') {
   const candidate = String(mdFile || '').trim();
-  if (!candidate) return false;
-  return /^(?:[a-zA-Z0-9_.-]+\/)*[a-zA-Z0-9_.-]+\.md$/.test(candidate);
+  // Keys are stored as written, so a "./" prefix is not accepted here (isSafeMarkdownPath allows it).
+  return !candidate.startsWith('./') && isSafeMarkdownPath(candidate);
 }
 
 function deriveThumbnailName(mdFile = '') {
