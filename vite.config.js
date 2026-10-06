@@ -14,7 +14,6 @@
 //   separately by `npm run build:theme` (sass -> dist/css) and fonts by `npm run build:fonts`.
 // - socket.io-client is aliased to its ESM build so the browser bundle and the offline IIFE
 //   share one copy.
-import { defineConfig } from 'vite';
 const presentationIndexPlugin = require('./vite.plugins.js');
 import path from 'path';
 import fs from 'fs';

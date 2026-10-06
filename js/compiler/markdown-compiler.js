@@ -30,6 +30,7 @@
  * `../presentation-bootstrap.js`.
  */
 import * as yaml from 'js-yaml';
+import { parseYamlOrEmpty } from '../yaml-parse.js';
 import { createSlideCompiler } from './slide-compiler.js';
 import { createMarkdownLineParsers } from './markdown-line-parsers.js';
 import { createMediaLineParsers } from './media-line-parsers.js';
@@ -94,7 +95,7 @@ export function extractFrontMatter(md) {
   const content = md.slice(match[0].length);
 
   try {
-    const metadata = yaml.load(yamlText) || {};
+    const metadata = parseYamlOrEmpty(yamlText);
     return { metadata, content };
   } catch (err) {
     console.error("⚠ Malformed YAML in presentation:", err.message);

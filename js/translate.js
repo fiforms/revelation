@@ -9,7 +9,8 @@
 // offline/hosted exports (window.offlineMarkdown / __revelationHostedRoute); the wrapper's admin
 // pages (http_admin/*.js) push extra URLs onto window.translationsources before
 // DOMContentLoaded; sources are deep-merged per language. Elements with a `data-translate` attribute are translated in place (the element's
-// innerHTML is the key) once, then the attribute is removed.
+// innerHTML is the key; the translation is written back as innerHTML) once, then the attribute
+// is removed. Missing translations are warned about once per key.
 //
 // Search the dom for all elements with a data-translate attribute
 // and replace their inner text with the corresponding translation
@@ -26,6 +27,15 @@ if(window.offlineMarkdown || window.__revelationHostedRoute) {
   window.translationsources = ['/js/translations.json'];
 }
 
+// Warn once per language+key; tr() and translatePage() both run repeatedly.
+const warnedMissing = new Set();
+function warnMissing(key, language) {
+  const id = `${language}\u0000${key}`;
+  if (warnedMissing.has(id)) return;
+  warnedMissing.add(id);
+  console.warn(`Missing translation for key: "${key}" in language: "${language}"`);
+}
+
 window.tr = (key) => {
     // Get from browser language settings
     const language = navigator.language.slice(0,2); 
@@ -37,7 +47,7 @@ window.tr = (key) => {
         return window.translations[language][key];
     }
     else {
-        console.warn(`Missing translation for key: "${key}" in language: "${language}"`);
+        warnMissing(key, language);
         return key; // Fallback to the original key
     }
 }
@@ -86,11 +96,13 @@ function translatePage(language) {
         const key = element.innerHTML.trim();
         // Check if the translation exists for the given language
         if (window.translations[language] && window.translations[language][key]) {
-            element.innerText = window.translations[language][key];
+            // innerHTML (not innerText): keys are innerHTML, so translations keep their markup
+            // (e.g. <br>). Translation files are first-party, same trust as the key.
+            element.innerHTML = window.translations[language][key];
             element.removeAttribute('data-translate');
         }
         else {
-            console.warn(`Missing translation for key: "${key}" in language: "${language}"`);
+            warnMissing(key, language);
         }
     });
 }

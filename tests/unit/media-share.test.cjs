@@ -85,7 +85,7 @@ test('middleware: full body, ignoring a query string, with length and Accept-Ran
   });
 });
 
-test('middleware: byte ranges (closed, open-ended, suffix-less start) and every invalid shape', async () => {
+test('middleware: byte ranges (closed, open-ended, suffix, clamped end) and every invalid shape', async () => {
   await withServer(async ({ share, base, file }) => {
     share.register({ token: T1, absolutePath: file });
     const get = (range) => fetch(`${base}/media-share/${T1}`, { headers: { range } });
@@ -93,7 +93,9 @@ test('middleware: byte ranges (closed, open-ended, suffix-less start) and every 
       ['bytes=0-0', 206, '0', 'bytes 0-0/10'],
       ['bytes=2-4', 206, '234', 'bytes 2-4/10'],
       ['bytes=7-', 206, '789', 'bytes 7-9/10'],
-      ['bytes=-', 206, '0123456789', 'bytes 0-9/10'],
+      ['bytes=-3', 206, '789', 'bytes 7-9/10'],
+      ['bytes=-50', 206, '0123456789', 'bytes 0-9/10'],
+      ['bytes=8-50', 206, '89', 'bytes 8-9/10'],
       ['bytes=9-9', 206, '9', 'bytes 9-9/10']
     ];
     for (const [range, status, body, contentRange] of cases) {
@@ -102,7 +104,7 @@ test('middleware: byte ranges (closed, open-ended, suffix-less start) and every 
       assert.strictEqual(await res.text(), body, range);
       assert.strictEqual(res.headers.get('content-range'), contentRange, range);
     }
-    for (const bad of ['bytes=5-2', 'bytes=0-10', 'bytes=10-', 'bytes=50-60', 'nonsense']) {
+    for (const bad of ['bytes=5-2', 'bytes=10-', 'bytes=50-60', 'bytes=-', 'bytes=-0', 'nonsense']) {
       const res = await get(bad);
       assert.strictEqual(res.status, 416, bad);
       assert.strictEqual(res.headers.get('content-range'), 'bytes */10', bad);

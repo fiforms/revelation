@@ -47,9 +47,9 @@
         left: 0;  
         width: 100%;
         height: 100%;
-        background-color: rgba(255,255,266,0.5);
-        zIndex: 0;
-        pointerEvents: none;
+        background-color: rgba(255,255,255,0.5);
+        z-index: 0;
+        pointer-events: none;
 }
 
 .info-head, .info-body {

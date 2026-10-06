@@ -258,8 +258,8 @@ export async function loadAndPreprocessMarkdown(deck, selectedFile = null) {
       if (externalPath) {
         const res = await fetch(externalPath);
         if (res.ok) {
-          const yaml = await import('js-yaml');
-          const importsData = yaml.default.load(await res.text()) || {};
+          const { parseYamlOrEmpty } = await import('./yaml-parse.js');
+          const importsData = parseYamlOrEmpty(await res.text());
           if (typeof importsData === 'object' && !Array.isArray(importsData)) {
             // Merge imported macros
             if (importsData.macros && typeof importsData.macros === 'object' && !Array.isArray(importsData.macros)) {

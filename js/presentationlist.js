@@ -11,7 +11,7 @@
  */
 import { pluginLoader } from './pluginloader.js';
 import { createInfoPanel } from './info-panel.js';
-import * as yaml from 'js-yaml';
+import { parseYamlOrEmpty } from './yaml-parse.js';
 
 const urlParams = new URLSearchParams(window.location.search);
 const url_key = urlParams.get('key');
@@ -749,7 +749,7 @@ function extractFrontMatter(raw = '') {
   const match = String(raw).match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?/);
   if (!match) return {};
   try {
-    return yaml.load(match[1]) || {};
+    return parseYamlOrEmpty(match[1]);
   } catch (err) {
     console.warn('Failed to parse presentation metadata:', err.message);
     return {};

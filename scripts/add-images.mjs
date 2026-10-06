@@ -1,12 +1,13 @@
 // `npm run addimages`: interactive helper that appends image slides to a presentation.
-// NOTE: targets ../presentations (see the note in make-presentation.js), not presentations_<key>/.
 import fs from 'fs';
 import path from 'path';
 import readline from 'readline/promises';
 import { fileURLToPath } from 'url';
+import { createRequire } from 'module';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const presentationsDir = path.resolve(__dirname, '../presentations');
+const { main: initPresentations } = createRequire(import.meta.url)('./init-presentations.js');
+const presentationsDir = path.resolve(__dirname, '..', initPresentations());
 
 const rl = readline.createInterface({
   input: process.stdin,

@@ -41,6 +41,12 @@ function createMediaShare() {
     return false;
   }
 
+  // A file deleted between statSync and open emits 'error'; without a handler that is uncaught.
+  function pipeFile(res, stream) {
+    stream.on('error', () => { if (!res.headersSent) res.writeHead(404); res.end(); });
+    stream.pipe(res);
+  }
+
   function middleware(req, res, next) {
     if (!req.url.startsWith(ROUTE_PREFIX)) return next();
     const rawToken = req.url.slice(ROUTE_PREFIX.length).split('?')[0];
@@ -53,14 +59,21 @@ function createMediaShare() {
     const total = stat.size;
     const range = req.headers['range'];
     if (range) {
-      const m = range.match(/bytes=(\d*)-(\d*)/);
-      if (!m) {
+      const m = range.match(/^bytes=(\d*)-(\d*)$/);
+      if (!m || (!m[1] && !m[2]) || total === 0) {
         res.writeHead(416, { 'Content-Range': `bytes */${total}` });
         return res.end();
       }
-      const start = m[1] ? parseInt(m[1], 10) : 0;
-      const end   = m[2] ? parseInt(m[2], 10) : total - 1;
-      if (start > end || end >= total) {
+      let start, end;
+      if (!m[1]) {
+        // Suffix range: the last N bytes.
+        start = Math.max(0, total - parseInt(m[2], 10));
+        end = total - 1;
+      } else {
+        start = parseInt(m[1], 10);
+        end = m[2] ? Math.min(parseInt(m[2], 10), total - 1) : total - 1;
+      }
+      if (start > end || start >= total) {
         res.writeHead(416, { 'Content-Range': `bytes */${total}` });
         return res.end();
       }
@@ -70,14 +83,14 @@ function createMediaShare() {
         'Content-Length': end - start + 1,
         'Content-Type': entry.mimeType
       });
-      fs.createReadStream(entry.absolutePath, { start, end }).pipe(res);
+      pipeFile(res, fs.createReadStream(entry.absolutePath, { start, end }));
     } else {
       res.writeHead(200, {
         'Content-Length': total,
         'Content-Type': entry.mimeType,
         'Accept-Ranges': 'bytes'
       });
-      fs.createReadStream(entry.absolutePath).pipe(res);
+      pipeFile(res, fs.createReadStream(entry.absolutePath));
     }
   }
 

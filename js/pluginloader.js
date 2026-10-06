@@ -19,8 +19,8 @@
  * getRevealPlugins by js/presentations.js, builder hooks by the builder plugins.
  * Failures (bad baseURL, 404, no registration) never reject: the returned promise is
  * Promise.allSettled over all plugin loads.
- * NOTE: when the key is missing from the page URL the fetch goes to `/plugins_null/...`,
- * fails, and the page simply runs with no plugins.
+ * NOTE: when the key is missing from the page URL presentations.js warns, the fetch to
+ * `/plugins_/plugins.json` fails, and the page simply runs with no plugins.
  */
 export function pluginLoader(page, prefix) {
   window.RevelationPlugins = {};

@@ -172,7 +172,7 @@ test('media-share: Range requests give 206 slices and 416 for bad ranges', async
   const open = await get('bytes=15-');
   assert.strictEqual(open.status, 206);
   assert.strictEqual(await open.text(), 'fghij');
-  for (const bad of ['bytes=10-5', 'bytes=0-20', 'bytes=99-100', 'garbage']) {
+  for (const bad of ['bytes=10-5', 'bytes=99-100', 'garbage']) {
     const res = await get(bad);
     assert.strictEqual(res.status, 416, bad);
     assert.strictEqual(res.headers.get('content-range'), 'bytes */20');

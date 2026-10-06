@@ -250,7 +250,13 @@ function setupInterPresentationLinkHandler() {
 }
 
 
-pluginLoader('presentations',`/plugins_${key}`).then(async function() {
+// The access key is only available from a /presentations_<key>/ URL; without it the plugin tree
+// (/plugins_<key>/) can't be addressed, so say so instead of silently failing to load plugins.
+if (!key && window.location.protocol !== 'file:' && !window.__offlinePluginList) {
+  console.warn('[presentations] URL has no /presentations_<key>/ segment; plugins will not load. Open the deck through its presentations_<key> path.');
+}
+
+pluginLoader('presentations', key ? `/plugins_${key}` : '/plugins_').then(async function() {
 
   const plugins = [Markdown, Notes, Zoom, Search, SlideLabels()];
   const enableRevealRemote = !!window.revealRemoteServer && (!builderPreviewMode || builderPreviewPeerEnabled);

@@ -112,7 +112,9 @@ function createThumbsMiddleware({ presentationsDir, key, ffmpegBin, generator = 
     function serveThumb() {
       res.setHeader('Content-Type', 'image/jpeg');
       res.setHeader('Cache-Control', 'public, max-age=86400');
-      fs.createReadStream(thumbFile).pipe(res);
+      const stream = fs.createReadStream(thumbFile);
+      stream.on('error', () => { if (!res.headersSent) res.statusCode = 404; res.end(); });
+      stream.pipe(res);
     }
 
     if (fs.existsSync(thumbFile) && fs.statSync(thumbFile).mtimeMs >= sourceStat.mtimeMs) {

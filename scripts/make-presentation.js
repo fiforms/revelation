@@ -1,12 +1,11 @@
 // `npm run make`: interactive scaffold from templates/default.
-// NOTE: writes to ../presentations/<slug>, but the live presentations folder is
-// presentations_<key>/ (scripts/init-presentations.js), so output lands in a folder the server
-// does not serve. Likewise scripts/add-images.mjs (`npm run addimages`).
+// Writes into the live presentations_<key>/ folder (scripts/init-presentations.js).
 const fs = require('fs');
 const path = require('path');
 const readline = require('readline');
 
-const presentationsDir = path.resolve(__dirname, '../presentations');
+const { main: initPresentations } = require('./init-presentations');
+const presentationsDir = path.resolve(__dirname, '..', initPresentations());
 const templateDir = path.resolve(__dirname, '../templates/default');
 const themeDir = path.resolve(__dirname, '../css');
 
@@ -106,7 +105,7 @@ async function main() {
 
   fs.writeFileSync(path.join(presDir, 'presentation.md'), content);
 
-  console.log(`✅ Presentation '${title}' created in presentations/${slug}`);
+  console.log(`✅ Presentation '${title}' created in ${path.basename(presentationsDir)}/${slug}`);
   rl.close();
 }
 
