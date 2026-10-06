@@ -52,10 +52,11 @@ Front matter YAML, macros y definiciones de alias de medios:
 
 ## Referencia de arquitectura
 
-Arquitectura de runtime y extensión del framework REVELation:
+Arquitectura de runtime y extensión del framework REVELation (flujo de solicitudes, pipeline del compilador, contrato del cargador de plugins, rutas y sockets del servidor, variables de entorno, paquete offline, temas, pruebas):
 - [revelation/doc/ARCHITECTURE.md](ARCHITECTURE.md)
+- [revelation/doc/SECURITY.md](SECURITY.md) - niveles de confianza y mapa de endpoints
 
-Configuración de proxy inverso:
+Configuración de proxy inverso
 - [revelation/doc/REVERSE_PROXY.md](REVERSE_PROXY.md)
 
 ---
@@ -73,11 +74,9 @@ La sintaxis y comportamiento específicos de plugins viven junto al código fuen
 
 ## Documentación del wrapper
 
-La documentación del wrapper Electron está en el repositorio externo:
-- [doc/GUI_REFERENCE.md](../../doc/GUI_REFERENCE.md)
-- [doc/TROUBLESHOOTING.md](../../doc/TROUBLESHOOTING.md)
-- [doc/REVERSE_PROXY.md](../../doc/REVERSE_PROXY.md)
-- [doc/dev/INSTALLING.md](../../doc/dev/INSTALLING.md)
-- [doc/dev/PLUGINS.md](../../doc/dev/PLUGINS.md)
-- [doc/dev/PEERING.md](../../doc/dev/PEERING.md)
-- [doc/dev/README-PDF.md](../../doc/dev/README-PDF.md)
+La documentación del wrapper Electron está en el repositorio externo.
+- Especificación del formato de archivo de presentación `.revel`: `doc/dev/REVEL_FORMAT.md` (repositorio externo)
+- Cómo implementa el wrapper `.revel`: `doc/dev/REVEL_IMPLEMENTATION.md` (repositorio externo)
+- API de hooks de plugins y guía de autoría: `doc/dev/PLUGINS.md` (repositorio externo)
+- Protocolo de emparejamiento de peers: `doc/dev/PEERING.md` (repositorio externo)
+- Ejecución de un relay de sockets público (`npm run relay`): `doc/dev/PUBLIC_RELAY.md` (repositorio externo)

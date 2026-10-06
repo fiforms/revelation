@@ -97,6 +97,8 @@ __underline__
 ~~strikethrough~~
 ```
 
+---
+
 #### Text Colors
 
 Wrap text in brackets and follow it with a color class (Pandoc-style bracketed span):
@@ -114,10 +116,14 @@ This is [important]{.red} and this is [fine]{.green}.
 | `.highlight` | `.yellow`, `.orange`, `.gold` | Gold/amber family; exact shade is theme-specific |
 | `.muted` | `.grey`, `.gray`, `.silver` | De-emphasized text |
 
+---
+
 Colors are defined by the theme, so "red" is a darker red on light themes and a softer red on dark themes
 (slides using `darkbg`/`lightbg` follow their forced background mode). Unknown class names are left as written,
 inline code is never converted, and spans can contain other formatting: `[**bold red**]{.red}`.
 The long form `<span class="text-red">…</span>` is equivalent. Inline `style` colors still work but are not themed.
+
+---
 
 #### Verse Headings and References
 
@@ -500,6 +506,8 @@ Example changing transition duration:
 | `carousel` | Slides sit back in depth like a gallery and glide past each other. |
 | `spin` | The slide rotates and shrinks away while the new one spins in. |
 
+---
+
 Notes:
 
 - **In and out:** every transition except `fade` and `none` can be used on its own, or as `name-in` / `name-out` to set the arriving and leaving slide separately, such as `data-transition="flip-in zoom-out"`. reveal.js does not provide in/out versions of `fade` or `none`: a leaving slide tagged `fade-out` or `none-out` simply falls back to reveal's default opacity fade.
@@ -586,6 +594,8 @@ Append `++` to convert a line into a fragment:
 ![web:scrollY=500](https://example.com)
 ```
 
+---
+
 #### `fit` — full-slide fit
 
 `![fit](image.jpg)` scales the image or video to fill the slide area (honouring theme margins) using the `data-imagefit` attribute.
@@ -602,6 +612,8 @@ Because the height is expressed as a fraction of `--slide-height` (Reveal's inte
 ![fit:40](clip.mp4)              <!-- video, 40% of slide height -->
 ```
 
+---
+
 #### `fill` — full-screen fill
 
 `![fill](image.jpg)` fills the entire screen by expanding beyond the slide margins, using the `data-imagefit-fill` attribute. This is useful for full-screen videos, immersive content, or media that should visually extend to the viewport edge.
@@ -614,6 +626,8 @@ Like `![fit]()`, this works with both images and videos, and supports all the sa
 ![fill](fullscreen-video.mp4)
 ![fill](immersive-image.jpg)
 ```
+
+---
 
 #### `fill:background` — background contained in the slide
 

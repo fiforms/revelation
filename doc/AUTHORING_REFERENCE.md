@@ -237,6 +237,8 @@ Common forms:
 ![web:scrollY=500](https://example.com)
 ```
 
+---
+
 **`![fit]()` vs `![fill]()`:**
 - `![fit](media)` — Fills the usable slide area with content (respects slide margins)
 - `![fill](media)` — Fills the entire screen by expanding beyond the slide margins (useful for full-screen videos or immersive content)
@@ -264,6 +266,8 @@ An empty caption still produces the figure frame without caption text:
 ```
 
 Fragment and auto-animate annotations on the image line transfer to the whole figure, so the image and caption appear together as one unit:
+
+---
 
 ```markdown
 ![](keynote.jpg) ++
@@ -451,6 +455,8 @@ Custom macros are defined in the YAML front matter `macros` section and can expa
 
 Use the `macros` section in YAML front matter:
 
+---
+
 ```yaml
 ---
 macros:
@@ -464,6 +470,8 @@ macros:
     {{lowerthird}}
 ---
 ```
+
+---
 
 #### Inline Macros (`:name:` syntax)
 
@@ -511,6 +519,8 @@ Usage:
 ```markdown
 {{my_lovely_theme}}
 ```
+
+---
 
 Each nested macro (`{{darkbg}}`, `{{lighttext}}`, etc.) is expanded recursively. The `![background:sticky](...)` is processed into a reveal.js background directive.
 
@@ -566,6 +576,8 @@ macros:
 :bad_macro:   # ⚠️ darkbg will persist, defeating inline semantics
 ```
 
+---
+
 **Recommended instead:**
 
 ```yaml
@@ -602,6 +614,8 @@ imports: shared-resources.yaml
 
 The imports file path is **relative to the presentation directory** and must be a simple filename or relative path (no absolute paths or `..` traversal). For example:
 
+---
+
 ```
 presentations/
 ├── slides.md                       # Front matter: imports: shared.yaml
@@ -611,6 +625,8 @@ presentations/
 ```
 
 The imports YAML file can contain both `macros` and `media` sections:
+
+---
 
 ```yaml
 # shared-resources.yaml
@@ -635,6 +651,8 @@ media:
     copyright: Original composition
 ```
 
+---
+
 Then use them in your presentation:
 
 ```markdown
@@ -650,6 +668,8 @@ Important point with sound: :audio:play:media:intro_sound:
 ```
 
 **Merging behavior:** If both inline and imported definitions are present in the front matter, inline definitions take precedence in case of name conflicts. This allows you to override shared resources on a per-deck basis.
+
+---
 
 ```yaml
 ---

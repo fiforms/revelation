@@ -18,6 +18,8 @@ If you are on the **New Presentation** screen, these are the most important opti
 | `Show Advanced Options` | Reveals extra technical settings. Safe to leave off unless you know you need them. |
 | `Create a Title Slide` | Automatically creates a first slide with title details so you can start faster. |
 
+---
+
 When **Advanced Options** are shown, common fields include:
 
 | Advanced Field | Simple explanation |
@@ -169,6 +171,8 @@ For translation workflow and synchronized multi-language show setup, see:
 
 `config.transition` also accepts the REVELation transitions (for example `page-turn`, `cube-3d`, `fade-out-in`). See [Slide transitions](MARKDOWN_REFERENCE.md#44-slide-transitions) in the Markdown reference.
 
+---
+
 ### Auto-animate easing
 
 `config.autoAnimateEasing` (and a slide's `data-auto-animate-easing`) accepts a preset name or any CSS easing function. REVELation replaces a preset name with its CSS before handing the setting to Reveal.js; any other value is passed through unchanged.
@@ -257,6 +261,8 @@ imports: shared-resources.yaml
 
 The imported file can contain both macros and media definitions:
 
+---
+
 ```yaml
 # shared-resources.yaml
 macros:
@@ -274,6 +280,8 @@ media:
     filename: intro.mp3
     description: Introduction music
 ```
+
+---
 
 The path is **relative to the presentation directory** and must not use absolute paths or `..` traversal. When both inline and imported definitions are present, inline definitions take precedence in case of name conflicts.
 

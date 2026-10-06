@@ -117,7 +117,6 @@ Si ejecutas la **interfaz Electron** con un proxy inverso delante (caso poco fre
 | Ruta | Riesgo si queda expuesta |
 |------|--------------------------|
 | `/peer/status` | Expone la lista de dispositivos seguidores conectados |
-| `/peer/command` | Permite difundir comandos arbitrarios a todos los seguidores |
 | `/admin` | Expone la interfaz de administración (archivos estáticos, pero de uso local exclusivamente) |
 
 ---
@@ -125,7 +124,7 @@ Si ejecutas la **interfaz Electron** con un proxy inverso delante (caso poco fre
 Bloque nginx para añadir en este escenario:
 
 ```nginx
-location ~ ^/(peer/status|peer/command|admin) {
+location ~ ^/(peer/status|admin) {
     deny all;
     return 403;
 }
@@ -134,6 +133,6 @@ location ~ ^/(peer/status|peer/command|admin) {
 Equivalente en Caddy:
 
 ```caddy
-@blocked path /peer/status /peer/command /admin*
+@blocked path /peer/status /admin*
 respond @blocked 403
 ```

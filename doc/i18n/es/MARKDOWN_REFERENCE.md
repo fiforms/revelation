@@ -90,10 +90,55 @@ Line two
 ### 2.3 Énfasis
 
 ```markdown
-*italic* or _italic_
-**bold** or __bold__
+*italic*
+**bold**
+__underline__
 ***bold italic***
 ~~strikethrough~~
+```
+
+---
+
+#### Colores de texto
+
+Envuelve el texto entre corchetes y sigue con una clase de color (span entre corchetes al estilo Pandoc):
+
+```markdown
+This is [important]{.red} and this is [fine]{.green}.
+```
+
+| Clase | Alias | Notas |
+| --- | --- | --- |
+| `.red` | | |
+| `.green` | | |
+| `.blue` | | |
+| `.purple` | | |
+| `.highlight` | `.yellow`, `.orange`, `.gold` | Familia dorado/ámbar; el tono exacto depende del tema |
+| `.muted` | `.grey`, `.gray`, `.silver` | Texto con menos énfasis |
+
+---
+
+Los colores los define el tema, por lo que "red" es un rojo más oscuro en los temas claros y un rojo más suave en los temas oscuros
+(las diapositivas que usan `darkbg`/`lightbg` siguen su modo de fondo forzado). Los nombres de clase desconocidos se dejan tal como están,
+el código en línea nunca se convierte y los spans pueden contener otro formato: `[**bold red**]{.red}`.
+La forma larga `<span class="text-red">…</span>` es equivalente. Los colores en `style` en línea siguen funcionando, pero no se adaptan al tema.
+
+---
+
+#### Encabezados de versículo y referencias
+
+El Markdown de REVELation usa guiones bajos simples para delimitar encabezados de versículo o referencias:
+
+```markdown
+_Verse 1_
+```
+
+Estos se justifican automáticamente a la izquierda y se muestran como elementos de bloque, a menos que
+estén al final del bloque de texto, en cuyo caso se alinean a la derecha, como una referencia bíblica:
+
+```markdown
+For God so loved the world...  
+_John 3:16_
 ```
 
 ---
@@ -213,6 +258,27 @@ Título opcional:
 ```markdown
 ![Alt text](image.jpg "Optional title")
 ```
+
+---
+
+#### Nombres de archivo con caracteres especiales
+
+Si un nombre de archivo contiene espacios, paréntesis, llaves u otros caracteres que romperían la sintaxis estándar `![alt](path)`, encierra la ruta entre corchetes angulares (sintaxis CommonMark):
+
+```markdown
+![fit](<1) The first picture.jpg>)
+![background](<my photo (original).jpg>)
+![](< sermon notes & slides.jpg>)
+```
+
+La forma con corchetes angulares admite cualquier carácter excepto `<`, `>` y `%` mismos. Codifica con porcentaje esos tres caracteres cuando aparezcan en el nombre de archivo (`%` → `%25`, `<` → `%3C`, `>` → `%3E`):
+
+```markdown
+![fit](<weird%3Cname%3E.jpg>)
+![fit](<This is 100%25 Right.jpg>)
+```
+
+El builder aplica automáticamente este encierro al importar o arrastrar archivos de medios cuyos nombres contienen caracteres especiales.
 
 ---
 
@@ -440,11 +506,12 @@ Ejemplo cambiando duración de transición:
 | `carousel` | Las diapositivas quedan al fondo como una galería y se deslizan una junto a otra. |
 | `spin` | La diapositiva gira y se encoge mientras entra la nueva girando. |
 
+---
+
 Notas:
 
 - **Entrada y salida:** todas las transiciones excepto `fade` y `none` sirven solas o como `name-in` / `name-out` para definir por separado la diapositiva que entra y la que sale, por ejemplo `data-transition="flip-in zoom-out"`. reveal.js no ofrece versiones de entrada/salida de `fade` ni `none`: una diapositiva saliente marcada `fade-out` o `none-out` recurre al desvanecimiento de opacidad predeterminado de reveal.
 - **Velocidad:** `data-transition-speed` (`default`, `fast`, `slow`) y `config.transitionSpeed` se aplican a todas. Pasar página dura 1.75 veces la duración normal de reveal, y los desvanecimientos escalonados reparten la duración entre las dos diapositivas.
-- **Grupos verticales:** todas tienen versión vertical. Las bisagras y distancias se miden respecto a la pantalla, así que las diapositivas cortas se mueven igual que las largas.
 - **Extras para toda la presentación:** `page-turn` y `cube-3d` usan además estilos compartidos (perspectiva, sombras) que solo se aplican si la transición se define para toda la presentación con `config.transition`. En una sola diapositiva con `data-transition` se mueven correctamente pero sin esos extras.
 - **Fondos:** `config.backgroundTransition` solo acepta las integradas de reveal.js. Los fondos tienen su propia transición, así que un desvanecimiento escalonado muestra lo que esté haciendo el fondo entre ambas.
 - **Variantes de pantalla:** las variantes de monitor de confianza y tercios inferiores reemplazan o eliminan las transiciones (cortes directos), sin importar lo definido aquí.
@@ -517,11 +584,58 @@ Agregue `++` para convertir una línea en fragmento:
 ![background:noloop](bg.mp4)
 ![background:sticky](bg.mp4)
 ![fit](chart.png)
+![fit:60](chart.png)
+![fit:60](clip.mp4)
+![fill](fullscreen.mp4)
 ![caption:Figure caption](chart.png)
 ![youtube](https://youtu.be/VIDEO_ID)
 ![youtube:fit](https://youtu.be/VIDEO_ID)
 ![web](https://example.com)
 ![web:scrollY=500](https://example.com)
+```
+
+---
+
+#### `fit` — ajuste a toda la diapositiva
+
+`![fit](image.jpg)` escala la imagen o el video para llenar el área de la diapositiva (respetando los márgenes del tema) mediante el atributo `data-imagefit`.
+
+#### `fit:N` — ajuste por porcentaje de altura
+
+`![fit:60](image.jpg)` fija la altura del elemento en **N % de la altura de la diapositiva** (`--slide-height`), conservando la proporción y evitando el desbordamiento horizontal. Funciona tanto con imágenes como con videos. El número se limita al rango de 1 a 100.
+
+Como la altura se expresa como una fracción de `--slide-height` (la coordenada interna de diapositiva de Reveal, no el viewport), el tamaño es coherente sin importar el tamaño de la ventana ni el nivel de zoom.
+
+```markdown
+![fit:50](half-height.jpg)       <!-- 50% of slide height -->
+![fit:75](tall-chart.png)        <!-- 75% of slide height -->
+![fit:40](clip.mp4)              <!-- video, 40% of slide height -->
+```
+
+---
+
+#### `fill` — llenado de pantalla completa
+
+`![fill](image.jpg)` llena toda la pantalla expandiéndose más allá de los márgenes de la diapositiva, mediante el atributo `data-imagefit-fill`. Es útil para videos a pantalla completa, contenido inmersivo o medios que deben extenderse visualmente hasta el borde del viewport.
+
+La expansión se calcula automáticamente según el ajuste de márgenes de tu presentación en la configuración YAML, de modo que siempre compensa correctamente.
+
+Igual que `![fit]()`, funciona con imágenes y con videos, y admite los mismos comportamientos de reproducción automática y control (reproducción automática al cargar la diapositiva, ocultar los controles durante la reproducción, mostrarlos al pausar).
+
+```markdown
+![fill](fullscreen-video.mp4)
+![fill](immersive-image.jpg)
+```
+
+---
+
+#### `fill:background` — fondo contenido en la diapositiva
+
+`![fill:background](image.jpg)` establece el fondo de la diapositiva como `![background]()`, pero en lugar de cubrir todo el viewport la imagen queda **contenida** dentro del rectángulo de la diapositiva (la misma área que usa `![fill]()`), sin recortarse nunca. Combínalo con una superposición `![fill]()` de la misma proporción y ambas coinciden exactamente, con cualquier tamaño de ventana o zoom. Agrega `:sticky` (`![fill:background:sticky](...)`) para que continúe en las siguientes diapositivas. También funciona con videos. Fuera del rectángulo de la diapositiva se ve el color de fondo o el tema.
+
+```markdown
+![fill:background](layout-with-important-edges.jpg)
+![fill](matching-overlay.png)
 ```
 
 ---
@@ -564,6 +678,7 @@ media:
 3. Use bloques de código fenced al mostrar sintaxis que contenga `***`, `---`, `:note:` o macros.
 4. Prefiera separadores explícitos sobre separación implícita por encabezados para comportamiento predecible.
 5. Mantenga bloques HTML simples y estáticos; etiquetas/atributos inseguros se eliminan por sanitización.
+6. Los nombres de archivo con espacios o paréntesis rompen la sintaxis estándar `![alt](path)`; usa corchetes angulares: `![alt](<file name (1).jpg>)`. Consulta la [sección 2.8](#28-imágenes).
 
 ---
 

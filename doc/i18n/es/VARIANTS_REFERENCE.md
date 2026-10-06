@@ -130,6 +130,8 @@ alternatives: hidden
 
 Los archivos maestros también pueden ocultarse mientras declaran variantes:
 
+---
+
 ```yaml
 ---
 title: Welcome (Master)

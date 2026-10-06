@@ -37,6 +37,8 @@ shared slide space — navigate the deck, draw on the whiteboard, push a verse.
 See [the collaboration carve-out](#open-collaboration-plugins--accepted-design); that carve-out is
 part of the model, not a gap in it.
 
+---
+
 ## Trust tiers
 
 | Tier | Who | Should be able to | Must **not** be able to |
@@ -47,6 +49,8 @@ part of the model, not a gap in it.
 | **T2c — Collaborating viewer** | An invited viewer, when a collaboration plugin is enabled | Everything T2 can, **plus** drive the shared slide space — see [the collaboration carve-out](#open-collaboration-plugins--accepted-design) | Execute code, read files, reach the control API, enumerate the library |
 | **T3 — LAN prober** | Discovers `http://<host>:8000/` with no link and no key | Learn that a presenter app is running | Enumerate presentations, read files, obtain keys/PINs, trigger any operation |
 | **T4 — Paired peer** | A follower instance paired over mDNS with the PIN | Receive slide-sync commands | Extract signing material or act as the app toward third parties |
+
+---
 
 ## Secrets and what each one gates
 
@@ -68,6 +72,8 @@ part of the model, not a gap in it.
 > loopback-only, so they cannot *enumerate* slugs — they can still fetch any
 > slug they can guess or that was ever mentioned to them. Treat "share a link"
 > as "share the library, unlisted".
+
+---
 
 ## Enforcement mechanisms in use
 
@@ -111,6 +117,8 @@ part of the model, not a gap in it.
   …`) as a backstop. Tests: `tests/unit/pip-core.test.cjs`, `pip-page.test.cjs`,
   `tests/server/pip.test.cjs`.
 
+---
+
 ## Endpoint map
 
 "Custom-path mode" is the wrapper's normal GUI mode: the wrapper sets `PRESENTATIONS_DIR_OVERRIDE` and `PLUGINS_DIR_OVERRIDE`, and the server then mounts the keyed `/presentations_<key>/`, `/plugins_<key>/`, `/thumbs_<key>/` and `/admin` routes. A standalone server without those overrides does not mount them.
@@ -153,6 +161,8 @@ a shared room as **a collaborative space in which every participant is a peer**:
 | `captions` | Push live caption text | `remoteMultiplexId` |
 | `videostream` | Drive shared video playback | `remoteMultiplexId` |
 
+---
+
 **This is intended behaviour, not a defect.** That server has no
 authentication and no publish/subscribe split: holding the room id is the
 permission. A room id is not a capability the app tries to protect — it is in
@@ -164,6 +174,8 @@ rights in that slide space. The T2 restrictions above ("must not modify
 content, control other viewers' decks") describe the app only when none of
 these plugins is enabled.
 
+---
+
 These five declare `"collaboration": true` in their `plugin-manifest.json`,
 alongside a `collaboration_detail` string naming the specific abilities a
 viewer gains. Settings badges them, shows the detail when the plugin is
@@ -171,6 +183,8 @@ expanded, and displays a standing banner listing whichever are enabled — so th
 operational rule below is visible at the moment of choosing, not only here. A
 new plugin that accepts `presenter-plugin:event` from other participants must
 set the same flag; see [`doc/dev/PLUGINS.md`](../../doc/dev/PLUGINS.md).
+
+---
 
 ### Running a public relay
 
@@ -180,6 +194,8 @@ deployment is the one place where the reverse-proxy weakness in the loopback gat
 bites: behind a same-machine proxy every forwarded request presents
 `127.0.0.1`, so every `isLoopbackAddress()` gate passes for the entire
 internet.
+
+---
 
 **Public relay mode** exists for exactly this. Start the server with
 `REVELATION_PUBLIC_SERVER=1` (or `--public-server`, or `npm run relay`) and it
@@ -191,6 +207,8 @@ serves only:
 | `/presenter-plugins-socket` | Presenter-plugins channel |
 | `/_remote/ui/**` | The static remote-control UI (self-contained) |
 | `/` | A one-line liveness string, no host details |
+
+---
 
 Everything else returns a flat `404`. The mode does not gate the local-machine
 features — it **never registers them**: no presentations, plugins, thumbnails
@@ -208,6 +226,8 @@ Verified against a live server with 36 probes covering the allowed paths,
 Vite's static root and source files, `/@fs` and traversal escapes, every
 local-machine route, and the three Socket.IO servers.
 
+---
+
 ### Operational rule
 
 > **If any collaboration plugin is enabled, share presentation and multiplex
@@ -215,6 +235,8 @@ local-machine route, and the three Socket.IO servers.
 > permission, no read-only mode, and no way to eject a participant. Anyone who
 > obtains the link — or forwards it onward — can drive the shared space for
 > everyone in it.
+
+---
 
 Two consequences worth stating plainly, because they are easy to under-estimate:
 
@@ -228,6 +250,8 @@ Two consequences worth stating plainly, because they are easy to under-estimate:
   is enabled in Settings, which moves it to a public internet relay — at which
   point a participant no longer has to be on your network, only to hold the
   room id.
+
+---
 
 ### What the carve-out does *not* cover
 
@@ -247,6 +271,8 @@ the room displays. It does not extend to letting them escape the room:
   plugins use the `remoteMultiplexId`. A room id is shared with everyone in the
   room and with whoever operates the socket server, so it must gate nothing but
   the room.
+
+---
 
 ### Deferred: publish/subscribe permission split
 

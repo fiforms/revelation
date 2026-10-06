@@ -14,6 +14,10 @@ Esta guía explica cómo escribir presentaciones de REVELation según el comport
    - [Referencia de variantes de idioma](VARIANTS_REFERENCE.md)
 
 5. [Top Matter (sección superior)](#5-top-matter-top-section)
+   - [Macros y persistencia](#51-macros-and-stickiness)
+   - [Fondos sticky](#52-sticky-backgrounds)
+   - [Regla de no frontera rígida](#53-no-hard-boundary-rule)
+   - [Definiciones de macros personalizadas y encadenamiento](#54-custom-macro-definitions-and-chaining)
 6. Otros
    - [Separación por títulos (Heading-Based Slide Breaks)](#6-footnote-heading-based-slide-breaks)
 
@@ -157,7 +161,8 @@ Texto de párrafo normal.
 
 *Cursiva*
 **Negrita**
-<u>Subrayado (HTML)</u>
+__Subrayado__
+~~Tachado~~
 
 [Texto del enlace](https://example.com)
 ```
@@ -174,6 +179,16 @@ REVELation extiende el markdown normal con sintaxis enfocada en diapositivas.
 Para flujos multi-idioma en presentaciones, consulta la [Referencia de variantes de idioma](VARIANTS_REFERENCE.md).
 
 ---
+
+#### Encabezados con estilo y referencias
+
+Envuelve los encabezados y las referencias entre guiones bajos (cursiva en markdown estándar).
+Se convierten en encabezados de bloque, o en referencias justificadas a la derecha si están al
+final del párrafo.
+
+```markdown
+_Verse 1_
+```
 
 #### Fragmentos
 
@@ -197,6 +212,8 @@ Atribución por diapositiva:
 
 #### Imágenes mágicas
 
+Usa texto alternativo especial en etiquetas de imagen con estilo Markdown para activar comportamientos especiales
+
 Sintaxis:
 
 ```markdown
@@ -212,12 +229,58 @@ Formas comunes:
 ![background:noloop](loop.mp4)
 ![background:sticky](stage.mp4)
 ![fit](chart.png)
+![fill](fullscreen-video.mp4)
 ![caption:Quarterly trend](chart.png)
 ![youtube](https://youtu.be/VIDEO_ID)
 ![youtube:fit](https://youtu.be/VIDEO_ID)
 ![web](https://example.com)
 ![web:scrollY=500](https://example.com)
 ```
+
+---
+
+**`![fit]()` frente a `![fill]()`:**
+- `![fit](media)` — Llena el área útil de la diapositiva con el contenido (respeta los márgenes de la diapositiva)
+- `![fill](media)` — Llena toda la pantalla expandiéndose más allá de los márgenes de la diapositiva (útil para videos a pantalla completa o contenido inmersivo)
+
+Ambas admiten los mismos comportamientos de reproducción automática y control (reproducción automática al cargar la diapositiva, ocultar los controles durante la reproducción, mostrarlos al pausar).
+
+Nota: `![background:sticky]()` se interpreta como una macro, por lo que se repetirá en todas las diapositivas y también reiniciará las macros.
+
+---
+
+#### Imágenes con leyenda
+
+Coloca una línea `:caption:` **inmediatamente después** de una imagen markdown simple (sin línea en blanco entre ambas) para envolver la imagen en un bloque `<figure>` de estilo polaroid:
+
+```markdown
+![](photo.jpg)
+:caption:The ruins of the old cathedral, 1887.:
+```
+
+Una leyenda vacía igualmente produce el marco de la figura sin texto de leyenda:
+
+```markdown
+![](photo.jpg)
+:caption::
+```
+
+Las anotaciones de fragmento y de auto-animate en la línea de la imagen se transfieren a toda la figura, de modo que la imagen y la leyenda aparecen juntas como una sola unidad:
+
+---
+
+```markdown
+![](keynote.jpg) ++
+:caption:This slide animates in with its caption.:
+
+![](chart.png) ==:flipX
+:caption:Quarterly trend — the whole frame flips in.:
+```
+
+Advertencias:
+- **No debe haber línea en blanco** entre la imagen y la línea `:caption:`.
+- Las imágenes de fondo (`![background](...)`) y de fondo sticky no admiten leyendas; una línea `:caption:` después de ellas se ignora en silencio.
+
 ---
 
 #### Alias de medios
@@ -277,6 +340,7 @@ Comandos/macros por línea usados comúnmente durante la autoría:
 | `:note:` | Iniciar la sección de notas para la diapositiva actual |
 | `:ATTRIB:<text>` | Agregar atribución a la diapositiva actual |
 | `:AI:` | Marcar la diapositiva actual con símbolo de IA |
+| `:caption:<text>:` | Agregar una leyenda a la imagen de la línea anterior (sin línea en blanco entre ambas) |
 | `:audio:play:<src>:` | Iniciar audio de fondo desde un archivo local o `media:<alias>` |
 | `:audio:playloop:<src>:` | Iniciar audio de fondo en bucle desde un archivo local o `media:<alias>` |
 | `:audio:stop:` | Detener audio de fondo |
@@ -294,6 +358,14 @@ Comandos/macros por línea usados comúnmente durante la autoría:
 | `:nobg:` | Suprimir modo de fondo oscuro/claro persistido |
 | `:shiftnone:` | Suprimir desplazamiento izquierda/derecha persistido |
 | `:nothird:` | Suprimir layout persistido de tercio superior/inferior |
+| `:hide:` | Ocultar la diapositiva actual en las vistas de handout y de presentación |
+| `:hide:handout:` | Ocultar la diapositiva actual solo en la vista de handout |
+| `:hide:slideshow:` | Ocultar la diapositiva actual solo en la vista de presentación (principal, monitor de confianza, tercios inferiores, notas) |
+| `:hide:main:` | Ocultar la diapositiva actual solo en la ventana principal de la presentación |
+| `:hide:confidence:` | Ocultar la diapositiva actual solo en el monitor de confianza (`?variant=confidencemonitor`) |
+| `:hide:notes:` | Ocultar la diapositiva actual solo en la vista de notas/teleprompter (`?variant=notes`) |
+| `:hide:lowerthirds:` | Ocultar la diapositiva actual solo en la salida de tercios inferiores (`?variant=lowerthirds`) |
+| `:hide:not:<target>:` | Ocultar la diapositiva actual en todas partes *excepto* en `<target>`; por ejemplo, `:hide:not:confidence:` muestra la diapositiva solo en el monitor de confianza |
 
 ---
 
@@ -374,6 +446,247 @@ En la práctica:
 - Usa `:note:` para comenzar las notas.
 
 Esto mantiene los archivos predecibles tanto en el markdown fuente como en la UI del builder.
+
+---
+
+### 5.4 Definiciones de macros personalizadas y encadenamiento
+
+Las macros personalizadas se definen en la sección `macros` del front matter YAML y pueden expandirse a macros incorporadas, a sintaxis definida por plugins o a contenido de varias líneas. Esto permite macros "plantilla" reutilizables que reducen la duplicación.
+
+#### Definir macros personalizadas
+
+Usa la sección `macros` en el front matter YAML:
+
+---
+
+```yaml
+---
+macros:
+  myname: |-
+    :lt:
+      name: John Doe
+      title: President, No Place In Particular
+  my_theme: |-
+    {{darkbg}}
+    {{lighttext}}
+    {{lowerthird}}
+---
+```
+
+---
+
+#### Macros en línea (sintaxis `:name:`)
+
+Las macros en línea se expanden **antes** de que se ejecuten los plugins, lo que permite encadenarlas con sintaxis definida por plugins:
+
+```markdown
+:myname:
+```
+
+Se expande al bloque `:lt:` de varias líneas, que luego procesa el plugin lowerthirds.
+
+Con parámetros usando `$1`, `$2`, etc.:
+
+```yaml
+macros:
+  mytint: |-
+    {{bgtint:$1}}
+```
+
+Uso:
+
+```markdown
+:mytint:rgba(100,0,0,0.5):
+```
+
+Sustituye `$1` por `rgba(100,0,0,0.5)`.
+
+---
+
+#### Macros sticky (sintaxis `{{name}}`)
+
+Las macros sticky se expanden **dentro del compilador línea por línea** y pueden encadenarse con macros incorporadas u otras macros sticky:
+
+```yaml
+macros:
+  my_lovely_theme: |-
+    ![background:sticky](theme-bg.mp4)
+    {{darkbg}}
+    {{lighttext}}
+    {{lowerthird}}
+```
+
+Uso:
+
+```markdown
+{{my_lovely_theme}}
+```
+
+---
+
+Cada macro anidada (`{{darkbg}}`, `{{lighttext}}`, etc.) se expande de forma recursiva. El `![background:sticky](...)` se procesa como una directiva de fondo de reveal.js.
+
+Con parámetros:
+
+```yaml
+macros:
+  bg_with_tint: |-
+    ![background:sticky](fancy_background.jpg)
+    {{bgtint:$1}}
+```
+
+Uso:
+
+```markdown
+{{bg_with_tint:rgba(0,0,0,0.4)}}
+```
+
+---
+
+#### Resolución de alias de medios
+
+Las macros personalizadas pueden hacer referencia a alias de medios definidos en la sección `media`. Se resuelven durante la expansión de la macro:
+
+```yaml
+---
+media:
+  intro:
+    filename: clouds.mp4
+macros:
+  title_bg: |-
+    ![background:sticky](media:intro)
+---
+```
+
+---
+
+#### ⚠️ Advertencia: macros sticky en contextos no sticky
+
+Si la definición de una macro personalizada contiene macros sticky (como `{{darkbg}}`) y la usas con **sintaxis en línea** (`:name:`), esas macros seguirán persistiendo porque la expansión ocurre antes de que se aplique la distinción.
+
+**No recomendado:**
+
+```yaml
+macros:
+  # Contains {{sticky}} — don't use as inline macro
+  bad_macro: |-
+    {{darkbg}}
+    Some content
+```
+
+```markdown
+:bad_macro:   # ⚠️ darkbg will persist, defeating inline semantics
+```
+
+---
+
+**Recomendado en su lugar:**
+
+```yaml
+macros:
+  # Use consistent syntax
+  good_sticky: |-
+    {{darkbg}}
+    Some content
+  good_inline: |-
+    :lt:
+      name: Example
+      title: Title
+```
+
+```markdown
+{{good_sticky}}  # Sticky usage of sticky macro
+:good_inline:    # Inline usage of inline macro
+```
+
+Este comportamiento podría marcarse o impedirse en versiones futuras. Define las macros con una sintaxis coherente con su uso previsto.
+
+---
+
+#### Cargar macros desde archivos externos
+
+Para presentaciones que reutilizan macros y medios en varios decks, puedes cargarlos desde un archivo YAML aparte con el campo `imports` del front matter:
+
+```yaml
+---
+title: My Presentation
+imports: shared-resources.yaml
+---
+```
+
+La ruta del archivo de importaciones es **relativa al directorio de la presentación** y debe ser un nombre de archivo simple o una ruta relativa (sin rutas absolutas ni recorrido con `..`). Por ejemplo:
+
+---
+
+```
+presentations/
+├── slides.md                       # Front matter: imports: shared.yaml
+├── shared.yaml                     # Loaded from same directory
+└── themes/
+    └── presentation_dark.md        # Front matter: imports: ../shared.yaml
+```
+
+El archivo YAML de importaciones puede contener tanto la sección `macros` como la sección `media`:
+
+---
+
+```yaml
+# shared-resources.yaml
+macros:
+  custom_theme: |-
+    ![background:sticky](theme-bg.jpg)
+    {{darkbg}}
+    {{lighttext}}
+
+  highlight_red: |-
+    {{bgtint:rgba(255,0,0,0.3)}}
+
+  section_title: |-
+    ![background:sticky](section.jpg)
+
+media:
+  background_video:
+    filename: bg.mp4
+    description: Looping background video
+  intro_sound:
+    filename: intro.mp3
+    copyright: Original composition
+```
+
+---
+
+Luego úsalas en tu presentación:
+
+```markdown
+{{custom_theme}}
+# Slide with custom theme
+
+![](media:background_video)
+
+---
+
+{{highlight_red}}
+Important point with sound: :audio:play:media:intro_sound:
+```
+
+**Comportamiento de combinación:** si hay definiciones en línea e importadas en el front matter, las definiciones en línea tienen precedencia en caso de conflicto de nombres. Esto te permite reemplazar recursos compartidos deck por deck.
+
+---
+
+```yaml
+---
+title: My Presentation
+imports: shared-resources.yaml
+macros:
+  custom_theme: |-
+    # This overrides the custom_theme from shared-resources.yaml
+    ![background:sticky](override.jpg)
+media:
+  background_video:
+    filename: override-bg.mp4
+    description: Override background video
+---
+```
 
 ---
 

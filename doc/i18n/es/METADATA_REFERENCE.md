@@ -18,6 +18,8 @@ Si está en la pantalla **New Presentation**, estas son las opciones más import
 | `Show Advanced Options` | Muestra ajustes técnicos adicionales. Es seguro dejarlo desactivado salvo que sepa que lo necesita. |
 | `Create a Title Slide` | Crea automáticamente una primera diapositiva con detalles de título para empezar más rápido. |
 
+---
+
 Cuando se muestran **Advanced Options**, campos comunes incluyen:
 
 | Campo avanzado | Explicación simple |
@@ -118,6 +120,12 @@ config:
   controls: false
   slideNumber: c
   hash: true
+  width: 960
+  height: 540
+
+confidence:
+  width: 640
+  height: 480
 
 stylesheet: style.css
 
@@ -146,10 +154,12 @@ scrollspeed: 2.1
 | Campo          | Tipo     | Descripción |
 | -------------- | -------- | ----------- |
 | `config`       | `object` | Valores de configuración Reveal.js. Ver https://revealjs.com/config/ |
+| `confidence`   | `object` | Dimensiones por variante para la vista de monitor de confianza. Al renderizarse como `?variant=confidencemonitor`, sustituye los valores `width` y `height` de `config`. Útil para mostrar las diapositivas con distintos tamaños de lienzo en monitores de confianza. |
 | `stylesheet`   | `string` | Archivo CSS personalizado relativo a la carpeta de presentación. |
 | `alternatives` | `object` | Archivos markdown alternativos por nombre/ruta con código de idioma; soporta `self: hidden` para ocultar el archivo actual del listado. |
 | `media`        | `object` | Alias de medios nombrados usados por markdown y macros. |
 | `macros`       | `object` | Bloques de macro reutilizables nombrados. |
+| `imports`      | `string` | Ruta a un archivo YAML externo (relativa al directorio de la presentación) que contiene macros y definiciones de medios compartidas. |
 | `scrollspeed`  | `number` | Velocidad opcional de auto-scroll para variante de notas. |
 
 ---
@@ -160,6 +170,8 @@ Para flujo de traducción y configuración sincronizada multi-idioma en presenta
 ### Transiciones de diapositiva
 
 `config.transition` también acepta las transiciones de REVELation (por ejemplo `page-turn`, `cube-3d`, `fade-out-in`). Consulta [Transiciones de diapositiva](MARKDOWN_REFERENCE.md#44-transiciones-de-diapositiva) en la referencia de Markdown.
+
+---
 
 ### Curva de animación automática
 
@@ -173,6 +185,8 @@ Para flujo de traducción y configuración sincronizada multi-idioma en presenta
 | `overshoot` | Se pasa del destino y luego se asienta |
 | `bouncy` | Rebota varias veces contra el destino (usa CSS `linear()`) |
 | `anticipate` | Retrocede un poco y luego se pasa |
+
+---
 
 ```yaml
 config:
@@ -233,6 +247,48 @@ Ver:
 Los parámetros soportan `$1`, `$2`, etc.
 
 Los valores `media:alias` en parámetros de macro se resuelven a rutas `_media/` durante el preprocesamiento.
+
+---
+
+### Importaciones compartidas
+
+Para presentaciones que comparten recursos (macros y medios) entre varios decks, use `imports` para cargarlos desde un archivo YAML aparte:
+
+```yaml
+---
+title: My Presentation
+imports: shared-resources.yaml
+---
+```
+
+El archivo importado puede contener tanto macros como definiciones de medios:
+
+---
+
+```yaml
+# shared-resources.yaml
+macros:
+  fogbg: |
+    <!-- .slide: data-background-video="media:fogloop" -->
+    :ATTRIB:Background by John Doe
+  darkbg: |
+    <!-- .slide: data-darkbg -->
+
+media:
+  fogloop:
+    filename: fog_loop.mp4
+    copyright: Background video by John Doe
+  introaudio:
+    filename: intro.mp3
+    description: Introduction music
+```
+
+---
+
+La ruta es **relativa al directorio de la presentación** y no debe usar rutas absolutas ni recorrido con `..`. Cuando hay definiciones en línea e importadas, las definiciones en línea tienen precedencia en caso de conflicto de nombres.
+
+Para ejemplos detallados y patrones de uso, consulte:
+- [Carga de macros desde archivos externos](AUTHORING_REFERENCE.md#loading-macros-from-external-files)
 
 ---
 
