@@ -48,7 +48,7 @@ const args = process.argv.slice(2);
 fs.appendFileSync(${JSON.stringify(thumbLog)}, args.join(' ') + '\\n');
 setTimeout(() => { fs.writeFileSync(args[args.length - 1], 'JPEGDATA'); }, 150);
 `, { mode: 0o755 });
-  process.env.FFMPEG_BIN = bin;
+  srv.setFfmpegBin(bin);
 });
 
 test.after(() => srv.close());

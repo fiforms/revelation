@@ -1,7 +1,7 @@
 # Security Model
 
 The trust tiers this software intends to enforce for the HTTP/WebSocket surface
-created by [`../vite.plugins.js`](../vite.plugins.js) and the Electron wrapper
+created by [`../vite.plugins.js`](../vite.plugins.js) (with the modules in [`../server/`](../server/)) and the Electron wrapper
 that drives it: what each tier is allowed to do, and where the boundaries
 actually live in code.
 

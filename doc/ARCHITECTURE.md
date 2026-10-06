@@ -39,7 +39,8 @@ Source layout:
 
 | Path | Role |
 | ---- | ---- |
-| `vite.config.js`, `vite.plugins.js` | Vite config and the whole server back end (one Vite plugin) |
+| `vite.config.js`, `vite.plugins.js` | Vite config and the server back end (one Vite plugin, `createRevelationPlugin(options)`), which composes the modules in `server/` |
+| `server/*.js` | The server's parts, each a factory that can be required and tested alone: `config` (mode and paths), `presentation-index`, `presentation-watcher`, `media-share`, `thumbnails`, `access-gates`, `presenter-plugins-broker`, `reveal-remote-broker`, `public-relay` |
 | `peer-server.js` | Peer pairing HTTP endpoints and the `/peer-commands` socket (master side) |
 | `js/presentations.js`, `js/presentation-bootstrap.js` | Presentation page controller and markdown loading/compilation bootstrap |
 | `js/compiler/` | Markdown compiler (front matter, macros, media, slide assembly, sanitization) |
@@ -107,9 +108,9 @@ window.RevelationPlugins['myplugin'] = {
 
 <a id="architecture-server"></a>
 
-## Server Surface (vite.plugins.js)
+## Server Surface (vite.plugins.js and server/)
 
-The Vite server is the whole back end. The middleware stack in registration order (full detail and trust tiers in the comment banner at `presentationIndexPlugin()` in `vite.plugins.js` and in [SECURITY.md](SECURITY.md)):
+The Vite server is the whole back end. The middleware stack in registration order (full detail and trust tiers in the comment banner above `createRevelationPlugin()` in `vite.plugins.js` and in [SECURITY.md](SECURITY.md)); the code for each row lives in the `server/` module named in that file's header:
 
 | Route | Purpose | Gate |
 | ----- | ------- | ---- |
@@ -131,8 +132,8 @@ Three Socket.IO servers share the one HTTP server, each on its own `path` (they 
 
 | Path | File | Purpose | Auth |
 | ---- | ---- | ------- | ---- |
-| `/socket.io` | `vite.plugins.js` | Reveal Remote broker: `presenter`, `remote`, `follower` roles | channel UUIDs |
-| `/presenter-plugins-socket` | `vite.plugins.js` | Collaboration plugin rooms (`presenter-plugin:join` / `presenter-plugin:event`) | room id only |
+| `/socket.io` | `server/reveal-remote-broker.js` | Reveal Remote broker: `presenter`, `remote`, `follower` roles | channel UUIDs |
+| `/presenter-plugins-socket` | `server/presenter-plugins-broker.js` | Collaboration plugin rooms (`presenter-plugin:join` / `presenter-plugin:event`) | room id only |
 | `/peer-commands` | `peer-server.js` | Master-to-follower slide-sync commands | RSA-signed bearer token |
 
 The plugin also watches the presentations directory (chokidar) and pushes Vite HMR custom events: `reload-presentations`, `presentations-index-updated`, `reload-media`. `presentations/index.json` (library list) and `_media/index.json` (media sidecar aggregate) are generated here.

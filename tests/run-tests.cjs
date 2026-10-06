@@ -277,15 +277,16 @@ async function main() {
   }
 }
 
-// tests/server/*.test.cjs start a real Vite server, so each file runs in its own process (the plugin
-// reads its mode from the environment once). --test-force-exit because the plugin never closes its
-// file watcher or sockets.
+// tests/unit/*.test.cjs exercise the server/ modules directly; tests/server/*.test.cjs start real Vite
+// servers. node --test runs each file in its own process.
 function runServerTests() {
-  const dir = path.join(ROOT, 'server');
-  const files = fs.readdirSync(dir).filter((f) => f.endsWith('.test.cjs')).sort().map((f) => path.join(dir, f));
+  const files = ['unit', 'server'].flatMap((name) => {
+    const dir = path.join(ROOT, name);
+    return fs.readdirSync(dir).filter((f) => f.endsWith('.test.cjs')).sort().map((f) => path.join(dir, f));
+  });
   process.stdout.write(`\nServer tests (${files.length} file(s))\n`);
   const passthrough = process.argv.slice(2).filter((a) => a.startsWith('--test-'));
-  const result = spawnSync(process.execPath, ['--test', '--test-force-exit', ...passthrough, ...files], { stdio: 'inherit' });
+  const result = spawnSync(process.execPath, ['--test', ...passthrough, ...files], { stdio: 'inherit' });
   if (result.status !== 0) process.exitCode = 1;
 }
 

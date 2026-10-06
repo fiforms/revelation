@@ -1,193 +1,56 @@
 // =============================================================================
 // vite.plugins.js — the REVELation server, implemented as one Vite plugin
 // (`generate-presentation-index`, loaded from vite.config.js). Despite the name
-// it is the whole back end: Vite is the HTTP server, this file adds everything
+// it is the whole back end: Vite is the HTTP server, this plugin adds everything
 // that is not a static page. CommonJS; loaded by Vite's config loader.
 //
-// SECTION MAP (top to bottom)
-//   1. Environment + mode selection ......... PRESENTATIONS_*_OVERRIDE, public relay
-//   2. Presentation index generation ........ generatePresentationIndex() -> index.json
-//   3. Thumbnail (ffmpeg) helpers
-//   4. Public relay mode .................... configurePublicRelayServer()
-//   5. presentationIndexPlugin() ............ build hook + configureServer() middleware stack
-//   6. Presenter-plugins socket ............. /presenter-plugins-socket
-//   7. Reveal Remote socket ................. /socket.io
-//   (peer pairing + /peer-commands socket live in ./peer-server.js)
+// This file only COMPOSES the pieces in ./server/ (each has its own header and can be
+// required and tested on its own):
+//   server/config.js ................ resolveServerConfig(): mode, directories, keys from options/env
+//   server/presentation-index.js .... index.json + _media/index.json generation, GUI index route
+//   server/presentation-watcher.js .. chokidar watcher: debounced reindex + HMR reload events
+//   server/media-share.js ........... /media-share/<token> (tokens registered by Electron)
+//   server/thumbnails.js ............ /thumbs_<key>/ (ffmpeg) and the legacy .webp fallback
+//   server/access-gates.js .......... the loopback-only gates (sandbox origin, index.json, /admin)
+//   server/presenter-plugins-broker.js  /presenter-plugins-socket
+//   server/reveal-remote-broker.js ...  /socket.io (Reveal Remote)
+//   server/public-relay.js .......... public relay mode
+//   peer-server.js .................. peer pairing endpoints + /peer-commands socket
 //
-// ENVIRONMENT (all optional; the Electron wrapper sets most of them)
-//   PRESENTATIONS_DIR_OVERRIDE + PRESENTATIONS_KEY_OVERRIDE  both required; use an external
-//                           presentations dir served at /presentations_<key>/ ("custom path"
-//                           mode). Without them the first revelation/presentations_* folder
-//                           is used (created by scripts/init-presentations.js at npm install).
-//   PLUGINS_DIR_OVERRIDE    plugins dir served at /plugins_<key>/ (custom path mode only)
-//   ADMIN_DIR_OVERRIDE      wrapper's http_admin/ dir, mounted at /admin (loopback only)
-//   FFMPEG_BIN              ffmpeg binary; enables /thumbs_<key>/ (custom path mode only)
-//   USER_DATA_DIR           wrapper userData dir: config.json + peer-followers.json for the peer
-//                           server, publish/ dir for /publish, local index cache (GUI mode)
-//   REVELATION_GUI=1        run under Electron: serve css from dist/css, keep the index.json
-//                           cache in USER_DATA_DIR, skip README-deck generation
-//   REVELATION_PUBLIC_SERVER=1 (or --public-server)  bare socket relay, see section 4
-//   Also read by vite.config.js: VITE_HTTPS_CERT / VITE_HTTPS_KEY. Process arguments --host and
-//   --https are read only to print the startup URL.
+// USE
+//   vite.config.js:  plugins: [require('./vite.plugins.js')()]      // configured from the environment
+//   tests/code:      require('./vite.plugins.js').createRevelationPlugin({ presentationsDir, key, ... })
+//   Options and the environment variables they fall back to are listed in server/config.js
+//   (PRESENTATIONS_DIR_OVERRIDE + PRESENTATIONS_KEY_OVERRIDE, PLUGINS_DIR_OVERRIDE, ADMIN_DIR_OVERRIDE,
+//   FFMPEG_BIN, USER_DATA_DIR, REVELATION_GUI, REVELATION_PUBLIC_SERVER). Further options:
+//   parentPort (default process.parentPort; anything with on/off/postMessage), indexRebuildDebounceMs.
+//   Nothing is read or started until Vite calls a hook, so creating a plugin is free of side effects;
+//   each plugin instance owns its own state (tokens, sockets, watcher) and releases it when the
+//   server closes, so several can live in one process.
+//   Process arguments --host and --https are read only to print the startup URL.
 //
 // PARENT-PORT MESSAGES (Electron utility process only): `register-media-token` /
-// `revoke-media-token` manage /media-share tokens; every other message is passed to
+// `revoke-media-token` go to server/media-share.js; every other message is passed to
 // peerServer.handleParentMessage().
 //
 // TRUST TIERS (T0..T4) used in the banners below are defined in doc/SECURITY.md.
 // =============================================================================
+'use strict';
 const os = require('os');
 const fs = require('fs');
 const crypto = require('crypto');
 const path = require('path');
-const yaml = require('js-yaml');
 const serveStatic = require('serve-static');
-const { Server } = require('socket.io');
-const { v4: uuidv4 } = require('uuid');
-const { toDataURL: qrToDataURL } = require('qrcode');
-const { createPeerServer, isLoopbackAddress, normalizeRemoteAddress } = require('./peer-server.js');
-
-// Same front-matter rule as extractFrontMatter() in js/compiler/markdown-compiler.js,
-// so the presentation list sees the metadata the renderer sees. Throws on malformed YAML.
-function readFrontMatterData(md) {
-  const match = md.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?/);
-  if (!match) return {};
-  // loadAll() yields [] for an empty/comment-only block, where load() throws in js-yaml 5.
-  const [data] = yaml.loadAll(match[1]);
-  return data && typeof data === 'object' ? data : {};
-}
-
-// NOTE: getLocalIpAddress()/`localIp` below are unused (dead); getLocalIp() further
-// down is the one the startup banner uses. Kept as-is (comments-only pass).
-function getLocalIpAddress() {
-  const interfaces = os.networkInterfaces();
-  for (const name of Object.keys(interfaces)) {
-    for (const iface of interfaces[name] || []) {
-      if (iface.family === 'IPv4' && !iface.internal) {
-        return iface.address;
-      }
-    }
-  }
-  return '127.0.0.1';
-}
-
-const localIp = getLocalIpAddress(); // Gets the LAN IP
-
-const baseDir = __dirname;
-const prefix = 'presentations_';
-const PRESENTER_PLUGINS_SOCKET_PATH = '/presenter-plugins-socket';
-let presenterPluginsIo = null;
-let revealRemoteIo = null;
-const revealRemoteStates = {};
-const revealRemoteMultiplexes = {};
-const revealRemoteHashsecret = uuidv4();
-
-let presentationsWebPath = '';
-let presentationsDir = '';
-let key = '';
-let customPath = false;
-let pluginsDir = '';
-let pluginsWebPath = '';
-
-// Token-keyed registry for dynamically shared media files.
-// Entries are added/removed via postMessage from the Electron main process.
-const dynamicMediaFiles = new Map(); // token (48-char hex) → { absolutePath, mimeType }
-const _MEDIA_TOKEN_RE = /^[a-f0-9]{48}$/;
-
-if (process.parentPort) {
-  process.parentPort.on('message', ({ data }) => {
-    if (!data || typeof data !== 'object') return;
-    if (data.type === 'register-media-token') {
-      const { token, absolutePath, mimeType } = data;
-      if (_MEDIA_TOKEN_RE.test(token) && typeof absolutePath === 'string') {
-        dynamicMediaFiles.set(token, {
-          absolutePath,
-          mimeType: typeof mimeType === 'string' ? mimeType : 'application/octet-stream'
-        });
-      }
-    } else if (data.type === 'revoke-media-token') {
-      if (typeof data.token === 'string') dynamicMediaFiles.delete(data.token);
-    } else {
-      peerServer.handleParentMessage(data);
-    }
-  });
-}
-
-// --- 1. Environment + mode selection / public relay mode ------------------
-// (the presentations-dir lookup further down depends on this choice)
-//
-// Runs this server as a bare Socket.IO relay for Reveal Remote and the
-// presenter-plugins channel — the role revealremote.fiforms.org fills — with
-// every local-machine feature switched off.
-//
-// This is the one deployment where the reverse-proxy weakness in the loopback
-// gates actually bites: behind a same-machine proxy every forwarded request
-// presents 127.0.0.1, so `isLoopbackAddress()` passes for the whole internet.
-// Rather than trying to teach those gates about proxies, this mode removes
-// everything they were guarding: no presentations, no plugins, no thumbnails,
-// no media, no admin UI, no peer endpoints, no file watching, and no Vite
-// static root. What remains is the two socket namespaces and the static
-// remote-control UI, none of which touch this machine's files or config.
-//
-// Enable with REVELATION_PUBLIC_SERVER=1 (preferred — an env var cannot
-// collide with Vite's own CLI parsing) or the --public-server argument.
-const isPublicServerMode =
-  /^(1|true)$/i.test(process.env.REVELATION_PUBLIC_SERVER || '') ||
-  process.argv.includes('--public-server');
-
-if (isPublicServerMode) {
-    // A relay has no presentations directory, and the lookup below throws when
-    // it cannot find one. Leave these blank; nothing in this mode reads them.
-    presentationsDir = '';
-    key = '';
-    presentationsWebPath = '';
-}
-else if(process.env.PRESENTATIONS_DIR_OVERRIDE && process.env.PRESENTATIONS_KEY_OVERRIDE) {
-    presentationsDir = process.env.PRESENTATIONS_DIR_OVERRIDE;
-    key = process.env.PRESENTATIONS_KEY_OVERRIDE;
-    presentationsWebPath = `/${prefix}${key}`;
-    customPath = true;
-    pluginsDir = process.env.PLUGINS_DIR_OVERRIDE;
-    pluginsWebPath = `/plugins_${key}`
-}
-else {
-    const folderName = fs.readdirSync(baseDir).find(name =>
-        fs.statSync(path.join(baseDir, name)).isDirectory() && name.startsWith(prefix)
-    );
-    if (!folderName) throw new Error('No presentations folder found');
-
-    presentationsDir = path.join(baseDir, folderName); // full path
-    key = folderName.replace(prefix, '');
-    presentationsWebPath = `/${folderName}`;
-}
-
-const sharedIndexFile = path.join(presentationsDir, 'index.json');
-const isGuiMode = /^(1|true)$/i.test(process.env.REVELATION_GUI || '');
-const userDataDir = process.env.USER_DATA_DIR ? path.resolve(process.env.USER_DATA_DIR) : '';
-const localIndexFile = isGuiMode && userDataDir
-  ? path.join(userDataDir, '.revelation-cache', 'presentations-index.json')
-  : '';
-const outputFile = localIndexFile || sharedIndexFile;
-
-// Master side of the peer protocol. See peer-server.js.
-const peerServer = createPeerServer({
-  configPath: userDataDir ? path.join(userDataDir, 'config.json') : null,
-  followersPath: userDataDir ? path.join(userDataDir, 'peer-followers.json') : null,
-  postToParent(message) {
-    process.parentPort?.postMessage(message);
-  }
-});
-const INDEX_REBUILD_DEBOUNCE_MS = 1200;
-
-// README deck: outside GUI mode the plugin regenerates <presentations>/readme/presentation.md
-// from header.yaml + README.md + doc/REFERENCE.md whenever README.md is newer (GUI mode: the
-// wrapper builds its own docs deck instead).
-const readmePresDir = path.join(presentationsDir, 'readme');
-const readmePresentationPath = path.join(readmePresDir, 'presentation.md');
-const readmeYamlPath = path.join(readmePresDir, 'header.yaml');
-const readmeTemplatePath = path.resolve(__dirname, 'templates/readme');
-const projectReadmePath = path.resolve(__dirname, 'README.md');
-const referencePath = path.resolve(__dirname, 'doc/REFERENCE.md');
+const { createPeerServer } = require('./peer-server.js');
+const { resolveServerConfig } = require('./server/config.js');
+const { createPresentationIndex, createIndexRoute } = require('./server/presentation-index.js');
+const { createPresentationWatcher, DEFAULT_DEBOUNCE_MS } = require('./server/presentation-watcher.js');
+const { createMediaShare } = require('./server/media-share.js');
+const { createThumbsMiddleware, createLegacyThumbnailFallback } = require('./server/thumbnails.js');
+const { createSandboxOriginGate, createIndexJsonGate, createAdminGate } = require('./server/access-gates.js');
+const { createPresenterPluginsBroker } = require('./server/presenter-plugins-broker.js');
+const { createRevealRemoteBroker } = require('./server/reveal-remote-broker.js');
+const { configurePublicRelayServer } = require('./server/public-relay.js');
 
 function getLocalIp() {
   const nets = os.networkInterfaces();
@@ -199,339 +62,6 @@ function getLocalIp() {
     }
   }
   return 'localhost';
-}
-
-function normalizeCreatedField(value) {
-  if (value instanceof Date && !Number.isNaN(value.getTime())) {
-    return value.toISOString();
-  }
-  if (typeof value === 'string') {
-    return value.trim();
-  }
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    const parsed = new Date(value);
-    if (!Number.isNaN(parsed.getTime())) {
-      return parsed.toISOString();
-    }
-  }
-  return '';
-}
-
-function toTimestamp(value) {
-  const parsed = Date.parse(String(value || ''));
-  if (!Number.isFinite(parsed)) return null;
-  return parsed;
-}
-
-function toPosixPath(value) {
-  return String(value || '').replace(/\\/g, '/');
-}
-
-function deriveThumbnailName(mdFile) {
-  const basename = path.basename(mdFile, path.extname(mdFile));
-  return `${basename}.thumb.jpg`;
-}
-
-function isTransientFsError(err) {
-  const code = String(err?.code || '');
-  return code === 'ENOENT' || code === 'ENOTDIR' || code === 'ESTALE';
-}
-
-function isLegacyLockOrTempEntry(name) {
-  if (typeof name !== 'string') return false;
-  const lower = name.toLowerCase();
-  return (
-    lower.endsWith('.lock') ||
-    lower.includes('.lock.~') ||
-    lower.startsWith('lock_')
-  );
-}
-
-function isHiddenAlternativeMetadata(data) {
-  if (!data) return false;
-  if (String(data.alternatives || '').trim().toLowerCase() === 'hidden') return true;
-  if (data.alternatives && typeof data.alternatives === 'object' && !Array.isArray(data.alternatives)) {
-    return String(data.alternatives.self || '').trim().toLowerCase() === 'hidden';
-  }
-  return false;
-}
-
-function collectMarkdownFilesRecursive(rootDir) {
-  const files = [];
-  const walk = (dirPath, relDir = '') => {
-    let entries = [];
-    try {
-      entries = fs.readdirSync(dirPath, { withFileTypes: true });
-    } catch (err) {
-      if (!isTransientFsError(err)) {
-        console.warn(`⚠ Failed to list markdown directory ${dirPath}: ${err.message}`);
-      }
-      return;
-    }
-    for (const entry of entries) {
-      if (entry.name.startsWith('.')) continue;
-      const absPath = path.join(dirPath, entry.name);
-      const relPath = relDir ? path.posix.join(relDir, entry.name) : entry.name;
-      if (entry.isDirectory()) {
-        walk(absPath, relPath);
-        continue;
-      }
-      if (!entry.isFile()) continue;
-      if (!entry.name.toLowerCase().endsWith('.md')) continue;
-      if (entry.name === '__builder_temp.md') continue;
-      files.push(relPath);
-    }
-  };
-  walk(rootDir);
-  files.sort((a, b) => a.localeCompare(b));
-  return files;
-}
-
-// --- 2. Presentation index generation ---------------------------------------
-// Walks <presentations>/<slug>/**.md (skipping dotfiles, _current_open, lock/temp
-// entries and hidden alternatives) and writes index.json: one entry per markdown file
-// with front-matter title/description/thumbnail/theme/created plus file mtime. In GUI mode
-// the file lives in USER_DATA_DIR/.revelation-cache and is served at
-// <presentationsWebPath>/index.json (see configureServer); otherwise it is written into the
-// presentations dir. Consumers: js/presentationlist.js (the library list). Malformed YAML
-// yields a "{malformed YAML}" placeholder entry rather than dropping the file.
-function generatePresentationIndex() {
-  // In GUI mode the wrapper owns docs/readme deck generation.
-  const isGui = /^(1|true)$/i.test(process.env.REVELATION_GUI || '');
-  if (!isGui) {
-    // Refresh README presentation first, if needed:
-    ensureReadmeTemplate();
-    
-    if (fs.existsSync(readmeYamlPath) && fs.existsSync(projectReadmePath)) {
-      const shouldGenerate =
-        !fs.existsSync(readmePresentationPath) ||
-        fs.statSync(readmePresentationPath).mtime < fs.statSync(projectReadmePath).mtime;
-
-      if (shouldGenerate) {
-        const header = fs.readFileSync(readmeYamlPath, 'utf-8');
-        const body = fs.readFileSync(projectReadmePath, 'utf-8');
-    
-        let combined = `${header}\n\n${body}`;
-        if (fs.existsSync(referencePath)) {
-          const reference = fs.readFileSync(referencePath, 'utf-8');
-          combined += `\n\n***\n\n${reference}`;
-        }
-        
-        fs.writeFileSync(readmePresentationPath, combined, 'utf-8');
-        console.log(`📝 Regenerated ${readmePresentationPath}`);
-      }
-    }
-  }
-
-    // Generate presentation manifest
-    let topLevelEntries = [];
-    try {
-      topLevelEntries = fs.readdirSync(presentationsDir);
-    } catch (err) {
-      console.warn(`⚠ Failed to list presentations dir ${presentationsDir}: ${err.message}`);
-      return;
-    }
-    const dirs = topLevelEntries.filter((dir) => {
-      if (!dir || dir.startsWith('.')) return false;
-      // Transient read-only copy of a .revel file opened from the OS; never listed in the library.
-      if (dir === '_current_open') return false;
-      if (isLegacyLockOrTempEntry(dir)) return false;
-      try {
-        return fs.lstatSync(path.join(presentationsDir, dir)).isDirectory();
-      } catch (err) {
-        if (!isTransientFsError(err)) {
-          console.warn(`⚠ Failed to inspect presentation entry ${dir}: ${err.message}`);
-        }
-        return false;
-      }
-    });
-
-    const indexData = [];
-
-    dirs.forEach((dir) => {
-      const folderPath = path.join(presentationsDir, dir);
-      const files = collectMarkdownFilesRecursive(folderPath);
-      
-      files.forEach((mdFile) => {
-        const mdPath = path.join(folderPath, mdFile);
-        let fileContent = '';
-        let stats = null;
-        try {
-          fileContent = fs.readFileSync(mdPath, 'utf-8');
-          stats = fs.statSync(mdPath);
-        } catch (err) {
-          if (!isTransientFsError(err)) {
-            console.warn(`⚠ Failed to read ${mdPath}: ${err.message}`);
-          }
-          return;
-        }
-
-        let data;
-        try {
-          // Attempt to read YAML front matter
-          data = readFrontMatterData(fileContent);
-        } catch (err) {
-          console.error(`⚠ Malformed YAML in ${dir}/${mdFile}: ${err.message}`);
-
-          // Fallback metadata when YAML is broken
-          data = {
-            title: "{malformed YAML}",
-            description: err.message,
-            thumbnail: deriveThumbnailName(mdFile),
-            _malformed: true
-          };
-        }
-
-        // Skip hidden alternatives
-        if (isHiddenAlternativeMetadata(data)) {
-          return;
-        }
-
-        const created = normalizeCreatedField(data.created);
-
-        indexData.push({
-          slug: dir,
-          md: toPosixPath(mdFile),
-          title: data.title || `${dir}/${mdFile}`,
-          description: data.description || "",
-          thumbnail: data.thumbnail || deriveThumbnailName(mdFile),
-          created,
-          createdTimestamp: toTimestamp(created),
-          modified: stats.mtime.toISOString(),
-          modifiedTimestamp: Number.isFinite(stats.mtimeMs) ? Math.round(stats.mtimeMs) : null,
-          theme: data.theme || "",
-          _malformed: data._malformed || false
-        });
-      });
-
-    });
-
-    fs.mkdirSync(path.dirname(outputFile), { recursive: true });
-    fs.writeFileSync(outputFile, JSON.stringify(indexData, null, 2), 'utf-8');
-    console.log(`📄 presentations/index.json regenerated (${outputFile})`);
-}
-
-function safeGeneratePresentationIndex(context = '') {
-  try {
-    generatePresentationIndex();
-  } catch (err) {
-    console.error(`⚠ generatePresentationIndex failed${context ? ` (${context})` : ''}: ${err.message}`);
-  }
-}
-
-function ensureReadmeTemplate() {
-  if (!fs.existsSync(readmeTemplatePath)) {
-    console.warn(`⚠️ README template folder missing: ${readmeTemplatePath}`);
-    return;
-  }
-  copyTemplateRecursiveSync(readmeTemplatePath, readmePresDir, new Set(['header.yaml']));
-}
-
-// --- 3. Thumbnail generation helpers ---
-// Back the /thumbs_<key>/ route: ffmpeg runs at most _THUMB_MAX_CONCURRENT at a time,
-// identical in-flight requests share one job (_thumbInFlight), results are cached next
-// to the source in a hidden .thumbs/ folder.
-
-const _THUMB_VIDEO_EXTS = new Set(['.mp4', '.webm', '.mov', '.m4v', '.ogv']);
-const _THUMB_MAX_CONCURRENT = 2;
-let _thumbActiveCount = 0;
-const _thumbQueue = [];
-const _thumbInFlight = new Map();
-
-function _withThumbSlot(fn) {
-  return new Promise((resolve, reject) => {
-    function tryRun() {
-      if (_thumbActiveCount < _THUMB_MAX_CONCURRENT) {
-        _thumbActiveCount++;
-        fn().then(resolve, reject).finally(() => {
-          _thumbActiveCount--;
-          if (_thumbQueue.length) _thumbQueue.shift()();
-        });
-      } else {
-        _thumbQueue.push(tryRun);
-      }
-    }
-    tryRun();
-  });
-}
-
-function _runFfmpegThumb(ffmpegBin, sourceFile, thumbFile) {
-  const isVideo = _THUMB_VIDEO_EXTS.has(path.extname(sourceFile).toLowerCase());
-  const args = isVideo
-    ? ['-y', '-ss', '0', '-i', sourceFile, '-vf', 'scale=320:-2', '-frames:v', '1', '-update', '1', thumbFile]
-    : ['-y', '-i', sourceFile, '-vf', 'scale=320:-2', '-frames:v', '1', '-update', '1', thumbFile];
-  return _withThumbSlot(() => new Promise((resolve, reject) => {
-    console.log(`[thumbs] ffmpeg cmd: ${ffmpegBin} ${args.join(' ')}`);
-    const proc = require('child_process').spawn(ffmpegBin, args, { stdio: 'pipe' });
-    const stderr = [];
-    proc.stderr?.on('data', (d) => stderr.push(d));
-    proc.on('close', (code) => {
-      if (code === 0) return resolve();
-      reject(new Error(`ffmpeg exit ${code}: ${Buffer.concat(stderr).toString().slice(-300)}`));
-    });
-    proc.on('error', reject);
-  }));
-}
-
-// Everything a public relay is allowed to answer. Socket.IO handles its own
-// two paths on the HTTP server before Connect middlewares ever run, so they do
-// not need entries here — they are listed for documentation and to keep the
-// landing page honest.
-const PUBLIC_RELAY_SOCKET_PATHS = ['/socket.io', PRESENTER_PLUGINS_SOCKET_PATH];
-// The only HTTP surface: the static remote-control UI. Self-contained —
-// server-ui/index.html references nothing outside its own directory.
-const PUBLIC_RELAY_UI_PREFIX = '/_remote/ui';
-
-function configurePublicRelayServer(server) {
-  const remoteUiDir = path.resolve(__dirname, 'node_modules/reveal.js-remote/server-ui');
-
-  // FIRST middleware, so it runs ahead of Vite's own static handling. Without
-  // it Vite would serve the project root and /@fs/ to the internet.
-  //
-  // Deny by default: anything not explicitly allowed gets a flat 404, with no
-  // hint as to whether the path exists.
-  server.middlewares.use((req, res, next) => {
-    let pathname = '';
-    try {
-      pathname = new URL(req.url || '', 'http://localhost').pathname;
-    } catch {
-      res.writeHead(400, { 'Content-Type': 'text/plain' });
-      res.end('400 Bad Request');
-      return;
-    }
-
-    if (pathname === '/' || pathname === '/index.html') {
-      // Deliberately contentless: says the service is alive, nothing about the
-      // host, its version, or what else might be running on it.
-      res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
-      res.end('REVELation relay: socket relay only.\n');
-      return;
-    }
-
-    if (pathname === PUBLIC_RELAY_UI_PREFIX || pathname.startsWith(`${PUBLIC_RELAY_UI_PREFIX}/`)) {
-      return next();
-    }
-
-    res.writeHead(404, { 'Content-Type': 'text/plain' });
-    res.end('404 Not Found');
-  });
-
-  if (fs.existsSync(remoteUiDir)) {
-    server.middlewares.use(PUBLIC_RELAY_UI_PREFIX, serveStatic(remoteUiDir, { fallthrough: false }));
-  } else {
-    console.warn(`⚠ Remote UI directory missing: ${remoteUiDir}`);
-  }
-
-  // The two relay socket paths. Peer pairing is deliberately NOT mounted
-  // (neither peerServer.middleware for /peer/* nor peerServer.attachSocketServer()
-  // for /peer-commands): it authenticates against this machine's config.json,
-  // which a relay neither has nor should have.
-  ensurePresenterPluginsServer(server);
-  ensureRevealRemoteServer(server);
-
-  console.log('🔒 PUBLIC RELAY MODE');
-  console.log(`   serving: ${PUBLIC_RELAY_SOCKET_PATHS.join(', ')}, ${PUBLIC_RELAY_UI_PREFIX}/`);
-  console.log('   disabled: presentations, plugins, thumbnails, media, admin, peer endpoints, file watching, Vite static root');
 }
 
 // Reveal's speaker view is an about:blank popup whose page is one big inline
@@ -558,7 +88,8 @@ function computeNotesViewScriptHash() {
   }
 }
 
-// --- 5. The Vite plugin -------------------------------------------------------
+
+// --- The Vite plugin ----------------------------------------------------------
 // transformIndexHtml: substitutes the speaker-view script hash into presentation.html's CSP.
 // buildStart:        regenerates presentations/index.json and _media/index.json.
 // configureServer:   builds the middleware stack. Order matters; registration order is:
@@ -578,7 +109,7 @@ function computeNotesViewScriptHash() {
 //        -> /presentation.html?slug=&key= ; .../handout[.html] -> /handout.html?slug=&key=
 //   -  sockets attached to the HTTP server (not middleware):
 //        /peer-commands            T4  RSA bearer token (peer-server.js)
-//        /presenter-plugins-socket T2c room id only, open by design (section 6)
+//        /presenter-plugins-socket T2c room id only, open by design (server/presenter-plugins-broker.js)
 //        /socket.io                T3  Reveal Remote, per-channel UUID (section 7)
 //   7  /_remote/ui  static remote-control web UI                none (static)
 //   8  peerServer.middleware: /peer/status (loopback), /peer/public-key, /peer/auth-nonce,
@@ -596,9 +127,63 @@ function computeNotesViewScriptHash() {
 //  13  /admin  wrapper http_admin/ (needs ADMIN_DIR_OVERRIDE)   T0: loopback gate + static
 //   Anything else falls through to Vite itself: in standalone (non-custom) mode that is the
 //   project root, so revelation/presentations_<key>/ is served by Vite's static handler.
-//   Public relay mode replaces all of this with configurePublicRelayServer().
-function presentationIndexPlugin() {
+//   Public relay mode replaces all of this with configurePublicRelayServer() (server/public-relay.js).
+// Everything one plugin instance owns. Built lazily (first Vite hook) so that creating the plugin
+// reads nothing and a vite.config.js that is merely loaded has no side effects.
+function createRuntime(options) {
+  const config = resolveServerConfig(options);
+  const parentPort = options.parentPort !== undefined ? options.parentPort : process.parentPort;
+
+  const index = createPresentationIndex(config);
+  const mediaShare = createMediaShare();
+  const presenterPlugins = createPresenterPluginsBroker();
+  const revealRemote = createRevealRemoteBroker();
+  // Master side of the peer protocol. See peer-server.js.
+  const peerServer = createPeerServer({
+    configPath: config.userDataDir ? path.join(config.userDataDir, 'config.json') : null,
+    followersPath: config.userDataDir ? path.join(config.userDataDir, 'peer-followers.json') : null,
+    postToParent(message) {
+      parentPort?.postMessage(message);
+    }
+  });
+
+  let watcher = null;
+  let parentListener = null;
+
+  // Electron main process -> this process.
+  function attachParentPort() {
+    if (!parentPort || parentListener) return;
+    parentListener = ({ data }) => {
+      if (!data || typeof data !== 'object') return;
+      if (!mediaShare.handleParentMessage(data)) peerServer.handleParentMessage(data);
+    };
+    parentPort.on('message', parentListener);
+  }
+
+  async function close() {
+    if (parentListener) {
+      (parentPort.off || parentPort.removeListener)?.call(parentPort, 'message', parentListener);
+      parentListener = null;
+    }
+    const activeWatcher = watcher;
+    watcher = null;
+    presenterPlugins.close();
+    revealRemote.close();
+    if (activeWatcher) await activeWatcher.close();
+  }
+
+  return {
+    config, index, mediaShare, presenterPlugins, revealRemote, peerServer,
+    attachParentPort, close,
+    setWatcher(next) { watcher = next; }
+  };
+}
+
+function createRevelationPlugin(options = {}) {
   let notesViewScriptHash;
+  let runtime = null;
+  const getRuntime = () => (runtime ??= createRuntime(options));
+
   return {
     name: 'generate-presentation-index',
     transformIndexHtml(html) {
@@ -607,87 +192,42 @@ function presentationIndexPlugin() {
       return html.replace(NOTES_HASH_PLACEHOLDER, notesViewScriptHash);
     },
     buildStart() {
-      if (isPublicServerMode) return;
-      safeGeneratePresentationIndex('buildStart');
-      generateMediaIndex();
+      const { config, index } = getRuntime();
+      if (config.isPublicServerMode) return;
+      index.safeGenerate('buildStart');
+      index.generateMediaIndex();
+    },
+    // Called when the dev server closes (and at the end of `vite build`): releases the file watcher,
+    // the socket brokers and the parent-port listener.
+    async closeBundle() {
+      await runtime?.close();
     },
     configureServer(server) {
-      if (isPublicServerMode) {
-        configurePublicRelayServer(server);
+      const rt = getRuntime();
+      const { config, index, mediaShare, presenterPlugins, revealRemote, peerServer } = rt;
+      rt.attachParentPort();
+      // Release the watcher, sockets and parent-port listener when the server closes. closeBundle()
+      // below does the same through Vite's plugin container; either path is enough and close() is
+      // idempotent (middleware-mode servers have no httpServer, so they rely on closeBundle).
+      server.httpServer?.once('close', () => { rt.close(); });
+
+      if (config.isPublicServerMode) {
+        configurePublicRelayServer(server, { rootDir: config.rootDir, presenterPlugins, revealRemote });
         return;
       }
 
-      const isGui = /^(1|true)$/i.test(process.env.REVELATION_GUI || '');
-      const cssServeDir = isGui ? path.resolve(__dirname, 'dist/css') : path.resolve(__dirname, 'css');
-      const revealDistDir = path.resolve(__dirname, 'node_modules/reveal.js/dist');
-      const userDataDir = process.env.USER_DATA_DIR;
+      const { rootDir, presentationsDir, presentationsWebPath, key, userDataDir } = config;
+      const cssServeDir = config.isGuiMode ? path.resolve(rootDir, 'dist/css') : path.resolve(rootDir, 'css');
+      const revealDistDir = path.resolve(rootDir, 'node_modules/reveal.js/dist');
 
-      if(!isGui) {
-        copyFonts();
-      }
-      safeGeneratePresentationIndex('configureServer');
-      generateMediaIndex();
+      index.safeGenerate('configureServer');
+      index.generateMediaIndex();
 
       // Support sandboxed builder preview iframes (Origin: null) loading module assets.
-      server.middlewares.use((req, res, next) => {
-        const origin = String(req.headers.origin || '').trim().toLowerCase();
-        const isLoopback = isLoopbackAddress(req.socket?.remoteAddress);
-        if (origin === 'null' && !isLoopback && !String(req.url || '').startsWith('/peer/')) {
-          res.writeHead(403, { 'Content-Type': 'text/plain' });
-          res.end('403 Forbidden: sandbox-origin access allowed only from localhost');
-          return;
-        }
-        if (req.method === 'OPTIONS' && origin === 'null' && isLoopback) {
-          res.statusCode = 204;
-          res.end();
-          return;
-        }
-        next();
-      });
+      server.middlewares.use(createSandboxOriginGate());
 
-      // Serve dynamically registered media files via opaque tokens.
-      // The real file path is never exposed to clients — only the 48-char hex token.
-      // Range requests are supported so video scrubbing works correctly.
-      server.middlewares.use((req, res, next) => {
-        const PREFIX = '/media-share/';
-        if (!req.url.startsWith(PREFIX)) return next();
-        const rawToken = req.url.slice(PREFIX.length).split('?')[0];
-        if (!_MEDIA_TOKEN_RE.test(rawToken)) { res.writeHead(404); return res.end(); }
-        const entry = dynamicMediaFiles.get(rawToken);
-        if (!entry) { res.writeHead(404); return res.end(); }
-        let stat;
-        try { stat = fs.statSync(entry.absolutePath); }
-        catch { res.writeHead(404); return res.end(); }
-        const total = stat.size;
-        const range = req.headers['range'];
-        if (range) {
-          const m = range.match(/bytes=(\d*)-(\d*)/);
-          if (!m) {
-            res.writeHead(416, { 'Content-Range': `bytes */${total}` });
-            return res.end();
-          }
-          const start = m[1] ? parseInt(m[1], 10) : 0;
-          const end   = m[2] ? parseInt(m[2], 10) : total - 1;
-          if (start > end || end >= total) {
-            res.writeHead(416, { 'Content-Range': `bytes */${total}` });
-            return res.end();
-          }
-          res.writeHead(206, {
-            'Content-Range': `bytes ${start}-${end}/${total}`,
-            'Accept-Ranges': 'bytes',
-            'Content-Length': end - start + 1,
-            'Content-Type': entry.mimeType
-          });
-          fs.createReadStream(entry.absolutePath, { start, end }).pipe(res);
-        } else {
-          res.writeHead(200, {
-            'Content-Length': total,
-            'Content-Type': entry.mimeType,
-            'Accept-Ranges': 'bytes'
-          });
-          fs.createReadStream(entry.absolutePath).pipe(res);
-        }
-      });
+      // Serve dynamically registered media files via opaque tokens (see server/media-share.js).
+      server.middlewares.use(mediaShare.middleware);
 
       if (fs.existsSync(revealDistDir)) {
         server.middlewares.use('/css/reveal.js/dist', serveStatic(revealDistDir, { fallthrough: true }));
@@ -702,9 +242,8 @@ function presentationIndexPlugin() {
       // file requires knowing the random publishKey embedded in the filename (~64-bit
       // entropy), generated in configManager.js. serve-static does not serve directory
       // listings, so the file list is not enumerable.
-      let publishDir = null;
       if (userDataDir) {
-        publishDir = path.join(userDataDir, 'publish');
+        const publishDir = path.join(userDataDir, 'publish');
         fs.mkdirSync(publishDir, { recursive: true });
         server.middlewares.use('/publish', serveStatic(publishDir, {
           fallthrough: true,
@@ -717,697 +256,117 @@ function presentationIndexPlugin() {
         }));
       }
 
-     // 👇 Find out if Vite was started with --host (network mode)
-    const isNetwork = process.argv.includes('--host');
-    const host = isNetwork ? getLocalIp() : 'localhost';
-    const isHttps = process.argv.includes('--https');
-    const protocol = isHttps ? 'https' : 'http';
+      // 👇 Find out if Vite was started with --host (network mode)
+      const isNetwork = config.argv.includes('--host');
+      const host = isNetwork ? getLocalIp() : 'localhost';
+      const protocol = config.argv.includes('--https') ? 'https' : 'http';
 
-    // 👇 Dynamically get port from server.httpServer
-    server.httpServer?.once('listening', () => {
-      const actualPort = server.httpServer.address().port;
-      const url = `${protocol}://${host}:${actualPort}/presentations.html?key=${key}`;
-      console.log(`\n🌐 Open your presentations at:\n   \x1b[36m${url}\x1b[0m\n`);
-    });
-
-    const chokidar = require('chokidar');
-
-      const watcher = chokidar.watch(presentationsDir, {
-      ignored: /(^|[/\\])\../, // Ignore dotfiles
-      persistent: true,
-      ignoreInitial: true,  
-      depth: 5
-    });
-
-    let mdRebuildDebounceTimer = null;
-    const pendingMdReloads = new Map();
-    // Last-seen content hash per markdown file (relative path). Cloud sync clients
-    // often touch files (mtime/attributes) without changing them; those events are
-    // dropped so they don't trigger index rebuilds or reloads.
-    const mdContentHashes = new Map();
-
-    const hashFileContent = (filePath) => {
-      try {
-        return crypto.createHash('sha1').update(fs.readFileSync(filePath)).digest('hex');
-      } catch {
-        return null;
-      }
-    };
-
-    const seedMdContentHashes = (dir, depth = 0) => {
-      if (depth > 5) return;
-      let entries = [];
-      try {
-        entries = fs.readdirSync(dir, { withFileTypes: true });
-      } catch {
-        return;
-      }
-      for (const entry of entries) {
-        if (entry.name.startsWith('.')) continue;
-        const fullPath = path.join(dir, entry.name);
-        if (entry.isDirectory()) {
-          seedMdContentHashes(fullPath, depth + 1);
-        } else if (entry.isFile() && entry.name.endsWith('.md')) {
-          const hash = hashFileContent(fullPath);
-          if (hash) mdContentHashes.set(toPosixPath(path.relative(presentationsDir, fullPath)), hash);
-        }
-      }
-    };
-    setImmediate(() => seedMdContentHashes(presentationsDir));
-
-    const flushMdRebuild = () => {
-      mdRebuildDebounceTimer = null;
-      if (!pendingMdReloads.size) return;
-
-      safeGeneratePresentationIndex('watcher:md-batch');
-      const pending = Array.from(pendingMdReloads.values());
-      pendingMdReloads.clear();
-
-      for (const item of pending) {
-        if (!item.mdFile) continue;
-        console.log(`Triggering reload-presentations for slug: ${item.slug}, md: ${item.mdFile}`);
-        server.ws.send({
-          type: 'custom',
-          event: 'reload-presentations',
-          data: { slug: item.slug, mdFile: item.mdFile }
-        });
-      }
-
-      // One batched notice per rebuild, so the presentation list can soft-refresh
-      // once instead of reacting to every file.
-      server.ws.send({
-        type: 'custom',
-        event: 'presentations-index-updated',
-        data: { changes: pending }
+      // 👇 Dynamically get port from server.httpServer
+      server.httpServer?.once('listening', () => {
+        const actualPort = server.httpServer.address().port;
+        const url = `${protocol}://${host}:${actualPort}/presentations.html?key=${key}`;
+        console.log(`\n🌐 Open your presentations at:\n   \x1b[36m${url}\x1b[0m\n`);
       });
-    };
 
-    const scheduleMdRebuild = () => {
-      if (mdRebuildDebounceTimer) {
-        clearTimeout(mdRebuildDebounceTimer);
-      }
-      mdRebuildDebounceTimer = setTimeout(flushMdRebuild, INDEX_REBUILD_DEBOUNCE_MS);
-      if (typeof mdRebuildDebounceTimer.unref === 'function') {
-        mdRebuildDebounceTimer.unref();
-      }
-    };
+      const watcher = createPresentationWatcher({
+        presentationsDir,
+        index,
+        send: (payload) => server.ws.send(payload),
+        debounceMs: options.indexRebuildDebounceMs ?? DEFAULT_DEBOUNCE_MS
+      });
+      watcher.start();
+      rt.setWatcher(watcher);
 
-    const queueMdReload = (event, filePath) => {
-      const relative = toPosixPath(path.relative(presentationsDir, filePath));
-      const [slug, ...rest] = relative.split('/');
-      if (!slug || !rest.length) return;
-      if (event === 'unlink') {
-        mdContentHashes.delete(relative);
-      } else {
-        const hash = hashFileContent(filePath);
-        if (hash && mdContentHashes.get(relative) === hash) return;
-        if (hash) mdContentHashes.set(relative, hash);
-      }
-      console.log(`📦 ${event.toUpperCase()}:`, filePath);
-      const mdFile = rest.join('/');
-      pendingMdReloads.set(relative, { slug, mdFile, event });
-      scheduleMdRebuild();
-    };
-
-    const triggerReload = (event, filePath) => {
-      if (filePath.endsWith('.md') && filePath.includes(presentationsDir)) {
-        queueMdReload(event, filePath);
-      }
-
-      if (filePath.endsWith('.json') && filePath.includes('_media')) {
-        console.log(`🧩 ${event.toUpperCase()}: Media JSON changed →`, filePath);
-        generateMediaIndex();
-
-        server.ws.send({
-          type: 'custom',
-          event: 'reload-media',
-          data: { filePath }
-        });
-      }
-    };
-
-      watcher
-      .on('add',    filePath => triggerReload('add', filePath))
-      .on('change', filePath => triggerReload('change', filePath))
-      .on('unlink', filePath => triggerReload('unlink', filePath))
-      .on('addDir', dirPath => {
-        // This code not needed as the creation of the .md file also triggers
-        // and sets up a race condition
-        /*
-	        console.log('📁 Folder added:', dirPath);
-          generatePresentationIndex();
-          console.log('Triggering full-reload');
-          server.ws.send({ type: 'full-reload' });
-        */
+      // Prefer dist/css output if available; fall back to css/.
+      console.log(`Serving /css from ${cssServeDir}`);
+      server.middlewares.use(
+        '/css',
+        serveStatic(cssServeDir, {
+          index: false,
+          fallthrough: true,
         })
-      .on('unlinkDir', dirPath => {
-        if (dirPath.includes(presentationsDir)) {
-          console.log('📁 Folder deleted:', dirPath);
-          const relative = toPosixPath(path.relative(presentationsDir, dirPath));
-          const [slug] = relative.split('/');
-          if (!slug || slug === '..') return;
-          for (const key of mdContentHashes.keys()) {
-            if (key.startsWith(`${relative}/`)) mdContentHashes.delete(key);
-          }
-          pendingMdReloads.set(`${relative}/`, { slug, mdFile: null, event: 'unlinkDir' });
-          scheduleMdRebuild();
+      );
+
+      // Rewrite `/presentations/foo/index.html` to `/presentation.html?slug=foo`
+      server.middlewares.use((req, res, next) => {
+        const escaped = presentationsWebPath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // escape for regex
+
+        const match = req.url.match(new RegExp(`^${escaped}/([^/]+)/(?:index\\.html)?(?:\\?.*)?$`));
+        if (match) {
+          const slug = match[1];
+          req.url = `/presentation.html?slug=${slug}&key=${key}`;
         }
-      });
 
-    // Prefer dist/css output if available; fall back to css/.
-    console.log(`Serving /css from ${cssServeDir}`);
-    server.middlewares.use(
-      '/css',
-      serveStatic(cssServeDir, {
-        index: false,
-        fallthrough: true,
-      })
-    );
-
-    // Rewrite `/presentations/foo/index.html` to `/presentation.html?slug=foo`
-    server.middlewares.use((req, res, next) => {
-      const escaped = presentationsWebPath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // escape for regex
-
-      const match = req.url.match(new RegExp(`^${escaped}/([^/]+)/(?:index\\.html)?(?:\\?.*)?$`));
-      if (match) {
-        const slug = match[1];
-        req.url = `/presentation.html?slug=${slug}&key=${key}`;
-      }
-
-      const hmatch = req.url.match(new RegExp(`^${escaped}/([^/]+)/handout(?:\\.html)?(?:\\?.*)?$`));
-      if (hmatch) {
-        const slug = hmatch[1];
-        req.url = `/handout.html?slug=${slug}&key=${key}`;
-      }
+        const hmatch = req.url.match(new RegExp(`^${escaped}/([^/]+)/handout(?:\\.html)?(?:\\?.*)?$`));
+        if (hmatch) {
+          const slug = hmatch[1];
+          req.url = `/handout.html?slug=${slug}&key=${key}`;
+        }
 
         next();
       });
 
       // Peer pairing + peer command endpoints (served from the same Vite server)
       peerServer.attachSocketServer(server.httpServer);
-      ensurePresenterPluginsServer(server);
-      ensureRevealRemoteServer(server);
-      server.middlewares.use('/_remote/ui', serveStatic(path.resolve(__dirname, 'node_modules/reveal.js-remote/server-ui'), { fallthrough: true }));
+      presenterPlugins.attach(server.httpServer);
+      revealRemote.attach(server.httpServer);
+      server.middlewares.use('/_remote/ui', serveStatic(path.resolve(rootDir, 'node_modules/reveal.js-remote/server-ui'), { fallthrough: true }));
       server.middlewares.use(peerServer.middleware);
 
       // Restrict access to presentation/media indexes to localhost only
-      server.middlewares.use((req, res, next) => {
-            let parsedPathname = '';
-            try {
-              parsedPathname = new URL(req.url || '', 'http://localhost').pathname.toLowerCase();
-            } catch (_) { /* malformed URL — let it fall through */ }
+      server.middlewares.use(createIndexJsonGate());
 
-            if (parsedPathname.endsWith('/index.json')) {
-            const isLocalhost = isLoopbackAddress(req.socket?.remoteAddress);
+      // In Electron GUI mode, serve presentations index from local userData cache.
+      if (config.outputFile !== config.sharedIndexFile) {
+        server.middlewares.use(createIndexRoute({ presentationsWebPath, outputFile: config.outputFile }));
+      }
 
-            if (!isLocalhost) {
-              const clientIp = normalizeRemoteAddress(req.socket?.remoteAddress);
-              console.log(`Attempted access from ${clientIp} blocked.`);
-              res.writeHead(403, { 'Content-Type': 'text/plain' });
-              res.end('403 Forbidden: index.json access denied (localhost only)');
-              return;
-            }
-          }
+      // Legacy media thumbnails (.webp where the .jpg is missing).
+      server.middlewares.use(createLegacyThumbnailFallback({ presentationsDir, presentationsWebPath }));
 
-          next();
-       });
-
-       // In Electron GUI mode, serve presentations index from local userData cache.
-       if (outputFile !== sharedIndexFile) {
-          const indexRoutePath = `${presentationsWebPath}/index.json`;
-          server.middlewares.use((req, res, next) => {
-            let parsedUrl;
-            try {
-              parsedUrl = new URL(req.url || '', 'http://localhost');
-            } catch (_err) {
-              return next();
-            }
-            if (parsedUrl.pathname !== indexRoutePath) return next();
-            try {
-              const data = fs.readFileSync(outputFile, 'utf-8');
-              res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
-              res.end(data);
-            } catch (err) {
-              if (isTransientFsError(err)) {
-                res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
-                res.end('[]');
-                return;
-              }
-              next(err);
-            }
-          });
-        }
-
-       // Legacy media thumbnails: items imported before the webp → jpg switch
-       // only have `<file>.thumbnail.webp`. Builders always request `.jpg`, so
-       // serve the webp in its place when the jpg is missing. Checks for the jpg
-       // itself because in non-custom mode this runs ahead of Vite's static handler.
-       const mediaThumbPrefix = `${presentationsWebPath}/_media/`;
-       server.middlewares.use((req, res, next) => {
-         if (req.method !== 'GET' && req.method !== 'HEAD') return next();
-         if (!req.url.startsWith(mediaThumbPrefix)) return next();
-         let name = req.url.slice(mediaThumbPrefix.length).split('?')[0];
-         try { name = decodeURIComponent(name); } catch { return next(); }
-         if (!/^[A-Za-z0-9_-][A-Za-z0-9._-]*\.thumbnail\.jpg$/.test(name)) return next();
-
-         const jpgPath = path.join(presentationsDir, '_media', name);
-         const webpPath = jpgPath.replace(/\.jpg$/, '.webp');
-         if (fs.existsSync(jpgPath)) return next();
-         fs.stat(webpPath, (err, stats) => {
-           if (err || !stats.isFile()) return next();
-           res.writeHead(200, {
-             'Content-Type': 'image/webp',
-             'Content-Length': stats.size,
-             'Cache-Control': 'no-cache',
-           });
-           if (req.method === 'HEAD') return res.end();
-           fs.createReadStream(webpPath).on('error', () => res.destroy()).pipe(res);
-         });
-       });
-
-       // Serve presentations from a custom path
-
-       if(customPath && fs.existsSync(presentationsDir)) {
-          console.log(`Serving ${presentationsWebPath} from custom presentations directory ${presentationsDir}`);
-          server.middlewares.use(presentationsWebPath, 
-            serveStatic(
-              presentationsDir,
-              {
-                  index: false,
-                  fallthrough: true,
-              }
-            )
-          );
-          if(fs.existsSync(pluginsDir)) {
-            console.log(`Serving ${pluginsWebPath} from plugins directory ${pluginsDir}`);
-            server.middlewares.use(pluginsWebPath,
-              serveStatic(pluginsDir,{})
-            );
-          }
-
-          // Thumbnail service: /thumbs_<key>/<slug>/<file> → cached 320-wide JPEG
-          const thumbsPrefix = `/thumbs_${key}/`;
-          server.middlewares.use((req, res, next) => {
-            if (!req.url.startsWith(thumbsPrefix)) return next();
-
-            const ffmpegBin = process.env.FFMPEG_BIN;
-            if (!ffmpegBin) { res.statusCode = 503; return res.end('FFMPEG_BIN not set'); }
-
-            const rawPath = req.url.slice(thumbsPrefix.length).split('?')[0];
-            const decodedPath = rawPath.split('/').map(seg => {
-              try { return decodeURIComponent(seg); } catch { return seg; }
-            }).join('/');
-            if (!decodedPath || decodedPath.includes('..')) return next();
-
-            const sourceFile = path.join(presentationsDir, decodedPath);
-            if (!fs.existsSync(sourceFile)) {
-              console.warn(`[thumbs] 404 source not found: ${decodedPath}`);
-              res.statusCode = 404; return res.end();
-            }
-
-            const sourceStat = fs.statSync(sourceFile);
-            const thumbFile = path.join(
-              path.dirname(sourceFile), '.thumbs',
-              path.basename(sourceFile) + '.thumb.jpg'
-            );
-
-            function serveThumb() {
-              res.setHeader('Content-Type', 'image/jpeg');
-              res.setHeader('Cache-Control', 'public, max-age=86400');
-              fs.createReadStream(thumbFile).pipe(res);
-            }
-
-            if (fs.existsSync(thumbFile) && fs.statSync(thumbFile).mtimeMs >= sourceStat.mtimeMs) {
-              console.log(`[thumbs] cache hit: ${decodedPath}`);
-              return serveThumb();
-            }
-
-            console.log(`[thumbs] generating: ${decodedPath}`);
-            let pending = _thumbInFlight.get(thumbFile);
-            if (!pending) {
-              const thumbDir = path.dirname(thumbFile);
-              const dirExisted = fs.existsSync(thumbDir);
-              fs.mkdirSync(thumbDir, { recursive: true });
-              if (!dirExisted && process.platform === 'win32') {
-                try {
-                  require('child_process').execFile('attrib', ['+h', thumbDir], () => {});
-                } catch {}
-              }
-              pending = _runFfmpegThumb(ffmpegBin, sourceFile, thumbFile)
-                .finally(() => _thumbInFlight.delete(thumbFile));
-              _thumbInFlight.set(thumbFile, pending);
-            }
-            pending
-              .then(() => {
-                if (fs.existsSync(thumbFile)) {
-                  console.log(`[thumbs] generated ok: ${decodedPath}`);
-                  serveThumb();
-                } else {
-                  console.warn(`[thumbs] generation produced no file: ${decodedPath}`);
-                  res.statusCode = 404; res.end();
-                }
-              })
-              .catch((err) => {
-                console.error(`[thumbs] ffmpeg failed for ${decodedPath}: ${err.message}`);
-                res.statusCode = 500; res.end();
-              });
-          });
-        }
-
-        // Middleware to serve files from revelation_electron-wrapper/http_admin
-        // This allows serving static files from the external folder
-
-        const adminDir = process.env.ADMIN_DIR_OVERRIDE;
-        if (adminDir && fs.existsSync(adminDir)) {
-          // Admin UI is public-domain static HTML/JS (same as the GitHub repo), but
-          // restrict to localhost — no reason to expose it on the LAN.
-          server.middlewares.use('/admin', (req, res, next) => {
-            if (!isLoopbackAddress(req.socket?.remoteAddress)) {
-              res.writeHead(403, { 'Content-Type': 'text/plain' });
-              res.end('403 Forbidden: admin access is localhost only');
-              return;
-            }
-            next();
-          });
-          server.middlewares.use(
-            '/admin',
-            serveStatic(adminDir, {
+      // Serve presentations from a custom path
+      if (config.customPath && fs.existsSync(presentationsDir)) {
+        console.log(`Serving ${presentationsWebPath} from custom presentations directory ${presentationsDir}`);
+        server.middlewares.use(presentationsWebPath,
+          serveStatic(
+            presentationsDir,
+            {
               index: false,
               fallthrough: true,
-            })
+            }
+          )
+        );
+        if (fs.existsSync(config.pluginsDir)) {
+          console.log(`Serving ${config.pluginsWebPath} from plugins directory ${config.pluginsDir}`);
+          server.middlewares.use(config.pluginsWebPath,
+            serveStatic(config.pluginsDir, {})
           );
-        } else {
-          console.warn('⚠️  External http_admin folder not found — skipping mount.');
         }
-	    
+
+        // Thumbnail service: /thumbs_<key>/<slug>/<file> → cached 320-wide JPEG
+        server.middlewares.use(createThumbsMiddleware({ presentationsDir, key, ffmpegBin: config.ffmpegBin }));
+      }
+
+      // Middleware to serve files from revelation_electron-wrapper/http_admin
+      // This allows serving static files from the external folder
+      if (config.adminDir && fs.existsSync(config.adminDir)) {
+        // Admin UI is public-domain static HTML/JS (same as the GitHub repo), but
+        // restrict to localhost — no reason to expose it on the LAN.
+        server.middlewares.use('/admin', createAdminGate());
+        server.middlewares.use(
+          '/admin',
+          serveStatic(config.adminDir, {
+            index: false,
+            fallthrough: true,
+          })
+        );
+      } else {
+        console.warn('⚠️  External http_admin folder not found — skipping mount.');
+      }
     }
   };
-};
-
-function copyFonts() {
-  // No-op: the whole body is commented out (kept as a stub; still called from configureServer).
-  // No longer used — fonts are now included directly in the css/fonts folder
-  /*
-      const src = path.resolve(__dirname, 'node_modules/reveal.js/dist/theme/fonts');
-      const dest = path.resolve(__dirname, 'css/fonts');
-
-      // Skip if already copied
-      if (fs.existsSync(dest)) return;
-
-      // Recursively copy
-      copyRecursiveSync(src, dest);
-      console.log('📁 Copied Reveal.js fonts to css/fonts');
-  */
 }
 
-// --- 6. Presenter-plugins socket (/presenter-plugins-socket) ----------------
-// Open room relay for collaboration plugins (slidecontrol, markerboard, bibletext-live,
-// captions, videostream). Protocol: client emits `presenter-plugin:join` {plugin, roomId}
-// (ack {ok, room}); thereafter `presenter-plugin:event` {type, payload} is re-emitted to the
-// other sockets in room `<plugin>:<roomId>`. NO authentication: holding the room id is the
-// permission (T2c, see doc/SECURITY.md "Open-collaboration plugins"). Input is only
-// shape-checked (plugin name and room id regexes, payload must be an object).
-function sanitizePluginName(value) {
-  const plugin = String(value || '').trim().toLowerCase();
-  if (!plugin) return '';
-  if (!/^[a-z0-9][a-z0-9_-]{0,63}$/.test(plugin)) return '';
-  return plugin;
-}
-
-function sanitizeRoomId(value) {
-  const roomId = String(value || '').trim();
-  if (!roomId) return '';
-  if (!/^[a-zA-Z0-9_-]{8,128}$/.test(roomId)) return '';
-  return roomId;
-}
-
-function ensurePresenterPluginsServer(server) {
-  if (presenterPluginsIo || !server.httpServer) return;
-
-  presenterPluginsIo = new Server(server.httpServer, {
-    path: PRESENTER_PLUGINS_SOCKET_PATH,
-    cors: { origin: '*', methods: ['GET', 'POST'] },
-    // Markerboard full-state snapshots can be large (import/restore). Increase
-    // payload budget so those sync events are not dropped by Socket.IO defaults.
-    maxHttpBufferSize: 25 * 1024 * 1024
-  });
-
-  presenterPluginsIo.on('connection', (socket) => {
-    let activeRoom = '';
-    let activePlugin = '';
-
-    socket.on('presenter-plugin:join', (data = {}, ack) => {
-      const plugin = sanitizePluginName(data.plugin);
-      const roomId = sanitizeRoomId(data.roomId);
-      if (!plugin || !roomId) {
-        if (typeof ack === 'function') ack({ ok: false, error: 'Invalid plugin or room' });
-        return;
-      }
-
-      const room = `${plugin}:${roomId}`;
-      if (activeRoom && activeRoom !== room) {
-        socket.leave(activeRoom);
-      }
-      socket.join(room);
-      activeRoom = room;
-      activePlugin = plugin;
-      if (typeof ack === 'function') ack({ ok: true, room });
-    });
-
-    socket.on('presenter-plugin:event', (message = {}) => {
-      if (!activeRoom || !activePlugin) return;
-      const type = String(message.type || '').trim();
-      if (!type) return;
-      const event = {
-        plugin: activePlugin,
-        roomId: activeRoom.split(':').slice(1).join(':'),
-        type,
-        payload: message.payload && typeof message.payload === 'object' ? message.payload : {},
-        ts: Date.now()
-      };
-      socket.to(activeRoom).emit('presenter-plugin:event', event);
-    });
-  });
-}
-
-// Helper: Recursive copy
-function copyRecursiveSync(src, dest) {
-  if (!fs.existsSync(dest)) fs.mkdirSync(dest, { recursive: true });
-
-  for (const item of fs.readdirSync(src)) {
-    const srcPath = path.join(src, item);
-    const destPath = path.join(dest, item);
-
-    if (fs.lstatSync(srcPath).isDirectory()) {
-      copyRecursiveSync(srcPath, destPath);
-    } else {
-      fs.copyFileSync(srcPath, destPath);
-    }
-  }
-}
-
-function copyTemplateRecursiveSync(src, dest, overwriteNames = new Set()) {
-  if (!fs.existsSync(src)) return;
-  if (!fs.existsSync(dest)) fs.mkdirSync(dest, { recursive: true });
-
-  for (const item of fs.readdirSync(src)) {
-    const srcPath = path.join(src, item);
-    const destPath = path.join(dest, item);
-
-    if (fs.lstatSync(srcPath).isDirectory()) {
-      copyTemplateRecursiveSync(srcPath, destPath, overwriteNames);
-    } else if (overwriteNames.has(item) || !fs.existsSync(destPath)) {
-      fs.copyFileSync(srcPath, destPath);
-    }
-  }
-}
-
-function generateMediaIndex() {
-  const mediaDir = path.join(presentationsDir, '_media');
-  if (!fs.existsSync(mediaDir)) return;
-
-  const files = fs.readdirSync(mediaDir).filter(f =>
-    f.endsWith('.json') && f !== 'index.json'
-  );
-
-  const index = {};
-  for (const file of files) {
-    const fullPath = path.join(mediaDir, file);
-    try {
-      const data = JSON.parse(fs.readFileSync(fullPath, 'utf-8'));
-      if (data?.large_variant?.filename) {
-        const variantPath = path.join(mediaDir, data.large_variant.filename);
-        data.large_variant_local = fs.existsSync(variantPath);
-      }
-      const key = path.basename(file, '.json');
-      index[key] = data;
-    } catch (e) {
-      console.warn(`⚠️ Failed to parse ${file}: ${e.message}`);
-    }
-  }
-
-  fs.writeFileSync(path.join(mediaDir, 'index.json'), JSON.stringify(index, null, 2));
-  console.log(`📁 _media/index.json updated with ${Object.keys(index).length} entries`);
-}
-
-// --- 7. Reveal Remote socket (/socket.io, default namespace) -----------------
-// Broker for reveal.js-remote. First message must be `start` {type}:
-//   presenter  -> gets remoteId/multiplexId (re-issued if the supplied hash verifies against the
-//                 per-process secret), QR codes, relays state/notes/buttons/multiplex/video-command
-//   remote     -> {id: remoteId}: receives presenter state, sends `command` back
-//   follower   -> {id: multiplexId}: receives multiplex state
-// No authentication beyond knowing the UUID of the channel (T3 to connect, UUID is the secret).
-// State is in-memory only and dropped when the presenter disconnects.
-function mkRevealRemoteHash(remoteId, multiplexId) {
-  return crypto.createHash('sha256')
-    .update(`${remoteId}-${multiplexId}-${revealRemoteHashsecret}`, 'utf8')
-    .digest('hex');
-}
-
-// Host-supplied remote buttons (see addRemoteButton in reveal.js-remote's plugin).
-// Mirrors sanitizeButtons in reveal.js-remote's server: clamp what a presenter
-// can put on remote screens. The remote UI renders labels as plain text.
-const REVEAL_REMOTE_MAX_BUTTONS = 12;
-function sanitizeRevealRemoteButtons(data) {
-  const list = data && Array.isArray(data.buttons) ? data.buttons : [];
-  return list
-    .filter((b) => b && typeof b.id === 'string' && b.id !== '')
-    .slice(0, REVEAL_REMOTE_MAX_BUTTONS)
-    .map((b) => ({
-      id: b.id.slice(0, 64),
-      label: String(b.label ?? b.id).slice(0, 40),
-      title: typeof b.title === 'string' ? b.title.slice(0, 120) : '',
-      disabled: !!b.disabled
-    }));
-}
-
-function initRevealRemotePresenter(socket, initialData, baseUrl) {
-  let remoteId = null;
-  let multiplexId = null;
-  let hash = null;
-
-  if (initialData.remoteId && initialData.multiplexId && initialData.hash &&
-      mkRevealRemoteHash(initialData.remoteId, initialData.multiplexId) === initialData.hash) {
-    remoteId = initialData.remoteId;
-    multiplexId = initialData.multiplexId;
-    hash = initialData.hash;
-  }
-
-  if (remoteId === null) {
-    remoteId = uuidv4();
-    multiplexId = uuidv4();
-    hash = mkRevealRemoteHash(remoteId, multiplexId);
-  }
-
-  socket.join('presenter-' + remoteId);
-
-  const remoteUrl = baseUrl + '_remote/ui/?' + remoteId;
-  const multiplexUrl = initialData.shareUrl.replace(/#.*/, '') +
-    (initialData.shareUrl.indexOf('?') > 0 ? '&' : '?') + 'remoteMultiplexId=' + multiplexId;
-
-  if (!revealRemoteStates[remoteId]) revealRemoteStates[remoteId] = {};
-  revealRemoteStates[remoteId].multiplexUrl = multiplexUrl;
-
-  socket.on('disconnect', () => {
-    delete revealRemoteStates[remoteId];
-    delete revealRemoteMultiplexes[multiplexId];
-  });
-
-  Promise.all([
-    qrToDataURL(remoteUrl, { errorCorrectionLevel: 'Q' }),
-    qrToDataURL(multiplexUrl, { errorCorrectionLevel: 'Q' })
-  ]).then((base64) => {
-    socket.emit('init', {
-      remoteUrl, multiplexUrl, hash, remoteId, multiplexId,
-      remoteImage: base64[0], multiplexImage: base64[1]
-    });
-  });
-
-  socket.on('state_changed', (data) => {
-    if (!revealRemoteStates[remoteId]) revealRemoteStates[remoteId] = {};
-    revealRemoteStates[remoteId].state = data;
-    socket.to('remote-' + remoteId).emit('state_changed', data);
-  });
-
-  socket.on('notes_changed', (data) => {
-    if (!revealRemoteStates[remoteId]) revealRemoteStates[remoteId] = {};
-    revealRemoteStates[remoteId].notes = data;
-    socket.to('remote-' + remoteId).emit('notes_changed', data);
-  });
-
-  socket.on('buttons_changed', (data) => {
-    if (!revealRemoteStates[remoteId]) revealRemoteStates[remoteId] = {};
-    const buttons = { buttons: sanitizeRevealRemoteButtons(data) };
-    revealRemoteStates[remoteId].buttons = buttons;
-    socket.to('remote-' + remoteId).emit('buttons_changed', buttons);
-  });
-
-  socket.on('multiplex', (data) => {
-    revealRemoteMultiplexes[multiplexId] = data;
-    socket.to('multiplex-' + multiplexId).emit('multiplex', data);
-  });
-
-  socket.on('video-command', (data) => {
-    socket.to('multiplex-' + multiplexId).emit('video-command', data);
-  });
-}
-
-function initRevealRemoteControl(socket, data) {
-  const id = data.id;
-  socket.join('remote-' + id);
-  socket.to('presenter-' + id).emit('client_connected', {});
-
-  if (revealRemoteStates[id]) {
-    if (revealRemoteStates[id].notes) socket.emit('notes_changed', revealRemoteStates[id].notes);
-    if (revealRemoteStates[id].state) socket.emit('state_changed', revealRemoteStates[id].state);
-    if (revealRemoteStates[id].buttons) socket.emit('buttons_changed', revealRemoteStates[id].buttons);
-    if (revealRemoteStates[id].multiplexUrl) socket.emit('presentation_url', { url: revealRemoteStates[id].multiplexUrl });
-  }
-
-  socket.on('command', (cmd) => {
-    if (typeof cmd?.command === 'string') {
-      socket.to('presenter-' + id).emit('command', cmd);
-    }
-  });
-}
-
-function initRevealRemoteFollower(socket, data) {
-  socket.join('multiplex-' + data.id);
-  if (revealRemoteMultiplexes[data.id]) {
-    socket.emit('multiplex', revealRemoteMultiplexes[data.id]);
-  }
-}
-
-function ensureRevealRemoteServer(server) {
-  if (revealRemoteIo || !server.httpServer) return;
-
-  revealRemoteIo = new Server(server.httpServer, {
-    path: '/socket.io',
-    cookie: false,
-    cors: { origin: true }
-  });
-
-  revealRemoteIo.sockets.on('connection', (socket) => {
-    const host = socket.request.headers['x-forwarded-host'] || socket.request.headers['host'];
-    const proto = socket.request.headers['x-forwarded-proto'] || 'http';
-    const baseUrl = proto + '://' + host + '/';
-
-    socket.once('start', (data) => {
-      try {
-        if (data.type === 'presenter') {
-          initRevealRemotePresenter(socket, data, baseUrl);
-        } else if (data.type === 'follower' && data.id) {
-          initRevealRemoteFollower(socket, data);
-        } else if (data.type === 'remote' && data.id) {
-          initRevealRemoteControl(socket, data);
-        }
-      } catch (e) {
-        console.warn(e);
-      }
-    });
-  });
-
-  console.log('🎛️  Reveal Remote server attached to Vite httpServer at /socket.io');
-}
-
-module.exports = presentationIndexPlugin;
+// vite.config.js calls the export with no arguments (configured from the environment).
+module.exports = createRevelationPlugin;
+module.exports.createRevelationPlugin = createRevelationPlugin;

@@ -3,7 +3,7 @@
 `npm run tests` runs everything below. It needs Node 22.7+ (ES modules are imported directly) and never opens a browser or Electron.
 
 ```
-npm run tests            # fixtures, then server tests
+npm run tests            # fixtures, then unit and server tests
 npm run tests:fixtures   # compiler fixtures only (fast)
 npm run tests:generate   # regenerate fixture references from the current compiler
 ```
@@ -15,42 +15,52 @@ passed to Reveal.js) and `reference/handout.html`. The runner `import()`s the re
 `plugins/credit_ccli/`, so new exports, imports and modules need no change to the test code. If a comparison fails, actual
 output is written to `tests/_actual/<name>/`.
 
-## 2. Server tests (`server/*.test.cjs`)
+## 2. The server
 
-These start a **real Vite dev server** with the REVELation plugin (`vite.plugins.js`) in the test process, on an ephemeral
-port and throwaway directories, and talk to it over HTTP and Socket.IO. No refactoring of the plugin is needed because it is
-configured entirely by environment variables; `helpers/vite-server.cjs` sets them and returns `{ base, dirs, send, posted, ... }`.
+The back end is one Vite plugin, `vite.plugins.js`, composed from factories in `server/` (see the header of each file).
+`createRevelationPlugin(options)` takes the settings that used to come only from environment variables (`server/config.js`
+lists both), keeps its state per instance, and releases its file watcher, sockets and parent-port listener when the server
+closes. That is what the tests build on.
 
-| File | Mode | Covers |
-|------|------|--------|
-| `custom-gui.test.cjs` | Custom path + GUI (as the Electron wrapper runs it) | index.json generation and cache, loopback-only gates, `Origin: null` handling, URL rewrites, CSP script hash, legacy thumbnail fallback, `/media-share` tokens and Range requests, `/thumbs` (cache, dedupe, traversal), `/publish`, `/admin`, watcher-driven reindexing |
-| `relay.test.cjs` | Public relay (`REVELATION_PUBLIC_SERVER=1`) | deny-by-default 404 surface, no peer endpoints, remote UI, both sockets |
-| `sockets.test.cjs` | Custom + GUI | Reveal Remote broker (presenter/remote/follower, hash resume, button clamping) and presenter-plugin rooms |
-| `peer.test.cjs` | `createPeerServer()` on a plain `http.Server` | pairing, PIN lockout, nonces/replay, signatures, socket grants, forgetting followers |
+### Unit tests (`unit/*.test.cjs`): each `server/` module on its own, no Vite
 
-Rules for these tests:
+| File | Module | Covers |
+|------|--------|--------|
+| `config.test.cjs` | `config.js` | mode selection, option/env precedence, GUI index paths, lazy `ffmpegBin`, no `process.env` access |
+| `access-gates.test.cjs` | `access-gates.js` | loopback gates driven with **fake remote addresses** (IPv4, IPv6, mapped, missing), so no LAN interface is needed |
+| `presentation-index.test.cjs` | `presentation-index.js` | index entries and every exclusion rule, README deck refresh, media index, GUI index route |
+| `presentation-watcher.test.cjs` | `presentation-watcher.js` | debounce, batching, unchanged-content filter, folder removal, `close()` (fake chokidar, recording `send`) |
+| `media-share.test.cjs` | `media-share.js` | token rules, parent messages, Range handling, per-instance registries |
+| `thumbnails.test.cjs` | `thumbnails.js` | concurrency cap, de-duplication, failure recovery, `/thumbs` route, legacy `.webp` fallback (fake ffmpeg) |
+| `brokers.test.cjs` | both socket brokers | sanitizers, isolation between instances, shutdown semantics |
 
-- **One server per test file.** The plugin reads its mode from the environment when first required, and `node --test` runs
-  each file in its own process. A new mode needs a new file.
-- Run them through `npm run tests` (or `node --test --test-force-exit tests/server/<file>`): the plugin never closes its
-  chokidar watcher or sockets, so the process must be force-exited.
-- Requests made to the machine's own LAN address arrive from a non-loopback address; that is how the loopback-only gates are
-  tested. Those assertions skip on a machine with no LAN interface.
-- Standalone (non-custom-path) mode is not tested: it serves, and writes the README deck and `index.json` into, the checked-out
-  `presentations_*` folder.
+### Server tests (`server/*.test.cjs`): a real Vite server over HTTP and Socket.IO
 
-## Testability notes (not done yet)
+`helpers/vite-server.cjs` builds the plugin from explicit options (no `process.env`, no `process.parentPort`), loads the
+settings from `vite.config.js`, and starts Vite on an ephemeral port with throwaway directories. It returns
+`{ base, dirs, send, posted, parentPort, setFfmpegBin, lanUrl, close }`; `send()` delivers a message as the Electron main
+process would.
 
-The real-server tests work without touching `vite.plugins.js`, but its shape limits what can be tested in isolation:
+| File | Covers |
+|------|--------|
+| `custom-gui.test.cjs` | the wrapper's configuration end to end: index generation and cache, loopback gates from a real non-loopback address, `Origin: null`, URL rewrites, CSP hash, `/media-share`, `/thumbs`, `/publish`, `/admin`, watcher-driven reindexing |
+| `relay.test.cjs` | public relay mode: deny-by-default 404 surface, no peer endpoints, remote UI, both sockets |
+| `sockets.test.cjs` | Reveal Remote broker and presenter-plugin rooms through the full server |
+| `modes.test.cjs` | a relay, a custom-path and a standalone server in one process; isolation; `close()` releases everything |
+| `peer.test.cjs` | `peer-server.js` on a plain `http.Server`: pairing, PIN lockout, nonces, signatures, socket grants |
 
-1. **Environment read at require time.** Mode, directories, key, the peer server and the `process.parentPort` listener are
-   module-level state, set once when the file is first loaded. That is why each mode needs its own test process. A
-   `createRevelationPlugin(options)` factory (defaulting to the environment) would allow several modes in one process.
-2. **`configureServer` is ~450 lines of inline closures.** `/media-share`, `/thumbs`, the loopback gates and the index
-   generator could be exported as factories (`createMediaShareMiddleware(registry)`, `generatePresentationIndex({ presentationsDir,
-   outputFile })`, ...) and unit-tested without a Vite server. `peer-server.js` already has this shape and is the easiest
-   module to test.
-3. **Resources are never released.** The chokidar watcher and both Socket.IO servers are not closed when the server closes,
-   so tests need `--test-force-exit`. Closing them on the HTTP server's `close` event would also make server restarts clean.
-4. **`process.parentPort` is read directly.** `peer-server.js` takes `postToParent` as an argument; the media-token and parent
-   messages in `vite.plugins.js` could be injected the same way instead of the harness defining `process.parentPort`.
+Notes:
+
+- Servers are independent, so a file may start several (any mode). Standalone mode runs against a temp folder
+  (`baseDir`), never the checked-out `presentations_*`.
+- Requests through the machine's LAN address arrive from a non-loopback address; those assertions skip on a machine with no
+  LAN interface. `unit/access-gates.test.cjs` covers the same gates without needing one.
+- Keep test output quiet: `node --test` children report over stdout, and a stray line from the code under test can corrupt
+  that stream. The harness mutes the plugin's console output; unit tests that load server modules do the same.
+
+## What is still inline in `vite.plugins.js`
+
+`configureServer` still mounts the static trees (`/css`, `/publish`, the presentations and plugins folders, `/admin`, the
+remote UI), the slug/handout URL rewrite and the startup banner directly. They are thin wrappers over `serve-static` or a
+few lines of string handling and are covered by `server/custom-gui.test.cjs`. Extract them into `server/` only if they grow
+logic of their own.
