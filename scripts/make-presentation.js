@@ -1,3 +1,7 @@
+// `npm run make`: interactive scaffold from templates/default.
+// NOTE: writes to ../presentations/<slug>, but the live presentations folder is
+// presentations_<key>/ (scripts/init-presentations.js), so output lands in a folder the server
+// does not serve. Likewise scripts/add-images.mjs (`npm run addimages`).
 const fs = require('fs');
 const path = require('path');
 const readline = require('readline');

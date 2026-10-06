@@ -1,3 +1,6 @@
+// `npm run build:fonts`: copies css/fonts -> dist/css/fonts (skipped if dist/css/fonts exists,
+// so stale fonts are never refreshed; delete dist/css/fonts to force). Part of `npm run build`.
+// (The top-level `return` is legal: Node wraps CommonJS files in a function.)
     const path = require('path');
     const fs = require('fs');
 

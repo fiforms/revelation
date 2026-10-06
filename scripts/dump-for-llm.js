@@ -1,3 +1,6 @@
+// `npm run llm:dump`: writes a text dump of git-tracked, non-binary source files (default output
+// relevant_files_for_llm.txt; the npm script passes revelation_file_summary.txt, which is
+// git-ignored and may be stale/leftover in the working tree).
 // scripts/dump-for-llm.js
 const fs = require('fs');
 const { execSync } = require('child_process');

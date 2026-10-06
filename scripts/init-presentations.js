@@ -1,3 +1,7 @@
+// Runs on `npm install` (postinstall) and from the wrapper: ensures a presentations_<key>/
+// folder exists (key = 8 random bytes hex; the folder name IS the server access key, see
+// doc/SECURITY.md) with a _media/ dir and the readme deck template. Exports main() and
+// copyReadmeTemplate().
 // scripts/init-presentations.js
 const fs = require('fs');
 const path = require('path');
