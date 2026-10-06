@@ -204,3 +204,67 @@ test('legacy fallback: a webp that is really a directory is not served', async (
     assert.strictEqual((await fetch(`${media}/dir.thumbnail.jpg`)).status, 418);
   });
 });
+
+test('thumbs middleware: only regular image/video files inside the presentations dir reach ffmpeg', async () => {
+  const restore = quiet();
+  const dir = tmpDir();
+  const ff = makeFakeFfmpeg(dir, 10);
+  const outside = writeTree(tmpDir(), { 'secret.png': 'png', 'secretdir/x.png': 'png' });
+  await withThumbsServer(() => ff.bin, async ({ base, dir: presDir }) => {
+    fs.writeFileSync(path.join(presDir, 'demo', 'list.m3u8'), '#EXTM3U');
+    fs.mkdirSync(path.join(presDir, 'demo', 'folder.png'));
+    fs.mkdirSync(path.join(presDir, 'demo', '.thumbs'), { recursive: true });
+    fs.writeFileSync(path.join(presDir, 'demo', '.thumbs', 'a.png'), 'x');
+    fs.symlinkSync(path.join(outside, 'secret.png'), path.join(presDir, 'demo', 'link.png'));
+    fs.symlinkSync(path.join(outside, 'secretdir'), path.join(presDir, 'demo', 'linkdir'));
+    for (const refused of ['demo/note.txt', 'demo/list.m3u8', 'demo/folder.png',
+      'demo/.thumbs/a.png', 'demo/link.png', 'demo/linkdir/x.png']) {
+      assert.strictEqual((await fetch(`${base}/thumbs_k/${refused}`)).status, 404, refused);
+    }
+    assert.strictEqual(ff.starts().length, 0, 'ffmpeg was never started for these');
+    assert.strictEqual((await fetch(`${base}/thumbs_k/demo/_media/pic.png`)).status, 200, 'a normal image still works');
+  });
+  restore();
+  remove(dir);
+  remove(outside);
+});
+
+test('ffmpeg is started with only the file protocol allowed', async () => {
+  const restore = quiet();
+  const dir = tmpDir();
+  const ff = makeFakeFfmpeg(dir, 10);
+  await createThumbnailGenerator().ensure(ff.bin, path.join(dir, 'a.png'), path.join(dir, '.t', 'a.jpg'));
+  restore();
+  assert.match(ff.starts()[0], /-protocol_whitelist file /);
+  remove(dir);
+});
+
+test('the generator rejects with QUEUE_FULL past maxQueue, but still shares an in-flight job', async () => {
+  const restore = quiet();
+  const dir = tmpDir();
+  const ff = makeFakeFfmpeg(dir, 100);
+  const gen = createThumbnailGenerator({ maxConcurrent: 1, maxQueue: 2 });
+  const job = (i) => gen.ensure(ff.bin, path.join(dir, `s${i}.png`), path.join(dir, '.t', `s${i}.jpg`));
+  const accepted = [job(0), job(1), job(2)]; // 1 running + 2 waiting
+  await assert.rejects(job(3), { code: 'QUEUE_FULL' });
+  assert.strictEqual(job(2), accepted[2], 'a queued file is shared, not rejected');
+  await Promise.all(accepted);
+  await gen.ensure(ff.bin, path.join(dir, 's3.png'), path.join(dir, '.t', 's3.jpg'));
+  restore();
+  assert.strictEqual(ff.starts().length, 4, 'the rejected file works once there is room');
+  remove(dir);
+});
+
+test('thumbs middleware: a full queue answers 503 with Retry-After', async () => {
+  const restore = quiet();
+  const generator = { ensure: () => Promise.reject(Object.assign(new Error('full'), { code: 'QUEUE_FULL' })) };
+  const dir = writeTree(tmpDir(), { 'demo/a.png': 'png' });
+  const middleware = createThumbsMiddleware({ presentationsDir: dir, key: 'k', ffmpegBin: () => '/x', generator });
+  const server = http.createServer((req, res) => middleware(req, res, () => { res.writeHead(418); res.end(); }));
+  await new Promise((r) => server.listen(0, '127.0.0.1', r));
+  try {
+    const res = await fetch(`http://127.0.0.1:${server.address().port}/thumbs_k/demo/a.png`);
+    assert.strictEqual(res.status, 503);
+    assert.strictEqual(res.headers.get('retry-after'), '5');
+  } finally { server.closeAllConnections?.(); await new Promise((r) => server.close(r)); remove(dir); restore(); }
+});

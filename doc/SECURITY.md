@@ -119,7 +119,7 @@ part of the model, not a gap in it.
 | `/pip.html`, `/js/pip*.js` | T3 | none, but the page validates its own input and ships a CSP (see "Enforcement mechanisms"); not served by the public relay |
 | `/presentations_<key>/**` | T1 | key in path |
 | `/plugins_<key>/**` | T1 | key in path — **serves server-side plugin source** (F7, open) |
-| `/thumbs_<key>/**` | T1 | key in path — **spawns ffmpeg** (F6, open) |
+| `/thumbs_<key>/**` | T1 | key in path — **spawns ffmpeg**: image/video files inside the presentations dir only, 2 at a time, 200 queued, 30 s limit |
 | `**/index.json` | T0 | loopback |
 | `/admin/**` | T0 | loopback |
 | `/peer/status` | T0 | loopback + `mdnsPublish` |

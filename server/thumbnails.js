@@ -2,13 +2,17 @@
 //
 // createThumbnailGenerator({ maxConcurrent }) -> { ensure(ffmpegBin, sourceFile, thumbFile) }
 //   Runs ffmpeg for one 320px-wide JPEG. At most `maxConcurrent` (default 2) ffmpeg processes run
-//   at once; identical in-flight requests share one job; results are cached by the caller next to
-//   the source in a hidden .thumbs/ folder.
+//   at once and at most `maxQueue` (default 200) more wait; past that ensure() rejects with an error whose
+//   `code` is 'QUEUE_FULL' (the middleware answers 503). Identical in-flight requests share one job; results are cached by the caller next to
+//   the source in a hidden .thumbs/ folder. ffmpeg runs with only the `file` protocol allowed (a crafted
+//   playlist cannot fetch URLs) and is killed after THUMB_TIMEOUT_MS so a bad file cannot hold a slot.
 //
 // createThumbsMiddleware({ presentationsDir, key, ffmpegBin, generator? })
 //   /thumbs_<key>/<slug>/<file> -> cached 320-wide JPEG (custom-path mode only). `ffmpegBin` is a
 //   function returning the binary path or a falsy value (503 "FFMPEG_BIN not set"). Trust tier T1
-//   (key in the path); it spawns ffmpeg on a file inside the presentations dir, so `..` is refused.
+//   (key in the path). It spawns ffmpeg, so the source must be a regular image/video file (by extension)
+//   whose real path, symlinks resolved, is inside the presentations dir, with no hidden (dot) folder in
+//   the path; `..` is refused outright.
 //
 // createLegacyThumbnailFallback({ presentationsDir, presentationsWebPath })
 //   Media imported before the webp -> jpg switch only has `<file>.thumbnail.webp`; builders always
@@ -19,9 +23,18 @@ const fs = require('fs');
 const path = require('path');
 
 const THUMB_VIDEO_EXTS = new Set(['.mp4', '.webm', '.mov', '.m4v', '.ogv']);
+const THUMB_IMAGE_EXTS = new Set(['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.avif', '.tif', '.tiff']);
 const THUMB_MAX_CONCURRENT = 2;
+const THUMB_MAX_QUEUE = 200;
+const THUMB_TIMEOUT_MS = 30000;
 
-function createThumbnailGenerator({ maxConcurrent = THUMB_MAX_CONCURRENT } = {}) {
+// True when `target` is `base` or inside it (both already resolved with realpath).
+function isInside(base, target) {
+  const rel = path.relative(base, target);
+  return rel === '' || (!rel.startsWith('..' + path.sep) && rel !== '..' && !path.isAbsolute(rel));
+}
+
+function createThumbnailGenerator({ maxConcurrent = THUMB_MAX_CONCURRENT, maxQueue = THUMB_MAX_QUEUE } = {}) {
   let activeCount = 0;
   const queue = [];
   const inFlight = new Map();
@@ -45,19 +58,24 @@ function createThumbnailGenerator({ maxConcurrent = THUMB_MAX_CONCURRENT } = {})
 
   function runFfmpegThumb(ffmpegBin, sourceFile, thumbFile) {
     const isVideo = THUMB_VIDEO_EXTS.has(path.extname(sourceFile).toLowerCase());
+    const base = ['-y', '-nostdin', '-protocol_whitelist', 'file'];
     const args = isVideo
-      ? ['-y', '-ss', '0', '-i', sourceFile, '-vf', 'scale=320:-2', '-frames:v', '1', '-update', '1', thumbFile]
-      : ['-y', '-i', sourceFile, '-vf', 'scale=320:-2', '-frames:v', '1', '-update', '1', thumbFile];
+      ? [...base, '-ss', '0', '-i', sourceFile, '-vf', 'scale=320:-2', '-frames:v', '1', '-update', '1', thumbFile]
+      : [...base, '-i', sourceFile, '-vf', 'scale=320:-2', '-frames:v', '1', '-update', '1', thumbFile];
     return withSlot(() => new Promise((resolve, reject) => {
       console.log(`[thumbs] ffmpeg cmd: ${ffmpegBin} ${args.join(' ')}`);
       const proc = require('child_process').spawn(ffmpegBin, args, { stdio: 'pipe' });
       const stderr = [];
       proc.stderr?.on('data', (d) => stderr.push(d));
+      let timedOut = false;
+      const timer = setTimeout(() => { timedOut = true; proc.kill('SIGKILL'); }, THUMB_TIMEOUT_MS);
       proc.on('close', (code) => {
+        clearTimeout(timer);
+        if (timedOut) return reject(new Error(`ffmpeg timed out after ${THUMB_TIMEOUT_MS} ms`));
         if (code === 0) return resolve();
         reject(new Error(`ffmpeg exit ${code}: ${Buffer.concat(stderr).toString().slice(-300)}`));
       });
-      proc.on('error', reject);
+      proc.on('error', (err) => { clearTimeout(timer); reject(err); });
     }));
   }
 
@@ -65,6 +83,9 @@ function createThumbnailGenerator({ maxConcurrent = THUMB_MAX_CONCURRENT } = {})
   function ensure(ffmpegBin, sourceFile, thumbFile) {
     let pending = inFlight.get(thumbFile);
     if (!pending) {
+      if (queue.length >= maxQueue) {
+        return Promise.reject(Object.assign(new Error('thumbnail queue is full'), { code: 'QUEUE_FULL' }));
+      }
       const thumbDir = path.dirname(thumbFile);
       const dirExisted = fs.existsSync(thumbDir);
       fs.mkdirSync(thumbDir, { recursive: true });
@@ -97,17 +118,33 @@ function createThumbsMiddleware({ presentationsDir, key, ffmpegBin, generator = 
     }).join('/');
     if (!decodedPath || decodedPath.includes('..')) return next();
 
-    const sourceFile = path.join(presentationsDir, decodedPath);
-    if (!fs.existsSync(sourceFile)) {
-      console.warn(`[thumbs] 404 source not found: ${decodedPath}`);
+    const ext = path.extname(decodedPath).toLowerCase();
+    const hidden = decodedPath.split(/[\\/]/).some((seg) => seg.startsWith('.'));
+    if (hidden || !(THUMB_IMAGE_EXTS.has(ext) || THUMB_VIDEO_EXTS.has(ext))) {
       res.statusCode = 404; return res.end();
     }
 
-    const sourceStat = fs.statSync(sourceFile);
+    const sourceFile = path.join(presentationsDir, decodedPath);
     const thumbFile = path.join(
       path.dirname(sourceFile), '.thumbs',
       path.basename(sourceFile) + '.thumb.jpg'
     );
+    let sourceStat;
+    try {
+      // Resolve symlinks: the real file and the .thumbs folder must both stay inside the presentations dir.
+      const root = fs.realpathSync(presentationsDir);
+      const realSource = fs.realpathSync(sourceFile);
+      sourceStat = fs.statSync(realSource);
+      const thumbDir = path.dirname(thumbFile);
+      const realThumbDir = fs.existsSync(thumbDir) ? fs.realpathSync(thumbDir) : null;
+      if (!sourceStat.isFile() || !isInside(root, realSource) || (realThumbDir && !isInside(root, realThumbDir))) {
+        console.warn(`[thumbs] refused: ${decodedPath}`);
+        res.statusCode = 404; return res.end();
+      }
+    } catch {
+      console.warn(`[thumbs] 404 source not found: ${decodedPath}`);
+      res.statusCode = 404; return res.end();
+    }
 
     function serveThumb() {
       res.setHeader('Content-Type', 'image/jpeg');
@@ -134,6 +171,9 @@ function createThumbsMiddleware({ presentationsDir, key, ffmpegBin, generator = 
         }
       })
       .catch((err) => {
+        if (err && err.code === 'QUEUE_FULL') {
+          res.statusCode = 503; res.setHeader('Retry-After', '5'); return res.end('Thumbnail queue is full');
+        }
         console.error(`[thumbs] ffmpeg failed for ${decodedPath}: ${err.message}`);
         res.statusCode = 500; res.end();
       });
@@ -165,4 +205,4 @@ function createLegacyThumbnailFallback({ presentationsDir, presentationsWebPath 
   };
 }
 
-module.exports = { createThumbnailGenerator, createThumbsMiddleware, createLegacyThumbnailFallback, THUMB_MAX_CONCURRENT };
+module.exports = { createThumbnailGenerator, createThumbsMiddleware, createLegacyThumbnailFallback, THUMB_MAX_CONCURRENT, THUMB_MAX_QUEUE, THUMB_TIMEOUT_MS };
