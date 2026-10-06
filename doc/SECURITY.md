@@ -88,7 +88,7 @@ part of the model, not a gap in it.
   `/peer/challenge` need a follower signature over a master-issued, single-use,
   HMAC-authenticated nonce. The PIN is never sent again, and followers are
   revoked one at a time from Settings.
-- **RSA challenge/response** — the `/peer-commands` Socket.IO namespace requires
+- **RSA challenge/response** — the `/peer-commands` Socket.IO server requires
   a server-signed `token:expiresAt:socketPath` bearer payload, using the
   dedicated peer keypair and a domain-separated signature. Tokens are
   server-issued and bound to the follower they were issued to.
@@ -113,15 +113,18 @@ part of the model, not a gap in it.
 
 ## Endpoint map
 
+"Custom-path mode" is the wrapper's normal GUI mode: the wrapper sets `PRESENTATIONS_DIR_OVERRIDE` and `PLUGINS_DIR_OVERRIDE`, and the server then mounts the keyed `/presentations_<key>/`, `/plugins_<key>/`, `/thumbs_<key>/` and `/admin` routes. A standalone server without those overrides does not mount them.
+
 | Path | Reachable by | Gate |
 |---|---|---|
 | `/`, `/presentation.html`, `/presentations.html`, `/@fs/*`, `/node_modules/*` | T3 | none (Vite dev-server root) |
+| `/css/**`, `/oldcss/<ver>/**` | T3 | none (compiled themes from Vite's root and `assets/`; no secrets) |
 | `/pip.html`, `/js/pip*.js` | T3 | none, but the page validates its own input and ships a CSP (see "Enforcement mechanisms"); not served by the public relay |
 | `/presentations_<key>/**` | T1 | key in path |
-| `/plugins_<key>/**` | T1 | key in path — **serves server-side plugin source** (F7, open) |
-| `/thumbs_<key>/**` | T1 | key in path — **spawns ffmpeg**: image/video files inside the presentations dir only, 2 at a time, 200 queued, 30 s limit |
-| `**/index.json` | T0 | loopback |
-| `/admin/**` | T0 | loopback |
+| `/plugins_<key>/**` | T1 | custom-path mode only; key in path — **serves server-side plugin source** (F7, open) |
+| `/thumbs_<key>/**` | T1 | custom-path mode only; key in path — **spawns ffmpeg**: image/video files inside the presentations dir only, 2 at a time, 200 queued, 30 s limit |
+| `**/index.json` | T0 | loopback; also covers `_media/index.json`, so followers cannot read the media index and lose the high-quality variant lookup |
+| `/admin/**` | T0 | loopback; custom-path mode only |
 | `/peer/status` | T0 | loopback + `mdnsPublish` |
 | `/peer/public-key` | T3 | `mdnsPublish` only — public by design, same data mDNS broadcasts |
 | `/peer/auth-nonce` | T3 | `mdnsPublish` only — stateless HMAC nonce, no data |
@@ -139,7 +142,7 @@ part of the model, not a gap in it.
 
 ## Open-collaboration plugins — accepted design
 
-Five plugins use the `/presenter-plugins-socket` namespace, and all five treat
+Five plugins use the `/presenter-plugins-socket` Socket.IO server (its own `path`), and all five treat
 a shared room as **a collaborative space in which every participant is a peer**:
 
 | Plugin | What a participant may do | Room id |
@@ -150,7 +153,7 @@ a shared room as **a collaborative space in which every participant is a peer**:
 | `captions` | Push live caption text | `remoteMultiplexId` |
 | `videostream` | Drive shared video playback | `remoteMultiplexId` |
 
-**This is intended behaviour, not a defect.** The namespace has no
+**This is intended behaviour, not a defect.** That server has no
 authentication and no publish/subscribe split: holding the room id is the
 permission. A room id is not a capability the app tries to protect — it is in
 the multiplex link handed to every viewer.
@@ -171,7 +174,7 @@ set the same flag; see [`doc/dev/PLUGINS.md`](../../doc/dev/PLUGINS.md).
 
 ### Running a public relay
 
-The socket namespaces can be hosted on a public server so that participants
+The Socket.IO servers can be hosted on a public server so that participants
 off the LAN can join — this is what `revealremote.fiforms.org` is. That
 deployment is the one place where the reverse-proxy weakness in the loopback gates above genuinely
 bites: behind a same-machine proxy every forwarded request presents
@@ -203,7 +206,7 @@ normal mode and try to firewall the extra routes — use this mode.
 
 Verified against a live server with 36 probes covering the allowed paths,
 Vite's static root and source files, `/@fs` and traversal escapes, every
-local-machine route, and the three socket namespaces.
+local-machine route, and the three Socket.IO servers.
 
 ### Operational rule
 
@@ -247,7 +250,7 @@ the room displays. It does not extend to letting them escape the room:
 
 ### Deferred: publish/subscribe permission split
 
-A future design could separate *publish* from *subscribe* on this namespace —
+A future design could separate *publish* from *subscribe* on this server —
 a presenter-held token permitting broadcast, with viewers subscribed read-only
 and navigation intent relayed through the presenter. **Not planned.** There is
 no concrete use case today for a viewer who should see the shared space but not
