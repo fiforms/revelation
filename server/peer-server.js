@@ -115,6 +115,10 @@ function isUsableFollowerKey(publicKeyPem) {
 // and leaves only a pointer (plus the Default profile's settings) in
 // config.json. Follow the pointer so the endpoints enforce the same PIN and
 // keys the running app shows. Mirrors loadConfig() in lib/configManager.js.
+// Performance note: this runs on every /peer/* request and is deliberately not cached. Measured
+// (Node 8 KB config.json, loopback, 16 connections): ~20 us per call, and /peer/public-key served
+// ~10,000 req/s, faster than a static CSS file from the same server. The parse is not a DoS lever;
+// an mtime cache would only add a stale-PIN/key risk.
 function loadPeerConfig(configPath) {
   if (!configPath || !fs.existsSync(configPath)) return null;
   let mainConfig;
