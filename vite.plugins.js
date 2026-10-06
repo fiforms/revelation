@@ -1,3 +1,41 @@
+// =============================================================================
+// vite.plugins.js — the REVELation server, implemented as one Vite plugin
+// (`generate-presentation-index`, loaded from vite.config.js). Despite the name
+// it is the whole back end: Vite is the HTTP server, this file adds everything
+// that is not a static page. CommonJS; loaded by Vite's config loader.
+//
+// SECTION MAP (top to bottom)
+//   1. Environment + mode selection ......... PRESENTATIONS_*_OVERRIDE, public relay
+//   2. Presentation index generation ........ generatePresentationIndex() -> index.json
+//   3. Thumbnail (ffmpeg) helpers
+//   4. Public relay mode .................... configurePublicRelayServer()
+//   5. presentationIndexPlugin() ............ build hook + configureServer() middleware stack
+//   6. Presenter-plugins socket ............. /presenter-plugins-socket
+//   7. Reveal Remote socket ................. /socket.io
+//   (peer pairing + /peer-commands socket live in ./peer-server.js)
+//
+// ENVIRONMENT (all optional; the Electron wrapper sets most of them)
+//   PRESENTATIONS_DIR_OVERRIDE + PRESENTATIONS_KEY_OVERRIDE  both required; use an external
+//                           presentations dir served at /presentations_<key>/ ("custom path"
+//                           mode). Without them the first revelation/presentations_* folder
+//                           is used (created by scripts/init-presentations.js at npm install).
+//   PLUGINS_DIR_OVERRIDE    plugins dir served at /plugins_<key>/ (custom path mode only)
+//   ADMIN_DIR_OVERRIDE      wrapper's http_admin/ dir, mounted at /admin (loopback only)
+//   FFMPEG_BIN              ffmpeg binary; enables /thumbs_<key>/ (custom path mode only)
+//   USER_DATA_DIR           wrapper userData dir: config.json + peer-followers.json for the peer
+//                           server, publish/ dir for /publish, local index cache (GUI mode)
+//   REVELATION_GUI=1        run under Electron: serve css from dist/css, keep the index.json
+//                           cache in USER_DATA_DIR, skip README-deck generation
+//   REVELATION_PUBLIC_SERVER=1 (or --public-server)  bare socket relay, see section 4
+//   Also read by vite.config.js: VITE_HTTPS_CERT / VITE_HTTPS_KEY. Process arguments --host and
+//   --https are read only to print the startup URL.
+//
+// PARENT-PORT MESSAGES (Electron utility process only): `register-media-token` /
+// `revoke-media-token` manage /media-share tokens; every other message is passed to
+// peerServer.handleParentMessage().
+//
+// TRUST TIERS (T0..T4) used in the banners below are defined in doc/SECURITY.md.
+// =============================================================================
 const os = require('os');
 const fs = require('fs');
 const crypto = require('crypto');
@@ -19,6 +57,8 @@ function readFrontMatterData(md) {
   return data && typeof data === 'object' ? data : {};
 }
 
+// NOTE: getLocalIpAddress()/`localIp` below are unused (dead); getLocalIp() further
+// down is the one the startup banner uses. Kept as-is (comments-only pass).
 function getLocalIpAddress() {
   const interfaces = os.networkInterfaces();
   for (const name of Object.keys(interfaces)) {
@@ -73,7 +113,8 @@ if (process.parentPort) {
   });
 }
 
-// --- Public relay mode --------------------------------------------------
+// --- 1. Environment + mode selection / public relay mode ------------------
+// (the presentations-dir lookup further down depends on this choice)
 //
 // Runs this server as a bare Socket.IO relay for Reveal Remote and the
 // presenter-plugins channel — the role revealremote.fiforms.org fills — with
@@ -138,6 +179,9 @@ const peerServer = createPeerServer({
 });
 const INDEX_REBUILD_DEBOUNCE_MS = 1200;
 
+// README deck: outside GUI mode the plugin regenerates <presentations>/readme/presentation.md
+// from header.yaml + README.md + doc/REFERENCE.md whenever README.md is newer (GUI mode: the
+// wrapper builds its own docs deck instead).
 const readmePresDir = path.join(presentationsDir, 'readme');
 const readmePresentationPath = path.join(readmePresDir, 'presentation.md');
 const readmeYamlPath = path.join(readmePresDir, 'header.yaml');
@@ -243,6 +287,14 @@ function collectMarkdownFilesRecursive(rootDir) {
   return files;
 }
 
+// --- 2. Presentation index generation ---------------------------------------
+// Walks <presentations>/<slug>/**.md (skipping dotfiles, _current_open, lock/temp
+// entries and hidden alternatives) and writes index.json: one entry per markdown file
+// with front-matter title/description/thumbnail/theme/created plus file mtime. In GUI mode
+// the file lives in USER_DATA_DIR/.revelation-cache and is served at
+// <presentationsWebPath>/index.json (see configureServer); otherwise it is written into the
+// presentations dir. Consumers: js/presentationlist.js (the library list). Malformed YAML
+// yields a "{malformed YAML}" placeholder entry rather than dropping the file.
 function generatePresentationIndex() {
   // In GUI mode the wrapper owns docs/readme deck generation.
   const isGui = /^(1|true)$/i.test(process.env.REVELATION_GUI || '');
@@ -375,7 +427,10 @@ function ensureReadmeTemplate() {
   copyTemplateRecursiveSync(readmeTemplatePath, readmePresDir, new Set(['header.yaml']));
 }
 
-// --- Thumbnail generation helpers ---
+// --- 3. Thumbnail generation helpers ---
+// Back the /thumbs_<key>/ route: ffmpeg runs at most _THUMB_MAX_CONCURRENT at a time,
+// identical in-flight requests share one job (_thumbInFlight), results are cached next
+// to the source in a hidden .thumbs/ folder.
 
 const _THUMB_VIDEO_EXTS = new Set(['.mp4', '.webm', '.mov', '.m4v', '.ogv']);
 const _THUMB_MAX_CONCURRENT = 2;
@@ -467,8 +522,9 @@ function configurePublicRelayServer(server) {
     console.warn(`⚠ Remote UI directory missing: ${remoteUiDir}`);
   }
 
-  // The two relay namespaces. ensurePeerCommandServer is deliberately NOT
-  // started: peer pairing authenticates against this machine's config.json,
+  // The two relay socket paths. Peer pairing is deliberately NOT mounted
+  // (neither peerServer.middleware for /peer/* nor peerServer.attachSocketServer()
+  // for /peer-commands): it authenticates against this machine's config.json,
   // which a relay neither has nor should have.
   ensurePresenterPluginsServer(server);
   ensureRevealRemoteServer(server);
@@ -502,6 +558,45 @@ function computeNotesViewScriptHash() {
   }
 }
 
+// --- 5. The Vite plugin -------------------------------------------------------
+// transformIndexHtml: substitutes the speaker-view script hash into presentation.html's CSP.
+// buildStart:        regenerates presentations/index.json and _media/index.json.
+// configureServer:   builds the middleware stack. Order matters; registration order is:
+//
+//   #  route / purpose                                         trust gate
+//   1  sandbox-origin gate: `Origin: null` from non-loopback   403 unless loopback or /peer/*
+//      -> 403; loopback OPTIONS -> 204 (builder preview iframe)
+//   2  /media-share/<48-hex token>  Range-capable file stream   T2: 192-bit token from the
+//      (tokens registered by Electron via parentPort)           registry (random path secret)
+//   3  /css/reveal.js/dist  (reveal.css for offline/export)    none (static)
+//   4  /publish/<publishKey>.html|.rev  URL-publish screens     T2: 64-bit key in filename,
+//      (only when USER_DATA_DIR set; no-store headers)          LAN-reachable by design
+//   -  chokidar watcher on the presentations dir (not a route): debounced index rebuild +
+//      HMR custom events `reload-presentations`, `presentations-index-updated`, `reload-media`
+//   5  /css  (dist/css in GUI mode, else css/)                  none (static)
+//   6  URL rewrite: /presentations_<key>/<slug>/[index.html]    (rewrite only)
+//        -> /presentation.html?slug=&key= ; .../handout[.html] -> /handout.html?slug=&key=
+//   -  sockets attached to the HTTP server (not middleware):
+//        /peer-commands            T4  RSA bearer token (peer-server.js)
+//        /presenter-plugins-socket T2c room id only, open by design (section 6)
+//        /socket.io                T3  Reveal Remote, per-channel UUID (section 7)
+//   7  /_remote/ui  static remote-control web UI                none (static)
+//   8  peerServer.middleware: /peer/status (loopback), /peer/public-key, /peer/auth-nonce,
+//      /peer/pair (PIN), /peer/challenge + /peer/socket-info (follower signature)
+//                                                              all 403 unless mdnsPublish
+//   9  any path ending /index.json (presentations + _media)     T0: loopback only
+//  10  GUI mode only: <presentationsWebPath>/index.json served  (behind gate 9)
+//      from the userData cache (`[]` if transiently missing)
+//  11  <presentationsWebPath>/_media/*.thumbnail.jpg -> legacy  T1: key in path
+//      .webp fallback when the jpg is absent
+//  12  custom-path mode only:
+//        <presentationsWebPath>/  static presentations tree     T1: key in path, no index
+//        <pluginsWebPath>/        static plugins tree           T1 (serves plugin source, F7)
+//        /thumbs_<key>/<slug>/<file>  ffmpeg 320px JPEG         T1 (spawns ffmpeg, F6)
+//  13  /admin  wrapper http_admin/ (needs ADMIN_DIR_OVERRIDE)   T0: loopback gate + static
+//   Anything else falls through to Vite itself: in standalone (non-custom) mode that is the
+//   project root, so revelation/presentations_<key>/ is served by Vite's static handler.
+//   Public relay mode replaces all of this with configurePublicRelayServer().
 function presentationIndexPlugin() {
   let notesViewScriptHash;
   return {
@@ -1010,6 +1105,7 @@ function presentationIndexPlugin() {
 };
 
 function copyFonts() {
+  // No-op: the whole body is commented out (kept as a stub; still called from configureServer).
   // No longer used — fonts are now included directly in the css/fonts folder
   /*
       const src = path.resolve(__dirname, 'node_modules/reveal.js/dist/theme/fonts');
@@ -1024,6 +1120,13 @@ function copyFonts() {
   */
 }
 
+// --- 6. Presenter-plugins socket (/presenter-plugins-socket) ----------------
+// Open room relay for collaboration plugins (slidecontrol, markerboard, bibletext-live,
+// captions, videostream). Protocol: client emits `presenter-plugin:join` {plugin, roomId}
+// (ack {ok, room}); thereafter `presenter-plugin:event` {type, payload} is re-emitted to the
+// other sockets in room `<plugin>:<roomId>`. NO authentication: holding the room id is the
+// permission (T2c, see doc/SECURITY.md "Open-collaboration plugins"). Input is only
+// shape-checked (plugin name and room id regexes, payload must be an object).
 function sanitizePluginName(value) {
   const plugin = String(value || '').trim().toLowerCase();
   if (!plugin) return '';
@@ -1147,6 +1250,14 @@ function generateMediaIndex() {
   console.log(`📁 _media/index.json updated with ${Object.keys(index).length} entries`);
 }
 
+// --- 7. Reveal Remote socket (/socket.io, default namespace) -----------------
+// Broker for reveal.js-remote. First message must be `start` {type}:
+//   presenter  -> gets remoteId/multiplexId (re-issued if the supplied hash verifies against the
+//                 per-process secret), QR codes, relays state/notes/buttons/multiplex/video-command
+//   remote     -> {id: remoteId}: receives presenter state, sends `command` back
+//   follower   -> {id: multiplexId}: receives multiplex state
+// No authentication beyond knowing the UUID of the channel (T3 to connect, UUID is the secret).
+// State is in-memory only and dropped when the presenter disconnects.
 function mkRevealRemoteHash(remoteId, multiplexId) {
   return crypto.createHash('sha256')
     .update(`${remoteId}-${multiplexId}-${revealRemoteHashsecret}`, 'utf8')

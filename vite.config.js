@@ -1,3 +1,19 @@
+// vite.config.js — Vite config for the REVELation server and the offline bundle.
+//
+// - Dev/serve: root is this directory; `assets/` is Vite's publicDir (so assets/oldcss/<ver>/
+//   is served at /oldcss/<ver>/). All server behavior (index generation, media/publish/admin
+//   routes, thumbnails, sockets, public relay) is in vite.plugins.js.
+// - server.cors allows only `Origin: null` (the builder preview iframe is sandboxed without
+//   allow-same-origin); vite.plugins.js additionally restricts that to loopback.
+// - server.allowedHosts is `true` (any Host header) because LAN/proxy access is intended;
+//   see doc/SECURITY.md and doc/REVERSE_PROXY.md. HTTPS only when VITE_HTTPS_CERT and
+//   VITE_HTTPS_KEY are both set.
+// - `vite build` does NOT build the app pages: its only input is js/offline.js, emitted as a
+//   single IIFE at dist/js/offline-bundle.js. The wrapper's lib/exportPresentation.js copies
+//   that file into standalone/offline exports (and WordPress/ keeps a copy). Theme CSS is built
+//   separately by `npm run build:theme` (sass -> dist/css) and fonts by `npm run build:fonts`.
+// - socket.io-client is aliased to its ESM build so the browser bundle and the offline IIFE
+//   share one copy.
 import { defineConfig } from 'vite';
 const presentationIndexPlugin = require('./vite.plugins.js');
 import path from 'path';

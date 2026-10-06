@@ -1,5 +1,7 @@
 // Master side of the peer protocol: the /peer/* HTTP endpoints, the
-// /peer-commands Socket.IO namespace, and the store of paired followers.
+// /peer-commands Socket.IO server (its own `path`, default namespace), and the store of
+// paired followers. Mounted by vite.plugins.js via createPeerServer(); never mounted in
+// public relay mode.
 //
 // Protocol v2 (doc/dev/PEERING.md in the wrapper repo):
 //   - The pairing PIN is used once, at enrollment (POST /peer/pair). The

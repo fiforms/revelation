@@ -66,6 +66,11 @@
     </div>
   </div>
   <script>
+    // Picture-in-picture shell: embeds the presentation URL from ?src= in an iframe next to a
+    // chroma-key area (opened by the wrapper's lib/presentationWindow.js). Query: src, side
+    // (left|right), color, start (on|off). NOTE: `src` is assigned to the iframe unvalidated,
+    // and the page has no CSP (a `javascript:` src would run in this origin); the
+    // postMessage handler below also does not check event.source.
     const params = new URLSearchParams(window.location.search);
     const src = params.get('src');
     const side = (params.get('side') || 'left').toLowerCase();
