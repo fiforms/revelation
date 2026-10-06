@@ -28,6 +28,7 @@ import { loadAndPreprocessMarkdown } from './presentation-bootstrap.js';
 import { revealTweaks, initVideoSync } from './tweaks.js';
 import { contextMenu, sendPresentationToPeers, closePresentationsOnPeers } from './contextmenu.js';
 import { pluginLoader } from './pluginloader.js';
+import { getElectronAPI } from './electron-api.js';
 
 (async () => {
 
@@ -272,7 +273,7 @@ pluginLoader('presentations', key ? `/plugins_${key}` : '/plugins_').then(async 
     }
     // Peer controls on the phone remote (they live here because they are specific
     // to the desktop app; reveal.js-remote only provides the generic button API).
-    if (!isFollower && !builderPreviewMode && window.electronAPI?.sendPeerCommand
+    if (!isFollower && !builderPreviewMode && getElectronAPI()?.sendPeerCommand
         && typeof remotePlugin.addRemoteButton === 'function') {
       const label = (text) => (typeof tr === 'function' ? tr(text) : text);
       remotePlugin.addRemoteButton(
@@ -1045,7 +1046,7 @@ pluginLoader('presentations', key ? `/plugins_${key}` : '/plugins_').then(async 
 
 
 const mdFile = urlParams.get('p');
-const config = window.electronAPI ? await window.electronAPI.getAppConfig() : {};
+const config = getElectronAPI() ? await getElectronAPI().getAppConfig() : {};
 window.AppConfig = config;
 
 // If embedded in a PIP iframe, forward X key presses to the parent.

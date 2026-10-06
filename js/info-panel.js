@@ -9,6 +9,8 @@
  *   // call panel.update() if config changes after init
  */
 
+import { getElectronAPI } from './electron-api.js';
+
 function t(key) {
   return (typeof tr === 'function') ? tr(key) : key;
 }
@@ -165,7 +167,7 @@ export function createInfoPanel(dropdownEl, getConfig, options = {}) {
   // ── Polling ────────────────────────────────────────────────────────────────
 
   async function doPollPeerStatus() {
-    if (!window.electronAPI || !isMasterMode()) return;
+    if (!getElectronAPI() || !isMasterMode()) return;
     const query = peerStatusLastEventId > 0 ? `?since=${peerStatusLastEventId}` : '';
     const response = await fetch(`${PEER_STATUS_ENDPOINT}${query}`);
     if (response.status === 403 || response.status === 404) {
@@ -184,8 +186,8 @@ export function createInfoPanel(dropdownEl, getConfig, options = {}) {
   }
 
   async function doPollMasterStatus() {
-    if (!window.electronAPI || !isFollowerMode()) return;
-    const statuses = await window.electronAPI.getPeerMasterStatuses();
+    if (!getElectronAPI() || !isFollowerMode()) return;
+    const statuses = await getElectronAPI().getPeerMasterStatuses();
     const list = Array.isArray(statuses) ? statuses : [];
     activeMasters = list.filter((e) => e?.connected === true);
     renderMastersRow();
@@ -207,7 +209,7 @@ export function createInfoPanel(dropdownEl, getConfig, options = {}) {
     }
 
     pairingPinLabel.textContent = t('Pairing PIN:');
-    if (window.electronAPI && isMasterMode() && cfg?.mdnsPairingPin) {
+    if (getElectronAPI() && isMasterMode() && cfg?.mdnsPairingPin) {
       pairingPinRow.style.display = 'block';
       pairingPinDisplay.textContent = cfg.mdnsPairingPin;
     } else {
@@ -225,7 +227,7 @@ export function createInfoPanel(dropdownEl, getConfig, options = {}) {
 
   /** Start background polling for active followers/masters. */
   function startPolling() {
-    if (!window.electronAPI || pollingTimer) return;
+    if (!getElectronAPI() || pollingTimer) return;
     doPollPeerStatus().catch((err) => console.warn('Peer status poll failed:', err.message || err));
     doPollMasterStatus().catch((err) => console.warn('Master status poll failed:', err.message || err));
     pollingTimer = window.setInterval(() => {

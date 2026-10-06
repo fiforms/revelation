@@ -20,6 +20,7 @@
  * - DOM-only helper widgets: `./loader-dom.js`
  */
 import convertSmartQuotes from './smart-quotes';
+import { getElectronAPI } from './electron-api.js';
 import { preprocessMarkdown, extractFrontMatter } from './compiler/markdown-compiler.js';
 import { sanitizeMarkdownEmbeddedHTML, sanitizeElementTree } from './compiler/html-sanitization.js';
 import {
@@ -122,9 +123,9 @@ export async function loadAndPreprocessMarkdown(deck, selectedFile = null) {
     let chromaKeyColor = '#00ff00';
     if (window.AppConfig?.pipColor) {
       chromaKeyColor = window.AppConfig.pipColor;
-    } else if (window.electronAPI?.getAppConfig) {
+    } else if (getElectronAPI()?.getAppConfig) {
       try {
-        const cfg = await window.electronAPI.getAppConfig();
+        const cfg = await getElectronAPI().getAppConfig();
         if (cfg?.pipColor) chromaKeyColor = cfg.pipColor;
       } catch {
         // Keep default chroma key color.
@@ -286,14 +287,14 @@ export async function loadAndPreprocessMarkdown(deck, selectedFile = null) {
     prefersHigh = true;
   } else if (mediaParam === 'low' || mediaParam === 'standard') {
     prefersHigh = false;
-  } else if (!window.electronAPI) {
+  } else if (!getElectronAPI()) {
     prefersHigh = getStorageItemSafe('options_media-version') === 'high';
   }
 
   // Hydrate application config lazily so runtime options like PIP color or CCLI can affect rendering.
-  if (!appConfig && window.electronAPI?.getAppConfig) {
+  if (!appConfig && getElectronAPI()?.getAppConfig) {
     try {
-      appConfig = await window.electronAPI.getAppConfig();
+      appConfig = await getElectronAPI().getAppConfig();
       window.AppConfig = appConfig;
     } catch {
       // Keep processing even if config is unavailable.
