@@ -1,9 +1,11 @@
 #!/usr/bin/env node
+// `npm run tests`: compiler fixtures (below), then the server tests in tests/server/. See tests/README.md.
 
 const fs = require('fs');
 const path = require('path');
-const vm = require('vm');
 const assert = require('assert');
+const { pathToFileURL } = require('url');
+const { spawnSync } = require('child_process');
 const { marked } = require('marked');
 
 const ROOT = __dirname;
@@ -11,6 +13,7 @@ const REVELATION_ROOT = path.resolve(ROOT, '..');
 const FIXTURES_DIR = path.join(ROOT, 'fixtures');
 const ACTUAL_DIR = path.join(ROOT, '_actual');
 const GENERATE_MODE = process.argv.includes('--generate');
+const FIXTURES_ONLY = process.argv.includes('--fixtures-only');
 
 global.window = {
   localStorage: {
@@ -35,227 +38,44 @@ function ensureTrailingNewline(value) {
   return text.endsWith('\n') ? text : `${text}\n`;
 }
 
-function loadSmartQuotes() {
-  const filePath = path.join(REVELATION_ROOT, 'js', 'smart-quotes.js');
-  let source = readText(filePath);
-  source = source.replace('export default function convertSmartQuotes', 'function convertSmartQuotes');
-  source += '\nmodule.exports = convertSmartQuotes;\n';
-
-  const module = { exports: {} };
-  const context = {
-    module,
-    exports: module.exports,
-    require,
-    console
-  };
-  vm.runInNewContext(source, context, { filename: filePath });
-  return module.exports;
+// The compiler modules are browser ES modules. Import them directly instead of rewriting their
+// source: adding an export, an import or a new module needs no change here. Node 22.7+ detects
+// ESM syntax in .js files; the typeless-package warning that triggers is filtered below.
+const [major, minor] = process.versions.node.split('.').map(Number);
+if (major < 22 || (major === 22 && minor < 7)) {
+  console.error(`These tests need Node 22.7 or newer (running ${process.versions.node}).`);
+  process.exit(1);
 }
+process.removeAllListeners('warning');
+process.on('warning', (warning) => {
+  if (warning.code !== 'MODULE_TYPELESS_PACKAGE_JSON') console.warn(warning);
+});
 
-function loadPresentationSegments() {
-  const filePath = path.join(REVELATION_ROOT, 'js', 'compiler', 'presentation-segments.js');
-  let source = readText(filePath);
-  source = source.replace(/export function /g, 'function ');
-  source += `
-module.exports = {
-  segmentPresentation,
-  splitSlides,
-  splitSlideContentAndNotes,
-  stripSlideSeparatorsOutsideCodeBlocks
-};
-`;
+const importModule = (...segments) => import(pathToFileURL(path.join(...segments)).href);
 
-  const module = { exports: {} };
-  const context = {
-    module,
-    exports: module.exports,
-    require,
-    console
-  };
-  vm.runInNewContext(source, context, { filename: filePath });
-  return module.exports;
+// Browser globals the modules read at call time. `document` is deliberately undefined so the
+// sanitizers take their DOM-free path, as they do for the handout/export code.
+global.tr = (value) => value; // plugin client modules use the page-level translate function
+
+let convertSmartQuotes;
+let segmentPresentation;
+let stripSlideSeparatorsOutsideCodeBlocks;
+let extractFrontMatter;
+let getNoteSeparator;
+let preprocessMarkdown;
+let sanitizeMarkdownEmbeddedHTML;
+let sanitizeRenderedHTML;
+let preprocessCreditCcliMarkdown;
+
+async function loadModules() {
+  convertSmartQuotes = (await importModule(REVELATION_ROOT, 'js', 'smart-quotes.js')).default;
+  ({ segmentPresentation, stripSlideSeparatorsOutsideCodeBlocks } =
+    await importModule(REVELATION_ROOT, 'js', 'compiler', 'presentation-segments.js'));
+  ({ extractFrontMatter, getNoteSeparator, preprocessMarkdown, sanitizeMarkdownEmbeddedHTML, sanitizeRenderedHTML } =
+    await importModule(REVELATION_ROOT, 'js', 'compiler', 'markdown-compiler.js'));
+  ({ preprocessMarkdown: preprocessCreditCcliMarkdown } =
+    await importModule(REVELATION_ROOT, '..', 'plugins', 'credit_ccli', 'markdown-preprocessor.js'));
 }
-
-function loadSlideCompiler() {
-  const filePath = path.join(REVELATION_ROOT, 'js', 'compiler', 'slide-compiler.js');
-  let source = readText(filePath);
-  source = source.replace(/export function /g, 'function ');
-  source += `
-module.exports = {
-  createSlideCompiler
-};
-`;
-
-  const module = { exports: {} };
-  const context = {
-    module,
-    exports: module.exports,
-    require,
-    console
-  };
-  vm.runInNewContext(source, context, { filename: filePath });
-  return module.exports;
-}
-
-function loadMarkdownLineParsers() {
-  const filePath = path.join(REVELATION_ROOT, 'js', 'compiler', 'markdown-line-parsers.js');
-  let source = readText(filePath);
-  source = source.replace(/export function /g, 'function ');
-  source += `
-module.exports = {
-  createMarkdownLineParsers
-};
-`;
-
-  const module = { exports: {} };
-  const context = {
-    module,
-    exports: module.exports,
-    require,
-    console
-  };
-  vm.runInNewContext(source, context, { filename: filePath });
-  return module.exports;
-}
-
-function loadMediaLineParsers() {
-  const filePath = path.join(REVELATION_ROOT, 'js', 'compiler', 'media-line-parsers.js');
-  let source = readText(filePath);
-  source = source.replace(/export function /g, 'function ');
-  source += `
-module.exports = {
-  createMediaLineParsers
-};
-`;
-
-  const module = { exports: {} };
-  const context = {
-    module,
-    exports: module.exports,
-    require,
-    console,
-    window: global.window
-  };
-  vm.runInNewContext(source, context, { filename: filePath });
-  return module.exports;
-}
-
-function loadLoaderUtils() {
-  const filePath = path.join(REVELATION_ROOT, 'js', 'compiler', 'compiler-utils.js');
-  let source = readText(filePath);
-  source = source.replace(/export function /g, 'function ');
-  source = source.replace(/export \{\s*NOTE_SEPARATOR_CURRENT,\s*NOTE_SEPARATOR_LEGACY\s*\};/, '');
-  source += `
-module.exports = {
-  getStorageItemSafe,
-  usesNewNoteSeparator,
-  getNoteSeparator,
-  sanitizeMarkdownFilename,
-  NOTE_SEPARATOR_CURRENT,
-  NOTE_SEPARATOR_LEGACY
-};
-`;
-
-  const module = { exports: {} };
-  const context = { module, exports: module.exports, require, console, window: global.window };
-  vm.runInNewContext(source, context, { filename: filePath });
-  return module.exports;
-}
-
-function loadHtmlSanitization() {
-  const filePath = path.join(REVELATION_ROOT, 'js', 'compiler', 'html-sanitization.js');
-  let source = readText(filePath);
-  source = source.replace(/export function /g, 'function ');
-  source += `
-module.exports = {
-  isDangerousURL,
-  sanitizeMarkdownEmbeddedHTML,
-  sanitizeRenderedHTML
-};
-`;
-
-  const module = { exports: {} };
-  const context = { module, exports: module.exports, require, console, document: global.document };
-  vm.runInNewContext(source, context, { filename: filePath });
-  return module.exports;
-}
-
-function loadCreditCcliMarkdownPreprocessor() {
-  const filePath = path.join(REVELATION_ROOT, '..', 'plugins', 'credit_ccli', 'markdown-preprocessor.js');
-  let source = readText(filePath);
-  source = source.replace(/export function /g, 'function ');
-  source += '\nmodule.exports = { preprocessMarkdown };\n';
-
-  const module = { exports: {} };
-  const context = {
-    module,
-    exports: module.exports,
-    require,
-    console,
-    window: global.window,
-    tr: (value) => value
-  };
-  vm.runInNewContext(source, context, { filename: filePath });
-  return module.exports;
-}
-
-function loadMarkdownCompiler(slideCompiler, markdownLineParsers, mediaLineParsers, htmlSanitization, loaderUtils) {
-  const filePath = path.join(REVELATION_ROOT, 'js', 'compiler', 'markdown-compiler.js');
-  let source = readText(filePath);
-  source = source.replace("import * as yaml from 'js-yaml';", "const yaml = require('js-yaml');");
-  source = source.replace("import { createSlideCompiler } from './slide-compiler.js';", 'const { createSlideCompiler } = __imports.slideCompiler;');
-  source = source.replace("import { createMarkdownLineParsers } from './markdown-line-parsers.js';", 'const { createMarkdownLineParsers } = __imports.markdownLineParsers;');
-  source = source.replace("import { createMediaLineParsers } from './media-line-parsers.js';", 'const { createMediaLineParsers } = __imports.mediaLineParsers;');
-  source = source.replace("import { isDangerousURL, sanitizeMarkdownEmbeddedHTML, sanitizeRenderedHTML } from './html-sanitization.js';", 'const { isDangerousURL, sanitizeMarkdownEmbeddedHTML, sanitizeRenderedHTML } = __imports.htmlSanitization;');
-  source = source.replace(/import \{\s*getStorageItemSafe,\s*usesNewNoteSeparator,\s*getNoteSeparator,\s*NOTE_SEPARATOR_CURRENT,\s*NOTE_SEPARATOR_LEGACY\s*\} from '\.\/compiler-utils\.js';/, 'const { getStorageItemSafe, usesNewNoteSeparator, getNoteSeparator, NOTE_SEPARATOR_CURRENT, NOTE_SEPARATOR_LEGACY } = __imports.loaderUtils;');
-  source = source.replace(/export async function /g, 'async function ');
-  source = source.replace(/export function /g, 'function ');
-  source = source.replace(/export \{\s*usesNewNoteSeparator,\s*getNoteSeparator,\s*sanitizeMarkdownEmbeddedHTML,\s*sanitizeRenderedHTML\s*\};/, '');
-  source += `
-module.exports = {
-  extractFrontMatter,
-  getNoteSeparator,
-  preprocessMarkdown,
-  sanitizeMarkdownEmbeddedHTML,
-  sanitizeRenderedHTML,
-  usesNewNoteSeparator
-};
-`;
-
-  const module = { exports: {} };
-  const context = {
-    module,
-    exports: module.exports,
-    require,
-    console,
-    __imports: { slideCompiler, markdownLineParsers, mediaLineParsers, htmlSanitization, loaderUtils },
-    window: global.window,
-    document: global.document,
-    URLSearchParams,
-    fetch: global.fetch
-  };
-  vm.runInNewContext(source, context, { filename: filePath });
-  return module.exports;
-}
-
-const convertSmartQuotes = loadSmartQuotes();
-const slideCompiler = loadSlideCompiler();
-const markdownLineParsers = loadMarkdownLineParsers();
-const mediaLineParsers = loadMediaLineParsers();
-const htmlSanitization = loadHtmlSanitization();
-const loaderUtils = loadLoaderUtils();
-const {
-  segmentPresentation,
-  stripSlideSeparatorsOutsideCodeBlocks
-} = loadPresentationSegments();
-const {
-  extractFrontMatter,
-  getNoteSeparator,
-  preprocessMarkdown,
-  sanitizeMarkdownEmbeddedHTML,
-  sanitizeRenderedHTML
-} = loadMarkdownCompiler(slideCompiler, markdownLineParsers, mediaLineParsers, htmlSanitization, loaderUtils);
-const { preprocessMarkdown: preprocessCreditCcliMarkdown } = loadCreditCcliMarkdownPreprocessor();
 
 function runPluginRegressionTests() {
   const creditsMarkdown = [
@@ -395,7 +215,8 @@ function removeDir(dirPath) {
   }
 }
 
-function main() {
+async function main() {
+  await loadModules();
   runPluginRegressionTests();
   const fixtures = getFixtures();
   if (fixtures.length === 0) {
@@ -451,10 +272,26 @@ function main() {
       process.stdout.write(`- ${failure.fixture}: see ${failure.actualDir}\n`);
     }
     process.exitCode = 1;
-    return;
+  } else {
+    process.stdout.write(`\nAll ${fixtures.length} fixture(s) matched reference output.\n`);
   }
-
-  process.stdout.write(`\nAll ${fixtures.length} fixture(s) matched reference output.\n`);
 }
 
-main();
+// tests/server/*.test.cjs start a real Vite server, so each file runs in its own process (the plugin
+// reads its mode from the environment once). --test-force-exit because the plugin never closes its
+// file watcher or sockets.
+function runServerTests() {
+  const dir = path.join(ROOT, 'server');
+  const files = fs.readdirSync(dir).filter((f) => f.endsWith('.test.cjs')).sort().map((f) => path.join(dir, f));
+  process.stdout.write(`\nServer tests (${files.length} file(s))\n`);
+  const passthrough = process.argv.slice(2).filter((a) => a.startsWith('--test-'));
+  const result = spawnSync(process.execPath, ['--test', '--test-force-exit', ...passthrough, ...files], { stdio: 'inherit' });
+  if (result.status !== 0) process.exitCode = 1;
+}
+
+main().then(() => {
+  if (!GENERATE_MODE && !FIXTURES_ONLY) runServerTests();
+}).catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

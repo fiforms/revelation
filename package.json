@@ -34,6 +34,7 @@
     "init-presentations": "node scripts/init-presentations.js",
     "serve": "concurrently --kill-others-on-fail npm:watch:theme npm:vite:serve",
     "tests": "node tests/run-tests.cjs",
+    "tests:fixtures": "node tests/run-tests.cjs --fixtures-only",
     "tests:generate": "node tests/run-tests.cjs --generate"
   },
   "overrides": {
