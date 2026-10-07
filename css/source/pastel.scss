@@ -1,0 +1,167 @@
+/**
+ * NAME: Pastel
+ * AUTHOR: Daniel McFeeters
+ *
+ * Light, decorative theme: a diagonal linear gradient of soft pastel bands
+ * separated by thin hard-edged accent lines, Quicksand body text, Playfair
+ * Display SC / Cormorant Garamond headings in a muted plum. Derived from Sky.
+ */
+
+@use "sass:color";
+
+// Palette
+$blush: #fdeaf0;
+$blush-line: #f2b5c6;
+$mint: #e2f3ea;
+$mint-line: #9fd3bb;
+$lavender: #d6c6f7;
+$lavender-deep: #ad94e4;
+$lavender-line: #b9a7e4;
+$peach: #f2d2ad;
+$peach-line: #f3c08a;
+$peach-deep: #faa652;
+$cream: #fff8f4;
+
+$plum: #4a3f5c;
+$plum-deep: #3a3048;
+$plum-soft: #7a6a94;
+
+// Lines sit only near the two corners; the wide middle (about 30%-68%) is a plain
+// cream so nothing crosses the text. Each thin line is followed by a color and
+// luminosity transition that dissolves into the cream.
+$background: linear-gradient(
+    115deg,
+    $lavender-deep 0%,
+    $lavender 10%,
+    $blush 10%,
+    $cream 30%,
+    $cream 68%,
+    $mint 90%,
+    $peach 90%,
+    $peach-deep 100%
+);
+$background-color: $cream;
+
+$main-font: 'Quicksand', 'Open Sans', sans-serif;
+$main-font-size: 40px;
+$main-color: $plum;
+
+$heading-font: 'Playfair Display SC', 'Cormorant Garamond', serif;
+$heading-color: $plum-deep;
+$heading-letter-spacing: 0.01em;
+$heading-text-transform: none;
+$heading-text-shadow: none;
+$heading-font-weight: 700;
+
+$heading1-size: 2.8em;
+$heading2-size: 2.2em;
+$heading3-size: 1.55em;
+$heading4-size: 1.4em;
+
+$link-color: #b0467a;
+$link-color-hover: #d46a9c;
+$selection-background-color: $lavender-line;
+$selection-color: $plum-deep;
+
+@import 'reveal.js/dist/reveal.css';
+@import "reveal.js/css/theme/template/mixins";
+@import "reveal.js/css/theme/template/settings";
+@import "./custom/layouts.scss";
+
+@import url("https://fonts.googleapis.com/css?family=Quicksand:400,500,700,400italic,700italic");
+@import url(./fonts/playfair_display_sc/playfair_display_sc.css);
+@import url(./fonts/cormorant_garamond/cormorant_garamond.css);
+@import url(./fonts/beau_rivage/beau_rivage.css);
+
+@import "reveal.js/css/theme/template/theme";
+
+.reveal .slides {
+    font-weight: 500;
+}
+
+// H1/H3: Playfair Display SC (already small-caps, so no text-transform)
+.reveal h1,
+.reveal h3 {
+    font-family: 'Playfair Display SC', 'Cormorant Garamond', Georgia, serif;
+    text-transform: none;
+}
+.reveal h1 { font-weight: 500; }
+.reveal h3 { font-weight: 400; }
+
+// H2/H4: Cormorant Garamond italic (swap in 'Beau Rivage' here for a script look)
+.reveal h2,
+.reveal h4 {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-style: italic;
+    font-weight: 600;
+}
+.reveal h2,
+.reveal h4 {
+    color: $plum-soft;
+}
+
+// H1 ornament: a short bar of the four accent lines under the title
+.reveal h1 {
+    padding-bottom: 0.12em;
+    background-image: linear-gradient(
+        90deg,
+        $blush-line 0 25%,
+        $mint-line 25% 50%,
+        $lavender-line 50% 75%,
+        $peach-line 75% 100%
+    );
+    background-repeat: no-repeat;
+    background-position: center bottom;
+    background-size: 2.4em 0.04em;
+}
+
+.reveal em,
+.reveal i {
+    color: $plum-soft;
+}
+
+.reveal strong,
+.reveal b {
+    font-weight: 700;
+    color: $plum-deep;
+}
+
+.reveal blockquote {
+    background: rgba(255, 255, 255, 0.55);
+    border-left: 0.12em solid $lavender-line;
+    border-radius: 6px;
+    box-shadow: 0 4px 14px rgba(74, 63, 92, 0.12);
+}
+
+.reveal ul li::marker,
+.reveal ol li::marker {
+    color: $blush-line;
+}
+
+.reveal table th,
+.reveal table td {
+    border-bottom-color: $lavender-line;
+}
+
+#fixed-overlay-wrapper {
+    background: rgba(255, 255, 255, 0.35);
+    color: $plum-soft;
+    font-family: 'Quicksand', sans-serif;
+}
+
+#fixed-tint-wrapper {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.5);
+    z-index: 0;
+    pointer-events: none;
+}
+
+.info-head, .info-body {
+    background-color: rgba(255, 255, 255, 0.6);
+    padding: 1rem;
+    border-radius: 10px;
+}
