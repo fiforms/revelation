@@ -38,7 +38,7 @@ $active-color: #42affa;
 @import 'reveal.js/dist/reveal.css';
 
 // Include theme-specific fonts
-@import url('reveal.js/css/theme/fonts/source-sans-pro/source-sans-pro.css');
+@import url('./fonts/source-sans-pro/source-sans-pro.css');
 
 // Change text colors against light slide backgrounds
 @include mixins.light-bg-text-color(rgb(48, 48, 48));

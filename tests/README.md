@@ -38,6 +38,7 @@ closes. That is what the tests build on.
 | `media-share.test.cjs` | `media-share.js` | token rules, parent messages, Range handling, per-instance registries |
 | `thumbnails.test.cjs` | `thumbnails.js` | concurrency cap, de-duplication, failure recovery, `/thumbs` route, legacy `.webp` fallback (fake ffmpeg) |
 | `brokers.test.cjs` | both socket brokers | sanitizers, isolation between instances, shutdown semantics |
+| `theme-fonts.test.cjs` | `css/source/*.scss`, `scripts/prepare-reveal-themes.js` | offline fonts: compiles every theme as `build:theme` does and fails on any remote URL (Google Fonts or other CDN) or any local font/image file that does not exist; the prepare script leaves `node_modules` untouched |
 
 ### Server tests (`server/*.test.cjs`): a real Vite server over HTTP and Socket.IO
 
