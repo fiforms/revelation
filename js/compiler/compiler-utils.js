@@ -19,7 +19,7 @@ const CSS_VERSION_SNAPSHOTS = [
 ];
 
 // Parse a simple `major.minor.patch` semver string into a numeric tuple.
-function parseSemverTuple(version) {
+export function parseSemverTuple(version) {
   const raw = String(version || '').trim();
   const match = raw.match(/^v?(\d+)\.(\d+)\.(\d+)/i);
   if (!match) return null;
@@ -27,7 +27,7 @@ function parseSemverTuple(version) {
 }
 
 // Compare semver tuples so note-separator cutoffs can be expressed declaratively.
-function compareVersionTuples(a, b) {
+export function compareVersionTuples(a, b) {
   if (!Array.isArray(a) || !Array.isArray(b)) return 0;
   for (let i = 0; i < 3; i += 1) {
     const av = Number(a[i] || 0);
@@ -58,11 +58,33 @@ export function resolveLegacyCssFolder(metadata = {}) {
   return null;
 }
 
-// Determine whether deck metadata should opt into the modern `:note:` separator.
-export function usesNewNoteSeparator(metadata = {}) {
-  const tuple = parseSemverTuple(metadata?.version);
+// Decks written by app versions after NOTE_VERSION_BREAKPOINT use `:note:`; a missing or unparseable
+// version counts as legacy (`Note:`). isLegacyNoteVersion/isNewNoteVersion are the two halves the
+// builder uses to decide when to rewrite a deck's separators; keep them in step with
+// lib/versionUtil.js (the CommonJS twin used by the wrapper's main process).
+export function isNewNoteVersion(version) {
+  const tuple = parseSemverTuple(version);
   if (!tuple) return false;
   return compareVersionTuples(tuple, NOTE_VERSION_BREAKPOINT) > 0;
+}
+
+export function isLegacyNoteVersion(version) {
+  const tuple = parseSemverTuple(version);
+  if (!tuple) return true;
+  return compareVersionTuples(tuple, NOTE_VERSION_BREAKPOINT) <= 0;
+}
+
+// Rewrite whole-line legacy `Note:` separators to `:note:` (used when a deck is upgraded).
+export function normalizeNoteSeparators(markdown = '') {
+  return String(markdown)
+    .split(/\r?\n/)
+    .map((line) => (line.trim() === NOTE_SEPARATOR_LEGACY ? NOTE_SEPARATOR_CURRENT : line))
+    .join('\n');
+}
+
+// Determine whether deck metadata should opt into the modern `:note:` separator.
+export function usesNewNoteSeparator(metadata = {}) {
+  return isNewNoteVersion(metadata?.version);
 }
 
 // Resolve the note separator that Reveal should treat as speaker-note content.
@@ -140,5 +162,6 @@ export function resolveExternalFilePath(relativePath, presentationDir) {
 
 export {
   NOTE_SEPARATOR_CURRENT,
-  NOTE_SEPARATOR_LEGACY
+  NOTE_SEPARATOR_LEGACY,
+  NOTE_VERSION_BREAKPOINT
 };
