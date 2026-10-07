@@ -31,6 +31,7 @@
  */
 import * as yaml from 'js-yaml';
 import { parseYamlOrEmpty } from '../yaml-parse.js';
+import { parseFrontMatter } from '../frontmatter.js';
 import { createSlideCompiler } from './slide-compiler.js';
 import { createMarkdownLineParsers } from './markdown-line-parsers.js';
 import { createMediaLineParsers } from './media-line-parsers.js';
@@ -85,29 +86,22 @@ function shouldHideCurrentSlide(target, renderContext) {
 
 // Peel YAML front matter off the source document and recover safely from malformed YAML.
 export function extractFrontMatter(md) {
-  const FRONTMATTER_RE = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/;
-  const match = md.match(FRONTMATTER_RE);
-  if (!match) {
+  const { data, body, hasFrontMatter, malformed, error } = parseFrontMatter(md, parseYamlOrEmpty);
+  if (!hasFrontMatter) {
     return { metadata: {}, content: md };
   }
-
-  const yamlText = match[1];
-  const content = md.slice(match[0].length);
-
-  try {
-    const metadata = parseYamlOrEmpty(yamlText);
-    return { metadata, content };
-  } catch (err) {
-    console.error("⚠ Malformed YAML in presentation:", err.message);
+  if (malformed) {
+    console.error("⚠ Malformed YAML in presentation:", error.message);
     return {
       metadata: {
         title: "{malformed YAML}",
-        description: err.message,
+        description: error.message,
         _malformed: true
       },
-      content
+      content: body
     };
   }
+  return { metadata: data, content: body };
 }
 
 /**

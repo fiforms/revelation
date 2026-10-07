@@ -22,13 +22,13 @@
 import convertSmartQuotes from './smart-quotes';
 import { getElectronAPI } from './electron-api.js';
 import { preprocessMarkdown, extractFrontMatter } from './compiler/markdown-compiler.js';
+import { mergeImportedData } from './imports-loader.js';
 import { sanitizeMarkdownEmbeddedHTML, sanitizeElementTree } from './compiler/html-sanitization.js';
 import {
   getStorageItemSafe,
   getNoteSeparator,
   sanitizeMarkdownFilename,
   resolveLegacyCssFolder,
-  resolveExternalFilePath,
   NOTE_SEPARATOR_CURRENT
 } from './compiler/compiler-utils.js';
 import { ensureHiddenSlidePreviewStyles, createAlternativeSelector } from './loader-dom.js';
@@ -249,37 +249,7 @@ export async function loadAndPreprocessMarkdown(deck, selectedFile = null) {
   }
 
   // Load imports (macros and media) from external file if specified
-  if (metadata.imports && typeof metadata.imports === 'string') {
-    try {
-      const presentationDir = markdownFile.includes('/')
-        ? markdownFile.substring(0, markdownFile.lastIndexOf('/'))
-        : '';
-      const externalPath = resolveExternalFilePath(metadata.imports, presentationDir);
-
-      if (externalPath) {
-        const res = await fetch(externalPath);
-        if (res.ok) {
-          const { parseYamlOrEmpty } = await import('./yaml-parse.js');
-          const importsData = parseYamlOrEmpty(await res.text());
-          if (typeof importsData === 'object' && !Array.isArray(importsData)) {
-            // Merge imported macros
-            if (importsData.macros && typeof importsData.macros === 'object' && !Array.isArray(importsData.macros)) {
-              Object.assign(macros, importsData.macros);
-            }
-            // Merge imported media
-            if (importsData.media && typeof importsData.media === 'object' && !Array.isArray(importsData.media)) {
-              if (!metadata.media) metadata.media = {};
-              Object.assign(metadata.media, importsData.media);
-            }
-          }
-        } else {
-          console.warn(`Failed to fetch imports file (${externalPath}): ${res.status}`);
-        }
-      }
-    } catch (err) {
-      console.warn(`Error loading imports:`, err);
-    }
-  }
+  await mergeImportedData({ metadata, markdownFile, macros });
 
   // Resolve media quality preference from URL first, then local storage for non-Electron browser usage.
   const mediaParam = (urlParams.get('media') || '').toLowerCase();

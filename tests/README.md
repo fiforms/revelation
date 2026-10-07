@@ -26,6 +26,7 @@ closes. That is what the tests build on.
 
 | File | Module | Covers |
 |------|--------|--------|
+| `frontmatter.test.cjs` | `js/frontmatter.js`, `js/imports-loader.js` | browser-side front-matter split/parse (CRLF, malformed flagged, `---` inside values), the compiler's malformed-YAML placeholder, and the `imports:` merge with a fake `fetch` |
 | `config.test.cjs` | `config.js` | mode selection, option/env precedence, GUI index paths, lazy `ffmpegBin`, no `process.env` access |
 | `pip-core.test.cjs` | `js/pip-core.js` | which URL `pip.html` may embed (absolute http/https only, obfuscated `javascript:` refused), colour validation, and which `postMessage` events are acted on (sender and origin checks, peer-URL validation) |
 | `pip-page.test.cjs` | `js/pip.js` | the page script run against a fake DOM: what reaches the iframe, which messages reach `electronAPI`, the fallbacks |

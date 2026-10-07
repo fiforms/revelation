@@ -4,7 +4,7 @@
  * Data comes from <presentations>/index.json (built by vite.plugins.js; loopback-only), refreshed
  * in place on the Vite `presentations-index-updated` event. Per-presentation details (author,
  * language variants, additional files) are read by fetching the .md and parsing its front matter
- * client-side (extractFrontMatter below, a third copy of the front-matter parser). Provides sort
+ * client-side (extractFrontMatter below, a thin wrapper over frontmatter.js). Provides sort
  * modes, selection side panel / flyouts, slideshow-options lightbox, handout/PDF/peer actions,
  * and (Electron only) the info panel and toasts via window.electronAPI. All metadata is
  * rendered through escapeHTML(). Requires ?key=.
@@ -12,6 +12,7 @@
 import { pluginLoader } from './pluginloader.js';
 import { createInfoPanel } from './info-panel.js';
 import { parseYamlOrEmpty } from './yaml-parse.js';
+import { parseFrontMatter } from './frontmatter.js';
 import { isSafeMarkdownPath } from './compiler/compiler-utils.js';
 
 const urlParams = new URLSearchParams(window.location.search);
@@ -747,14 +748,9 @@ function openPrimaryPresentation(pres) {
 }
 
 function extractFrontMatter(raw = '') {
-  const match = String(raw).match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?/);
-  if (!match) return {};
-  try {
-    return parseYamlOrEmpty(match[1]);
-  } catch (err) {
-    console.warn('Failed to parse presentation metadata:', err.message);
-    return {};
-  }
+  const { data, malformed, error } = parseFrontMatter(raw, parseYamlOrEmpty);
+  if (malformed) console.warn('Failed to parse presentation metadata:', error.message);
+  return data;
 }
 
 function isValidMarkdownPath(mdFile = '') {
