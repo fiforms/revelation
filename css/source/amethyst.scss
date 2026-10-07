@@ -1,0 +1,183 @@
+/**
+ * NAME: Amethyst
+ * AUTHOR: Daniel McFeeters
+ *
+ * Dark theme: deep purple gradient background (diagonal, like Pastel) with
+ * silver lettering. Same font lineup as Bonbon: Quicksand body, Glass Antiqua
+ * H1, Playfair Display SC H3, Beau Rivage script H2/H4 with a soft lilac glow.
+ * Headings use a silver gradient fill (as in Gold Serif).
+ */
+
+@use "sass:color";
+
+// Palette
+$violet-black: #12081f;
+$violet-deep: #1e0f36;
+$violet: #2e1a52;
+$violet-mid: #432676;
+$violet-glow: #5b3a9a;
+
+$silver-light: #f4f4fb;
+$silver: #d4d4e4;
+$silver-mid: #b4b4cc;
+$silver-deep: #8a8aa6;
+$silver-glow: rgba(190, 170, 255, 0.55);
+
+// Dark corners, a lighter violet band across the middle, so the text area stays calm.
+$background: linear-gradient(
+    125deg,
+    $violet-black 0%,
+    $violet-deep 22%,
+    $violet 48%,
+    $violet-mid 62%,
+    $violet-deep 85%,
+    $violet-black 100%
+);
+$background-color: $violet-deep;
+
+$main-font: 'Quicksand', 'Open Sans', sans-serif;
+$main-font-size: 40px;
+$main-color: $silver;
+
+$heading-font: 'Playfair Display SC', 'Cormorant Garamond', serif;
+$heading-color: $silver;
+$heading-letter-spacing: 0.01em;
+$heading-text-transform: none;
+$heading-text-shadow: none;
+$heading-font-weight: 700;
+
+$heading1-size: 3.3em;
+$heading2-size: 2.9em;   // Beau Rivage is a thin script; it needs the extra size
+$heading3-size: 1.55em;
+$heading4-size: 2.2em;
+
+$link-color: #c9b8ff;
+$link-color-hover: #e6dcff;
+$selection-background-color: rgba($violet-glow, 0.8);
+$selection-color: $silver-light;
+
+@import 'reveal.js/dist/reveal.css';
+@import "reveal.js/css/theme/template/mixins";
+@import "reveal.js/css/theme/template/settings";
+@import "./custom/layouts.scss";
+.reveal { @include rv-text-colors-dark; }
+
+@import url(./fonts/quicksand/quicksand.css);
+@import url(./fonts/open_sans/open_sans.css);
+@import url(./fonts/greek-fallback.css);
+@import url(./fonts/playfair_display_sc/playfair_display_sc.css);
+@import url(./fonts/cormorant_garamond/cormorant_garamond.css);
+@import url(./fonts/beau_rivage/beau_rivage.css);
+@import url(./fonts/glass_antiqua/glass_antiqua.css);
+
+@include light-bg-text-color(#222);
+
+@import "reveal.js/css/theme/template/theme";
+
+.reveal .slides {
+    font-weight: 500;
+    color: $silver;
+}
+
+// Headings: silver gradient lettering with a faint drop shadow for depth
+.reveal h1,
+.reveal h2,
+.reveal h3,
+.reveal h4,
+.reveal h5,
+.reveal h6 {
+    background: linear-gradient(to bottom, $silver-light 0%, $silver 45%, $silver-deep 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: none;
+    filter: drop-shadow(1px 2px 2px rgba(0, 0, 0, 0.6));
+}
+
+// H1: Glass Antiqua (single weight)
+.reveal h1 {
+    font-family: 'Glass Antiqua', 'Playfair Display SC', Georgia, serif;
+    font-weight: 400;
+    text-transform: none;
+    // No bold cut exists, so thicken the strokes with a thin outline instead of faux bold
+    -webkit-text-stroke: 0.015em $silver-mid;
+}
+
+// H3: Playfair Display SC (already small-caps, so no text-transform)
+.reveal h3 {
+    font-family: 'Playfair Display SC', 'Cormorant Garamond', Georgia, serif;
+    font-weight: 400;
+    text-transform: none;
+}
+
+// H2/H4: Beau Rivage script (single weight) with a soft lilac glow underneath
+.reveal h2,
+.reveal h4 {
+    font-family: 'Beau Rivage', 'Cormorant Garamond', Georgia, serif;
+    font-weight: 400;
+    letter-spacing: 0.02em;
+    line-height: 1.1;
+    filter: drop-shadow(0 0.04em 0.12em $silver-glow) drop-shadow(0 0.08em 0.3em $silver-glow);
+}
+
+.reveal em,
+.reveal i {
+    color: $silver-mid;
+}
+
+.reveal strong,
+.reveal b {
+    font-weight: 700;
+    color: $silver-light;
+}
+
+// {{darkbg}} slides: the base theme forces white text; keep it silver
+.reveal section[data-darkbg] p,
+.reveal section[data-darkbg] ul,
+.reveal section[data-darkbg] ol,
+.reveal section[data-darkbg] li,
+.reveal section[data-darkbg] cite.attrib {
+    color: $silver !important;
+}
+
+section[data-darktext],
+section[data-darktext] p,
+section[data-darktext] li {
+    text-shadow: 1px 1px 3px rgba(255, 255, 255, 0.7);
+}
+
+.reveal blockquote {
+    background: rgba(255, 255, 255, 0.06);
+    border-left: 0.12em solid $silver-deep;
+    border-radius: 6px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+}
+
+.reveal ul li::marker,
+.reveal ol li::marker {
+    color: $silver-mid;
+}
+
+.reveal table th,
+.reveal table td {
+    border-bottom-color: $silver-deep;
+}
+
+#fixed-overlay-wrapper {
+    background: rgba(0, 0, 0, 0.2);
+    color: $silver;
+    font-family: 'Quicksand', sans-serif;
+}
+
+.info-head, .info-body {
+    background-color: rgba(0, 0, 0, 0.4);
+    padding: 1rem;
+    border-radius: 8px;
+}
+
+.reveal h2.countdown {
+    margin: 0.25em 0;
+    padding: 0.15em 0.45em;
+    border-radius: 0.2em;
+    background: rgba(0, 0, 0, 0.2);
+}

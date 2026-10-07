@@ -474,6 +474,7 @@ Choose a theme css file from the table below for the `theme` value in YAML. All 
 | league.css | Charcoal dark theme; dramatic League Gothic headings | light-on-dark |
 | moon.css | Deep navy/teal dark theme; League Gothic headings | light-on-dark |
 | night.css | Very dark theme; bold Montserrat headings | light-on-dark |
+| amethyst.css | Dark deep-purple diagonal gradient with silver gradient lettering; Quicksand body, Glass Antiqua (H1), Playfair Display SC (H3), Beau Rivage script (H2/H4) with soft lilac glow | light-on-dark |
 | bonbon.css | Sweet candy-shop theme: strawberry/mint glows, sprinkle dots, scalloped icing edges; Quicksand body, Glass Antiqua (H1), Playfair Display SC (H3), Beau Rivage script (H2/H4), heart bullets | dark-on-light |
 | pastel.css | Light diagonal gradient of pastel bands with hard accent lines; Quicksand body, Playfair Display SC (H1/H3), Cormorant italic (H2/H4) | dark-on-light |
 | serif.css | Light cream background; elegant Palatino serif headings | dark-on-light |
