@@ -8,6 +8,9 @@ const path = require('path');
 const { createThumbnailGenerator, createThumbsMiddleware, createLegacyThumbnailFallback } = require('../../server/thumbnails.js');
 const { tmpDir, writeTree, remove } = require('../helpers/tmp.cjs');
 
+// The fake ffmpeg is a shebang script, which Windows cannot spawn (EFTYPE); these tests run on Linux/macOS (CI).
+const SKIP_FAKE_FFMPEG = process.platform === 'win32' && 'fake ffmpeg needs a POSIX shebang';
+
 const quiet = () => {
   const saved = [console.log, console.warn, console.error];
   console.log = console.warn = console.error = () => {};
@@ -34,7 +37,7 @@ setTimeout(() => {
   return { bin, lines, starts: () => lines().filter((l) => l.startsWith('start')) };
 }
 
-test('the generator never runs more than maxConcurrent ffmpeg processes at once', async () => {
+test('the generator never runs more than maxConcurrent ffmpeg processes at once', { skip: SKIP_FAKE_FFMPEG }, async () => {
   const restore = quiet();
   const dir = tmpDir();
   const ff = makeFakeFfmpeg(dir, 150);
@@ -53,7 +56,7 @@ test('the generator never runs more than maxConcurrent ffmpeg processes at once'
   remove(dir);
 });
 
-test('concurrent requests for the same thumbnail share one ffmpeg run', async () => {
+test('concurrent requests for the same thumbnail share one ffmpeg run', { skip: SKIP_FAKE_FFMPEG }, async () => {
   const restore = quiet();
   const dir = tmpDir();
   const ff = makeFakeFfmpeg(dir);
@@ -69,7 +72,7 @@ test('concurrent requests for the same thumbnail share one ffmpeg run', async ()
   remove(dir);
 });
 
-test('video sources seek to the start; images do not; both scale to 320px wide', async () => {
+test('video sources seek to the start; images do not; both scale to 320px wide', { skip: SKIP_FAKE_FFMPEG }, async () => {
   const restore = quiet();
   const dir = tmpDir();
   const ff = makeFakeFfmpeg(dir, 10);
@@ -84,7 +87,7 @@ test('video sources seek to the start; images do not; both scale to 320px wide',
   remove(dir);
 });
 
-test('a failed run rejects, clears the in-flight entry, and a retry runs ffmpeg again', async () => {
+test('a failed run rejects, clears the in-flight entry, and a retry runs ffmpeg again', { skip: SKIP_FAKE_FFMPEG }, async () => {
   const restore = quiet();
   const dir = tmpDir();
   const ff = makeFakeFfmpeg(dir, 10);
@@ -119,7 +122,7 @@ test('thumbs middleware: other paths fall through; no ffmpeg configured is 503',
   restore();
 });
 
-test('thumbs middleware: ffmpegBin is asked per request, so it can be set after startup', async () => {
+test('thumbs middleware: ffmpegBin is asked per request, so it can be set after startup', { skip: SKIP_FAKE_FFMPEG }, async () => {
   const restore = quiet();
   const dir = tmpDir();
   const ff = makeFakeFfmpeg(dir, 10);
@@ -156,7 +159,7 @@ test('thumbs middleware: missing source 404, ffmpeg failure 500, traversal falls
   remove(dir);
 });
 
-test('thumbs middleware: the cache is used while fresh and refreshed when the source is newer', async () => {
+test('thumbs middleware: the cache is used while fresh and refreshed when the source is newer', { skip: SKIP_FAKE_FFMPEG }, async () => {
   const restore = quiet();
   const dir = tmpDir();
   const ff = makeFakeFfmpeg(dir, 10);
@@ -205,7 +208,7 @@ test('legacy fallback: a webp that is really a directory is not served', async (
   });
 });
 
-test('thumbs middleware: only regular image/video files inside the presentations dir reach ffmpeg', async () => {
+test('thumbs middleware: only regular image/video files inside the presentations dir reach ffmpeg', { skip: SKIP_FAKE_FFMPEG }, async () => {
   const restore = quiet();
   const dir = tmpDir();
   const ff = makeFakeFfmpeg(dir, 10);
@@ -229,7 +232,7 @@ test('thumbs middleware: only regular image/video files inside the presentations
   remove(outside);
 });
 
-test('ffmpeg is started with only the file protocol allowed', async () => {
+test('ffmpeg is started with only the file protocol allowed', { skip: SKIP_FAKE_FFMPEG }, async () => {
   const restore = quiet();
   const dir = tmpDir();
   const ff = makeFakeFfmpeg(dir, 10);
@@ -239,7 +242,7 @@ test('ffmpeg is started with only the file protocol allowed', async () => {
   remove(dir);
 });
 
-test('the generator rejects with QUEUE_FULL past maxQueue, but still shares an in-flight job', async () => {
+test('the generator rejects with QUEUE_FULL past maxQueue, but still shares an in-flight job', { skip: SKIP_FAKE_FFMPEG }, async () => {
   const restore = quiet();
   const dir = tmpDir();
   const ff = makeFakeFfmpeg(dir, 100);

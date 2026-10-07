@@ -51,6 +51,9 @@ setTimeout(() => { fs.writeFileSync(args[args.length - 1], 'JPEGDATA'); }, 150);
   srv.setFfmpegBin(bin);
 });
 
+// The fake ffmpeg is a shebang script, which Windows cannot spawn (EFTYPE); these tests run on Linux/macOS (CI).
+const SKIP_FAKE_FFMPEG = process.platform === 'win32' && 'fake ffmpeg needs a POSIX shebang';
+
 test.after(() => srv.close());
 
 // --- Presentation index ------------------------------------------------------------------------
@@ -207,7 +210,7 @@ test('media-share: a token whose file vanished is 404, not a crash', async () =>
 
 // --- /thumbs ------------------------------------------------------------------------------------
 
-test('thumbs: generates once, serves from cache, and shares one ffmpeg run between concurrent requests', async () => {
+test('thumbs: generates once, serves from cache, and shares one ffmpeg run between concurrent requests', { skip: SKIP_FAKE_FFMPEG }, async () => {
   const url = `${srv.base}/thumbs_${srv.key}/demo/_media/pic.png`;
   const [a, b] = await Promise.all([fetch(url), fetch(url)]);
   assert.strictEqual(a.status, 200);
@@ -222,7 +225,7 @@ test('thumbs: generates once, serves from cache, and shares one ffmpeg run betwe
   assert.ok(fs.existsSync(path.join(srv.dirs.presentations, 'demo', '_media', '.thumbs', 'pic.png.thumb.jpg')));
 });
 
-test('thumbs: a source newer than its thumbnail is regenerated', async () => {
+test('thumbs: a source newer than its thumbnail is regenerated', { skip: SKIP_FAKE_FFMPEG }, async () => {
   const source = path.join(srv.dirs.presentations, 'demo', '_media', 'pic.png');
   const future = new Date(Date.now() + 60_000);
   fs.utimesSync(source, future, future);
@@ -232,7 +235,7 @@ test('thumbs: a source newer than its thumbnail is regenerated', async () => {
   assert.strictEqual(fs.readFileSync(thumbLog, 'utf8').trim().split('\n').length, before + 1);
 });
 
-test('thumbs: missing source is 404 and path traversal never reaches ffmpeg', async () => {
+test('thumbs: missing source is 404 and path traversal never reaches ffmpeg', { skip: SKIP_FAKE_FFMPEG }, async () => {
   const before = fs.readFileSync(thumbLog, 'utf8');
   assert.strictEqual((await fetch(`${srv.base}/thumbs_${srv.key}/demo/_media/nope.png`)).status, 404);
   // share.bin sits in userData, one level above the presentations folder: these are real targets.
