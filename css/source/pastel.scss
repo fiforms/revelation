@@ -68,7 +68,9 @@ $selection-color: $plum-deep;
 @import "reveal.js/css/theme/template/settings";
 @import "./custom/layouts.scss";
 
-@import url("https://fonts.googleapis.com/css?family=Quicksand:400,500,700,400italic,700italic");
+@import url(./fonts/quicksand/quicksand.css);
+@import url(./fonts/open_sans/open_sans.css);
+@import url(./fonts/greek-fallback.css);
 @import url(./fonts/playfair_display_sc/playfair_display_sc.css);
 @import url(./fonts/cormorant_garamond/cormorant_garamond.css);
 @import url(./fonts/beau_rivage/beau_rivage.css);

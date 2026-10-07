@@ -1,0 +1,175 @@
+/*
+ * Greek fallback for families that ship no Greek glyphs.
+ *
+ * Declares extra @font-face rules under the original family names, limited by
+ * unicode-range to Greek, that load Open Sans's Greek files. A theme that asks
+ * for Lato, Montserrat, Quicksand or League Gothic therefore gets Open Sans
+ * glyphs for Greek text and the real font for everything else, with no change
+ * to any font stack. Needs ./open_sans/ (files only; its .css is not required).
+ * Import this after the family CSS files.
+ *
+ * Open Sans has no 500 weight, so Quicksand 500 maps to Open Sans 400.
+ * League Gothic is a single heavy condensed weight, so it maps to Open Sans 700.
+ */
+
+@font-face {
+    font-family: 'Lato';
+    src: url('./open_sans/open-sans-greek-400-normal.woff2') format('woff2');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+    unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+
+@font-face {
+    font-family: 'Lato';
+    src: url('./open_sans/open-sans-greek-ext-400-normal.woff2') format('woff2');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+    unicode-range: U+1F00-1FFF;
+}
+
+@font-face {
+    font-family: 'Lato';
+    src: url('./open_sans/open-sans-greek-400-italic.woff2') format('woff2');
+    font-weight: 400;
+    font-style: italic;
+    font-display: swap;
+    unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+
+@font-face {
+    font-family: 'Lato';
+    src: url('./open_sans/open-sans-greek-ext-400-italic.woff2') format('woff2');
+    font-weight: 400;
+    font-style: italic;
+    font-display: swap;
+    unicode-range: U+1F00-1FFF;
+}
+
+@font-face {
+    font-family: 'Lato';
+    src: url('./open_sans/open-sans-greek-700-normal.woff2') format('woff2');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+    unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+
+@font-face {
+    font-family: 'Lato';
+    src: url('./open_sans/open-sans-greek-ext-700-normal.woff2') format('woff2');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+    unicode-range: U+1F00-1FFF;
+}
+
+@font-face {
+    font-family: 'Lato';
+    src: url('./open_sans/open-sans-greek-700-italic.woff2') format('woff2');
+    font-weight: 700;
+    font-style: italic;
+    font-display: swap;
+    unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+
+@font-face {
+    font-family: 'Lato';
+    src: url('./open_sans/open-sans-greek-ext-700-italic.woff2') format('woff2');
+    font-weight: 700;
+    font-style: italic;
+    font-display: swap;
+    unicode-range: U+1F00-1FFF;
+}
+
+@font-face {
+    font-family: 'Montserrat';
+    src: url('./open_sans/open-sans-greek-700-normal.woff2') format('woff2');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+    unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+
+@font-face {
+    font-family: 'Montserrat';
+    src: url('./open_sans/open-sans-greek-ext-700-normal.woff2') format('woff2');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+    unicode-range: U+1F00-1FFF;
+}
+
+@font-face {
+    font-family: 'Quicksand';
+    src: url('./open_sans/open-sans-greek-400-normal.woff2') format('woff2');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+    unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+
+@font-face {
+    font-family: 'Quicksand';
+    src: url('./open_sans/open-sans-greek-ext-400-normal.woff2') format('woff2');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+    unicode-range: U+1F00-1FFF;
+}
+
+@font-face {
+    font-family: 'Quicksand';
+    src: url('./open_sans/open-sans-greek-400-normal.woff2') format('woff2');
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+    unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+
+@font-face {
+    font-family: 'Quicksand';
+    src: url('./open_sans/open-sans-greek-ext-400-normal.woff2') format('woff2');
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+    unicode-range: U+1F00-1FFF;
+}
+
+@font-face {
+    font-family: 'Quicksand';
+    src: url('./open_sans/open-sans-greek-700-normal.woff2') format('woff2');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+    unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+
+@font-face {
+    font-family: 'Quicksand';
+    src: url('./open_sans/open-sans-greek-ext-700-normal.woff2') format('woff2');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+    unicode-range: U+1F00-1FFF;
+}
+
+@font-face {
+    font-family: 'League Gothic';
+    src: url('./open_sans/open-sans-greek-700-normal.woff2') format('woff2');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+    unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+
+@font-face {
+    font-family: 'League Gothic';
+    src: url('./open_sans/open-sans-greek-ext-700-normal.woff2') format('woff2');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+    unicode-range: U+1F00-1FFF;
+}
