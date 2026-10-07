@@ -1,0 +1,103 @@
+/**
+ * NAME: Starter
+ * AUTHOR: Daniel McFeeters
+ *
+ * A plain base for custom styling (Presentation Properties > Style, or your own style.css). Laid out like
+ * Simple (white, dark-blue links, same heading sizes) but with nothing decorative to undo: no text
+ * shadows, no box shadows, no text transforms, no letter spacing, and only generic fonts (Arial /
+ * Times New Roman / Courier New, which Windows, macOS and Linux all provide) at normal and bold
+ * weights. No fonts are imported.
+ */
+
+@use "sass:color";
+
+$active-color: #00008b;
+
+$background-color: #fff;
+$background: $background-color;
+
+$main-font: Arial, Helvetica, sans-serif;
+$main-font-size: 40px;
+$main-color: #000;
+
+$heading-font: Arial, Helvetica, sans-serif;
+$heading-color: #000;
+$heading-font-weight: 700;
+$heading-letter-spacing: normal;
+$heading-text-transform: none;
+$heading-text-shadow: none;
+$heading1-text-shadow: none;
+
+$heading1-size: 2.5em;
+$heading2-size: 1.6em;
+$heading3-size: 1.3em;
+$heading4-size: 1em;
+
+$code-font: "Courier New", Courier, monospace;
+
+$link-color: $active-color;
+$link-color-hover: color.scale($active-color, $lightness: 20%);
+$selection-color: #fff;
+$selection-background-color: $active-color;
+
+$overlay-element-bg-color: 0, 0, 0;
+$overlay-element-fg-color: 240, 240, 240;
+
+// Reveal.js template base (via include path from node_modules)
+@import 'reveal.js/dist/reveal.css';
+@import "reveal.js/css/theme/template/mixins";
+@import "reveal.js/css/theme/template/settings";
+@import "./custom/layouts.scss";
+
+@import "reveal.js/css/theme/template/theme";
+
+// Change text when the background is inverted
+@include dark-bg-text-color(#fff);
+
+// Normal weight body text; headings keep the bold set above.
+.reveal .slides section,
+.reveal .slides section > section {
+    font-weight: 400;
+}
+
+// The template and our layouts add shadows to quotes, code blocks, frames, picture cards and tables.
+// Switch them all off. These are plain selectors (no !important) so a custom style.css can put one back.
+.reveal blockquote,
+.reveal pre,
+.reveal .r-frame,
+.reveal a:hover .r-frame,
+.reveal section[data-shadow-img] img,
+.reveal figure.captioned-image,
+.reveal table.datatable,
+.reveal table.datatable.lighttable,
+.reveal table.datatable.darktable {
+    box-shadow: none;
+}
+
+// Layout features that space letters out slightly (countdown, data table headers and summary labels).
+.reveal h2.countdown,
+.reveal table.datatable thead th,
+.reveal table.datatable tfoot .datatable-summary-label {
+    letter-spacing: normal;
+}
+
+#fixed-overlay-wrapper {
+    background: rgba(255, 255, 255, 0.2);
+    color: black;
+}
+
+#fixed-tint-wrapper {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255,255,255,0.5);
+    z-index: 0;
+    pointer-events: none;
+}
+
+.info-head, .info-body {
+    background-color: #eeeeee;
+    padding: 1rem;
+}

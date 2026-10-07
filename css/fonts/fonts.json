@@ -1,0 +1,24 @@
+{
+  "_comment": "Fonts the Style tab (Presentation Properties) offers. One entry per folder here that has its own <folder>/<folder>.css. id = folder name; family = the main font-family declared in that css; fallback = generic family appended to the stack. tests/presentationStyle.test.js checks this list against the folders. Not listed on purpose: symbols (images) and greek-fallback.css (helper).",
+  "fonts": [
+    { "id": "beau_rivage", "label": "Beau Rivage", "family": "Beau Rivage", "css": "beau_rivage/beau_rivage.css", "fallback": "cursive" },
+    { "id": "big_shoulders_stencil", "label": "Big Shoulders Stencil", "family": "Big Shoulders Stencil", "css": "big_shoulders_stencil/big_shoulders_stencil.css", "fallback": "sans-serif" },
+    { "id": "cormorant_garamond", "label": "Cormorant Garamond", "family": "Cormorant Garamond", "css": "cormorant_garamond/cormorant_garamond.css", "fallback": "serif" },
+    { "id": "glass_antiqua", "label": "Glass Antiqua", "family": "Glass Antiqua", "css": "glass_antiqua/glass_antiqua.css", "fallback": "serif" },
+    { "id": "great_vibes", "label": "Great Vibes", "family": "Great Vibes", "css": "great_vibes/great_vibes.css", "fallback": "cursive" },
+    { "id": "inter", "label": "Inter", "family": "Inter", "css": "inter/inter.css", "fallback": "sans-serif" },
+    { "id": "jet_brains_mono", "label": "JetBrains Mono", "family": "JetBrains Mono", "css": "jet_brains_mono/jet_brains_mono.css", "fallback": "monospace" },
+    { "id": "lato", "label": "Lato", "family": "Lato", "css": "lato/lato.css", "fallback": "sans-serif" },
+    { "id": "league-gothic", "label": "League Gothic", "family": "League Gothic", "css": "league-gothic/league-gothic.css", "fallback": "sans-serif" },
+    { "id": "merriweather_sans", "label": "Merriweather Sans", "family": "Merriweather Sans", "css": "merriweather_sans/merriweather_sans.css", "fallback": "sans-serif" },
+    { "id": "montserrat", "label": "Montserrat", "family": "Montserrat", "css": "montserrat/montserrat.css", "fallback": "sans-serif" },
+    { "id": "news_cycle", "label": "News Cycle", "family": "News Cycle", "css": "news_cycle/news_cycle.css", "fallback": "sans-serif" },
+    { "id": "noto_serif", "label": "Noto Serif", "family": "Noto Serif", "css": "noto_serif/noto_serif.css", "fallback": "serif" },
+    { "id": "open_sans", "label": "Open Sans", "family": "Open Sans", "css": "open_sans/open_sans.css", "fallback": "sans-serif" },
+    { "id": "playfair_display_sc", "label": "Playfair Display SC", "family": "Playfair Display SC", "css": "playfair_display_sc/playfair_display_sc.css", "fallback": "serif" },
+    { "id": "quicksand", "label": "Quicksand", "family": "Quicksand", "css": "quicksand/quicksand.css", "fallback": "sans-serif" },
+    { "id": "roboto_slab", "label": "Roboto Slab", "family": "Roboto Slab", "css": "roboto_slab/roboto_slab.css", "fallback": "serif" },
+    { "id": "source-sans-pro", "label": "Source Sans Pro", "family": "Source Sans Pro", "css": "source-sans-pro/source-sans-pro.css", "fallback": "sans-serif" },
+    { "id": "ubuntu", "label": "Ubuntu", "family": "Ubuntu", "css": "ubuntu/ubuntu.css", "fallback": "sans-serif" }
+  ]
+}

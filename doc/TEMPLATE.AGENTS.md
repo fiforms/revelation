@@ -481,6 +481,7 @@ Choose a theme css file from the table below for the `theme` value in YAML. All 
 | pastel.css | Light diagonal gradient of pastel bands with hard accent lines; Quicksand body, Playfair Display SC (H1/H3), Cormorant italic (H2/H4) | dark-on-light |
 | serif.css | Light cream background; elegant Palatino serif headings | dark-on-light |
 | simple.css | Clean white; condensed News Cycle headings | dark-on-light |
+| starter.css | Plain white base for custom styling: Arial/Helvetica text, normal and bold weights only, no shadows, no text transforms, no imported fonts; dark-blue links | dark-on-light |
 | sky.css | Light blue-white background; Quicksand rounded headings | dark-on-light |
 | softblood.css | Near-black; Ubuntu headings; softened Blood theme | light-on-dark |
 | solarized.css | Warm cream Solarized-inspired; League Gothic headings | dark-on-light |
