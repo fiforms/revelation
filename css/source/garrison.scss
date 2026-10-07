@@ -1,0 +1,192 @@
+/**
+ * NAME: Garrison
+ * AUTHOR: Daniel McFeeters
+ *
+ * Dark, blunt theme in oxblood red and concrete greys. Big Shoulders Stencil
+ * (ammo-crate lettering) for H1/H2 with a hard offset red shadow, Roboto Slab
+ * for H3/H4 and body. The background is charcoal with thin hard-edged red and
+ * steel lines cut across the two corners (as in Pastel), leaving the middle
+ * plain behind the text.
+ */
+
+@use "sass:color";
+
+// Palette
+$coal: #121315;
+$charcoal: #1b1d20;
+$gunmetal: #26292e;
+$concrete: #8a8f94;
+$ash: #d9d6d2;
+$ash-dim: #aaa7a2;
+
+$oxblood: #6e1414;
+$blood: #a82323;
+$signal: #e04a3a;
+$signal-bright: #ff6b57;
+
+// Lines sit only near the two corners; 6%-94% is plain charcoal with a faint lighter
+// middle. Each corner: oxblood band, black hairline, steel hairline.
+$background:
+    radial-gradient(ellipse at 100% 100%, rgba(168, 35, 35, 0.28) 0%, rgba(168, 35, 35, 0) 40%),
+    linear-gradient(
+        115deg,
+        $oxblood 0 4.4%,
+        $coal 4.4% 5.1%,
+        $concrete 5.1% 5.6%,
+        $charcoal 5.6%,
+        $gunmetal 50%,
+        $charcoal 94.4%,
+        $concrete 94.4% 94.9%,
+        $coal 94.9% 95.6%,
+        $oxblood 95.6% 100%
+    );
+$background-color: $charcoal;
+
+$main-font: 'Roboto Slab', 'Noto Serif', Georgia, serif;
+$main-font-size: 38px;
+$main-color: $ash;
+
+$heading-font: 'Big Shoulders Stencil', 'Impact', sans-serif;
+$heading-color: $ash;
+$heading-letter-spacing: 0.03em;
+$heading-text-transform: none;
+$heading-text-shadow: none;
+$heading-font-weight: 800;
+
+$heading1-size: 4.4em;
+$heading2-size: 2.7em;
+$heading3-size: 1.6em;
+$heading4-size: 1.15em;
+
+$link-color: $signal-bright;
+$link-color-hover: #ff9a8a;
+$selection-background-color: rgba($blood, 0.85);
+$selection-color: #fff;
+
+@import 'reveal.js/dist/reveal.css';
+@import "reveal.js/css/theme/template/mixins";
+@import "reveal.js/css/theme/template/settings";
+@import "./custom/layouts.scss";
+.reveal { @include rv-text-colors-dark; }
+
+@import url(./fonts/roboto_slab/roboto_slab.css);
+@import url(./fonts/big_shoulders_stencil/big_shoulders_stencil.css);
+@import url(./fonts/noto_serif/noto_serif.css);
+@import url(./fonts/greek-fallback.css);
+
+@include light-bg-text-color(#222);
+
+@import "reveal.js/css/theme/template/theme";
+
+.reveal .slides {
+    font-weight: 400;
+    color: $ash;
+}
+
+// H1/H2: Big Shoulders Stencil, in the case as typed
+.reveal h1,
+.reveal h2 {
+    font-family: 'Big Shoulders Stencil', 'Impact', sans-serif;
+    text-transform: none;
+}
+
+// H1: bone-white with a hard offset oxblood shadow, like a screen-printed poster
+.reveal h1 {
+    font-weight: 900;
+    text-shadow: 0.04em 0.04em 0 $blood;
+}
+
+.reveal h2 {
+    font-weight: 700;
+    color: $signal;
+}
+
+// H3/H4: Roboto Slab bold; H4 is small tracked caps
+.reveal h3,
+.reveal h4 {
+    font-family: 'Roboto Slab', Georgia, serif;
+    font-weight: 700;
+    text-transform: none;
+    letter-spacing: 0;
+    line-height: 1.2;
+}
+.reveal h3 { color: $ash; }
+.reveal h4 {
+    color: $concrete;
+    letter-spacing: 0.1em;
+}
+
+.reveal em,
+.reveal i {
+    color: $signal-bright;
+}
+
+.reveal strong,
+.reveal b {
+    font-weight: 700;
+    color: #fff;
+}
+
+// {{darkbg}} slides: the base theme forces white text; keep it ash
+.reveal section[data-darkbg] p,
+.reveal section[data-darkbg] ul,
+.reveal section[data-darkbg] ol,
+.reveal section[data-darkbg] li,
+.reveal section[data-darkbg] cite.attrib {
+    color: $ash !important;
+}
+
+section[data-darktext],
+section[data-darktext] p,
+section[data-darktext] li {
+    text-shadow: 1px 1px 3px rgba(255, 255, 255, 0.7);
+}
+
+.reveal ul li::marker,
+.reveal ol li::marker {
+    color: $signal;
+}
+
+// Blockquote: heavy red edge, flat grey slab
+.reveal blockquote {
+    background: rgba(255, 255, 255, 0.05);
+    border-left: 0.18em solid $blood;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+.reveal table th,
+.reveal table td {
+    border-bottom: 0.05em solid $concrete;
+}
+.reveal table th {
+    color: $signal-bright;
+    font-family: 'Big Shoulders Stencil', sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.reveal hr {
+    border: 0;
+    height: 0.12em;
+    background: linear-gradient(90deg, $blood 0 30%, $concrete 30% 100%);
+}
+
+#fixed-overlay-wrapper {
+    background: rgba(0, 0, 0, 0.25);
+    color: $ash-dim;
+    font-family: 'Roboto Slab', serif;
+}
+
+.info-head, .info-body {
+    background-color: rgba(0, 0, 0, 0.5);
+    padding: 1rem;
+    border-radius: 0;
+    border-left: 0.2rem solid $blood;
+}
+
+.reveal h2.countdown {
+    margin: 0.25em 0;
+    padding: 0.15em 0.45em;
+    background: rgba(0, 0, 0, 0.3);
+}

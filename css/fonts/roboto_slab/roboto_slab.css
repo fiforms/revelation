@@ -1,0 +1,8 @@
+/* Roboto Slab — Variable */
+@font-face {
+    font-family: 'Roboto Slab';
+    src: url('./RobotoSlab-Variable.ttf') format('truetype');
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: swap;
+}

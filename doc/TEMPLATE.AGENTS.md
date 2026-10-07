@@ -469,6 +469,8 @@ Choose a theme css file from the table below for the `theme` value in YAML. All 
 | beige.css | Warm beige designer theme; bold League Gothic headings | dark-on-light |
 | black.css | Near-black dark theme; Source Sans Pro headings | light-on-dark |
 | black-contrast.css | Pure black high-contrast theme; Source Sans Pro headings | light-on-dark |
+| forge.css | Dark gunmetal gradient with ember-orange accents and bar; League Gothic caps (H1/H3), Montserrat Bold caps (H2/H4), Source Sans Pro body; square corners | light-on-dark |
+| garrison.css | Dark charcoal with oxblood-red and steel corner lines; Big Shoulders Stencil (H1/H2, H1 with hard red offset shadow), Roboto Slab (H3/H4, body) | light-on-dark |
 | gold_serif.css | Dark, glowing gold gradient lettering; Playfair Display SC (H1/H3), Beau Rivage script (H2/H4), Cormorant Garamond body | light-on-dark |
 | dracula.css | Dark purple-charcoal palette; League Gothic headings | light-on-dark |
 | league.css | Charcoal dark theme; dramatic League Gothic headings | light-on-dark |

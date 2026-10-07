@@ -1,0 +1,184 @@
+/**
+ * NAME: Forge
+ * AUTHOR: Daniel McFeeters
+ *
+ * Dark, hard-edged theme: gunmetal gradient with faint brushed-steel grain, a
+ * glowing ember bar along the bottom edge and bone-white lettering with ember
+ * orange accents. League Gothic (tall, condensed) for H1/H3, Montserrat Bold
+ * caps for H2/H4, Source Sans Pro semibold body. Square corners and clipped
+ * blocks instead of rounded ones.
+ */
+
+@use "sass:color";
+
+// Palette
+$steel-black: #101214;
+$steel-dark: #1a1d21;
+$steel: #262b31;
+$steel-light: #3a4149;
+$steel-line: #566069;
+
+$bone: #ece8df;
+$bone-dim: #b9b5ab;
+$ember: #e8662a;
+$ember-bright: #ff8a3d;
+$ember-deep: #a8400f;
+
+// Layers, top to bottom: ember bar along the bottom edge, brushed-steel grain, then the
+// gunmetal gradient. The lighter band sits across the middle, away from the corners.
+$background:
+    linear-gradient(90deg, $ember-deep 0%, $ember 30%, $ember-bright 50%, $ember 70%, $ember-deep 100%) bottom left / 100% 0.7vw no-repeat,
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.018) 0 1px, rgba(0, 0, 0, 0) 1px 4px),
+    linear-gradient(155deg, $steel-black 0%, $steel-dark 25%, $steel 52%, $steel-dark 78%, $steel-black 100%);
+$background-color: $steel-dark;
+
+$main-font: 'Source Sans Pro', 'Open Sans', sans-serif;
+$main-font-size: 42px;
+$main-color: $bone;
+
+$heading-font: 'League Gothic', 'Impact', sans-serif;
+$heading-color: $bone;
+$heading-letter-spacing: 0.04em;
+$heading-text-transform: uppercase;
+$heading-text-shadow: none;
+$heading-font-weight: 400;
+
+$heading1-size: 4em;
+$heading2-size: 1.7em;
+$heading3-size: 2.6em;
+$heading4-size: 1.25em;
+
+$link-color: $ember-bright;
+$link-color-hover: #ffb27a;
+$selection-background-color: rgba($ember, 0.8);
+$selection-color: #fff;
+
+@import 'reveal.js/dist/reveal.css';
+@import "reveal.js/css/theme/template/mixins";
+@import "reveal.js/css/theme/template/settings";
+@import "./custom/layouts.scss";
+.reveal { @include rv-text-colors-dark; }
+
+@import url(./fonts/source-sans-pro/source-sans-pro.css);
+@import url(./fonts/open_sans/open_sans.css);
+@import url(./fonts/greek-fallback.css);
+@import url(./fonts/league-gothic/league-gothic.css);
+@import url(./fonts/montserrat/montserrat.css);
+
+@include light-bg-text-color(#222);
+
+@import "reveal.js/css/theme/template/theme";
+
+.reveal .slides {
+    font-weight: 600;
+    color: $bone;
+}
+
+// H1/H3: League Gothic, uppercase, wide-set
+.reveal h1,
+.reveal h3 {
+    font-family: 'League Gothic', 'Impact', sans-serif;
+    font-weight: 400;
+    text-transform: uppercase;
+}
+
+// H1: a short, hard ember bar underneath
+.reveal h1 {
+    padding-bottom: 0.1em;
+    background-image: linear-gradient(90deg, $ember-deep, $ember-bright);
+    background-repeat: no-repeat;
+    background-position: center bottom;
+    background-size: 2.2em 0.07em;
+}
+
+.reveal h3 {
+    color: $ember-bright;
+}
+
+// H2/H4: Montserrat Bold caps
+.reveal h2,
+.reveal h4 {
+    font-family: 'Montserrat', 'Source Sans Pro', sans-serif;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    line-height: 1.2;
+}
+.reveal h2 { color: $bone; }
+.reveal h4 { color: $bone-dim; }
+
+.reveal em,
+.reveal i {
+    color: $ember-bright;
+}
+
+.reveal strong,
+.reveal b {
+    font-weight: 700;
+    color: #fff;
+}
+
+// {{darkbg}} slides: the base theme forces white text; keep it bone
+.reveal section[data-darkbg] p,
+.reveal section[data-darkbg] ul,
+.reveal section[data-darkbg] ol,
+.reveal section[data-darkbg] li,
+.reveal section[data-darkbg] cite.attrib {
+    color: $bone !important;
+}
+
+section[data-darktext],
+section[data-darktext] p,
+section[data-darktext] li {
+    text-shadow: 1px 1px 3px rgba(255, 255, 255, 0.7);
+}
+
+// Square, ember-flagged bullets
+.reveal ul li::marker,
+.reveal ol li::marker {
+    color: $ember;
+}
+
+// Blockquote: a steel slab with a thick ember edge and one clipped corner
+.reveal blockquote {
+    background: rgba(255, 255, 255, 0.06);
+    border-left: 0.16em solid $ember;
+    border-radius: 0;
+    box-shadow: none;
+    clip-path: polygon(0 0, 100% 0, 100% calc(100% - 0.6em), calc(100% - 0.6em) 100%, 0 100%);
+}
+
+.reveal table th,
+.reveal table td {
+    border-bottom: 0.05em solid $steel-line;
+}
+.reveal table th {
+    color: $ember-bright;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.reveal hr {
+    border: 0;
+    height: 0.1em;
+    background: $steel-line;
+}
+
+#fixed-overlay-wrapper {
+    background: rgba(0, 0, 0, 0.25);
+    color: $bone-dim;
+    font-family: 'Source Sans Pro', sans-serif;
+}
+
+.info-head, .info-body {
+    background-color: rgba(0, 0, 0, 0.5);
+    padding: 1rem;
+    border-radius: 0;
+    border-left: 0.2rem solid $ember;
+}
+
+.reveal h2.countdown {
+    margin: 0.25em 0;
+    padding: 0.15em 0.45em;
+    background: rgba(0, 0, 0, 0.3);
+}

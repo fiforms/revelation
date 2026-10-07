@@ -1,0 +1,8 @@
+/* Big Shoulders Stencil — Variable */
+@font-face {
+    font-family: 'Big Shoulders Stencil';
+    src: url('./BigShouldersStencil-Variable.ttf') format('truetype');
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: swap;
+}
