@@ -22,13 +22,7 @@ import {
 import { sanitizeMarkdownFilename, isSafeMarkdownPath } from './compiler/compiler-utils.js';
 import { marked } from 'marked';
 import { mergeImportedData } from './imports-loader.js';
-
-function escapeHTML(text) {
-  if (typeof text !== 'string') return '';
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
+import { escapeHTML } from './escape.js';
 
 const urlParams = new URLSearchParams(window.location.search);
 // ?p= is fetched, so it must be a local .md name (a URL here would render another origin's markdown).

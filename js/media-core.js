@@ -6,13 +6,7 @@
 // search/filter/sort grid and preview lightbox, and loads plugins ('media-library' page) for
 // context-menu integration. Thumbnails are `<file>.thumbnail.jpg` next to each media file.
 import { pluginLoader } from './pluginloader.js';
-
-function escapeHTML(text) {
-  if (typeof text !== 'string') return '';
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
+import { escapeHTML } from './escape.js';
 
 export async function initMediaLibrary(container, {
   key,

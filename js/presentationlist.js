@@ -13,18 +13,12 @@ import { pluginLoader } from './pluginloader.js';
 import { createInfoPanel } from './info-panel.js';
 import { parseYamlOrEmpty } from './yaml-parse.js';
 import { parseFrontMatter } from './frontmatter.js';
+import { escapeHTML } from './escape.js';
 import { isSafeMarkdownPath } from './compiler/compiler-utils.js';
 
 const urlParams = new URLSearchParams(window.location.search);
 const url_key = urlParams.get('key');
 const url_prefix = `/presentations_${url_key}`;
-
-function escapeHTML(text) {
-  if (typeof text !== 'string') return '';
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
 
 const container = document.getElementById('presentation-list');
 let selectedCardElement = null;
