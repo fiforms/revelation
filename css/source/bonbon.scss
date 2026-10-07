@@ -1,0 +1,186 @@
+/**
+ * NAME: Bonbon
+ * AUTHOR: Daniel McFeeters
+ *
+ * Light, sweet theme in the Pastel family: a candy-shop background of
+ * strawberry-cream and mint glows, a scattered polka-dot "sprinkle" layer and a
+ * scalloped icing edge along the top and bottom. Quicksand body text, Beau
+ * Rivage script for H2/H4, Glass Antiqua for H1 and Playfair Display SC for H3, in raspberry and
+ * cocoa tones. H1 gets a hearts-and-flowers flourish; list bullets are hearts.
+ */
+
+@use "sass:color";
+
+// Palette
+$cream: #fffaf5;
+$frosting: #ffeef4;
+$strawberry: #f9c6d8;
+$rose: #e8799f;
+$raspberry: #c2447a;
+$raspberry-deep: #8f2c5c;
+$mint: #d9f2e6;
+$mint-deep: #8fd0b0;
+$lilac: #e5d9fa;
+$lilac-deep: #b49be6;
+$butter: #fff0c2;
+
+$cocoa: #5a3a4a;
+$cocoa-soft: #8a6475;
+
+// Background layers, top to bottom. Sizes are in vw so the candy scales with the window.
+//  1-2  scalloped icing band along the top and bottom edges
+//  3-4  sprinkle dots: two offset tiles of different dot colors, kept pale
+//  5-6  soft strawberry glow (top-left) and mint glow (bottom-right)
+//  7    lilac wash so the cream is not flat
+$background:
+    radial-gradient(circle at 50% 100%, $strawberry 0 1.55vw, rgba(249, 198, 216, 0) 1.6vw) top left / 3.4vw 1.7vw repeat-x,
+    radial-gradient(circle at 50% 0, $mint-deep 0 1.55vw, rgba(143, 208, 176, 0) 1.6vw) bottom left / 3.4vw 1.7vw repeat-x,
+    radial-gradient(circle at 25% 30%, rgba(232, 121, 159, 0.30) 0 0.45vw, rgba(232, 121, 159, 0) 0.5vw) 0 0 / 9vw 9vw,
+    radial-gradient(circle at 75% 70%, rgba(180, 155, 230, 0.30) 0 0.35vw, rgba(180, 155, 230, 0) 0.4vw) 0 0 / 9vw 9vw,
+    radial-gradient(ellipse at 0% 0%, $strawberry 0%, rgba(249, 198, 216, 0) 42%),
+    radial-gradient(ellipse at 100% 100%, $mint 0%, rgba(217, 242, 230, 0) 45%),
+    linear-gradient(160deg, $frosting 0%, $cream 45%, $lilac 100%);
+$background-color: $cream;
+
+$main-font: 'Quicksand', 'Open Sans', sans-serif;
+$main-font-size: 40px;
+$main-color: $cocoa;
+
+$heading-font: 'Playfair Display SC', 'Cormorant Garamond', serif;
+$heading-color: $raspberry-deep;
+$heading-letter-spacing: 0.01em;
+$heading-text-transform: none;
+$heading-text-shadow: none;
+$heading-font-weight: 700;
+
+$heading1-size: 3.3em;   // Glass Antiqua runs small for its size
+$heading2-size: 2.9em;   // Beau Rivage is a thin script; it needs the extra size
+$heading3-size: 1.55em;
+$heading4-size: 2.2em;
+
+$link-color: $raspberry;
+$link-color-hover: $rose;
+$selection-background-color: $strawberry;
+$selection-color: $raspberry-deep;
+
+@import 'reveal.js/dist/reveal.css';
+@import "reveal.js/css/theme/template/mixins";
+@import "reveal.js/css/theme/template/settings";
+@import "./custom/layouts.scss";
+
+@import url(./fonts/quicksand/quicksand.css);
+@import url(./fonts/open_sans/open_sans.css);
+@import url(./fonts/greek-fallback.css);
+@import url(./fonts/playfair_display_sc/playfair_display_sc.css);
+@import url(./fonts/cormorant_garamond/cormorant_garamond.css);
+@import url(./fonts/beau_rivage/beau_rivage.css);
+@import url(./fonts/glass_antiqua/glass_antiqua.css);
+
+@import "reveal.js/css/theme/template/theme";
+
+.reveal .slides {
+    font-weight: 500;
+}
+
+// H1: Glass Antiqua (single weight)
+.reveal h1 {
+    font-family: 'Glass Antiqua', 'Playfair Display SC', Georgia, serif;
+    font-weight: 400;
+    text-transform: none;
+    // No bold cut exists, so thicken the strokes with a thin outline instead of faux bold
+    -webkit-text-stroke: 0.015em currentColor;
+}
+
+// H3: Playfair Display SC (already small-caps, so no text-transform)
+.reveal h3 {
+    font-family: 'Playfair Display SC', 'Cormorant Garamond', Georgia, serif;
+    text-transform: none;
+    font-weight: 400;
+    color: $cocoa;
+}
+
+// H2/H4: Beau Rivage script (single weight)
+.reveal h2,
+.reveal h4 {
+    font-family: 'Beau Rivage', 'Cormorant Garamond', Georgia, serif;
+    font-weight: 400;
+    letter-spacing: 0.02em;
+    color: $raspberry;
+    line-height: 1.1;
+}
+
+// H1 flourish: hearts and flowers under the title, between two icing-colored rules
+.reveal h1::after {
+    content: "\2740  \2661  \2740";
+    display: block;
+    margin-top: 0.15em;
+    font-family: 'Quicksand', sans-serif;
+    font-size: 0.32em;
+    font-weight: 400;
+    letter-spacing: 0.5em;
+    text-indent: 0.5em;
+    color: $rose;
+}
+
+.reveal em,
+.reveal i {
+    color: $raspberry;
+}
+
+.reveal strong,
+.reveal b {
+    font-weight: 700;
+    color: $raspberry-deep;
+}
+
+// Sweet little hearts for bullets
+.reveal ul li::marker {
+    content: "\2661  ";
+    color: $rose;
+}
+.reveal ol li::marker {
+    color: $rose;
+    font-weight: 700;
+}
+
+// Blockquote: a frosted card with a candy-stripe edge
+.reveal blockquote {
+    background: rgba(255, 255, 255, 0.7);
+    border-left: 0.14em solid $rose;
+    border-radius: 14px;
+    box-shadow: 0 6px 18px rgba(194, 68, 122, 0.15), 0 0 0 0.04em $strawberry inset;
+}
+
+.reveal table th,
+.reveal table td {
+    border-bottom: 0.06em dotted $rose;
+}
+
+.reveal hr {
+    border: 0;
+    height: 0.12em;
+    background: repeating-linear-gradient(90deg, $rose 0 0.4em, transparent 0.4em 0.8em);
+}
+
+#fixed-overlay-wrapper {
+    background: rgba(255, 255, 255, 0.4);
+    color: $cocoa-soft;
+    font-family: 'Quicksand', sans-serif;
+}
+
+#fixed-tint-wrapper {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255, 250, 245, 0.5);
+    z-index: 0;
+    pointer-events: none;
+}
+
+.info-head, .info-body {
+    background-color: rgba(255, 255, 255, 0.65);
+    padding: 1rem;
+    border-radius: 14px;
+}
