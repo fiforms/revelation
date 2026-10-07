@@ -8,14 +8,31 @@
 
 @use "sass:color";
 
-$background: #1a1a1a;
-$background-color: #1a1a1a;
 
 $gold-light: #fff1c7;
 $gold: #f5cf7a;
 $gold-bright: #fae0a1;
 $gold-deep: #c98f2e;
 $gold-glow: rgba(255, 190, 90, 0.45);
+
+// Dark gradient sloping gently across the screen, with a lighter band about 60% of
+// the way up, capped by solid gold bars on the top and bottom screen edges.
+$bar-height: 2.4%;
+$bar-gold: linear-gradient(to bottom, $gold-deep 0%, $gold 50%, $gold-deep 100%);
+$background:
+    $bar-gold top / 100% $bar-height no-repeat,
+    $bar-gold bottom / 100% $bar-height no-repeat,
+    linear-gradient(
+        167deg,
+        #0c0a07 0%,
+        #17130c 22%,
+        #30271a 40%,
+        #453925 46%,
+        #30271a 54%,
+        #17130c 76%,
+        #0c0a07 100%
+    );
+$background-color: #17130c;
 
 $main-color: $gold;
 $heading-color: $gold;
