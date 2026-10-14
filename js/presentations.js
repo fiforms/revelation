@@ -12,7 +12,7 @@
  * notesteleprompter), next-slide preview, and the Vite HMR hot-reload hook
  * (`reload-presentations`, deferred while media is playing).
  * URL switches handled across the runtime: variant, lang, p, remoteMultiplexId, builderPreview,
- * noShuffle, noTransitions, forceControls, exportMode, media, ccli.
+ * noShuffle, noTransitions, forceControls, exportMode, media (plus any plugin-contributed params, see plugin-url-params.js).
  */
 import Reveal from 'reveal.js';
 import { io as socketIoClient } from 'socket.io-client';

@@ -85,13 +85,12 @@ export async function loadAndPreprocessMarkdown(deck, selectedFile = null) {
   style_path = window.__revelationHostedRoute ? '_resources/css/' : '/css/';
   const defaultFile = 'presentation.md';
 
-  // Read URL-level runtime switches such as `?variant=notes` or `?ccli=123456`.
+  // Read URL-level runtime switches such as `?variant=notes`.
   const urlParams = new URLSearchParams(window.location.search);
   const variant = (urlParams.get('variant') || '').trim().toLowerCase();
   // `noTransitions=1` is sent by image/thumbnail capture so a screenshot never lands mid-transition.
   const captureNoTransitions = urlParams.get('noTransitions') === '1';
   const forceNoTransitions = variant === 'lowerthirds' || captureNoTransitions;
-  const ccliFromUrl = (urlParams.get('ccli') || '').trim();
   const variantThemeMap = {
     lowerthirds: 'lowerthirds.css',
     confidencemonitor: 'confidencemonitor.css'
@@ -261,7 +260,7 @@ export async function loadAndPreprocessMarkdown(deck, selectedFile = null) {
     prefersHigh = getStorageItemSafe('options_media-version') === 'high';
   }
 
-  // Hydrate application config lazily so runtime options like PIP color or CCLI can affect rendering.
+  // Hydrate application config lazily so runtime options like PIP color can affect rendering.
   if (!appConfig && getElectronAPI()?.getAppConfig) {
     try {
       appConfig = await getElectronAPI().getAppConfig();
@@ -269,11 +268,6 @@ export async function loadAndPreprocessMarkdown(deck, selectedFile = null) {
     } catch {
       // Keep processing even if config is unavailable.
     }
-  }
-
-  // Allow URL overrides for session-specific values, e.g. a one-off CCLI license number.
-  if (ccliFromUrl) {
-    appConfig = { ...(appConfig || {}), ccliLicenseNumber: ccliFromUrl };
   }
 
   // Load the media index when available so aliases can prefer a local high-bitrate variant.

@@ -14,6 +14,7 @@ import { createInfoPanel } from './info-panel.js';
 import { parseYamlOrEmpty } from './yaml-parse.js';
 import { parseFrontMatter } from './frontmatter.js';
 import { escapeHTML } from './escape.js';
+import { collectPluginPresentationParams } from './plugin-url-params.js';
 import { isSafeMarkdownPath } from './compiler/compiler-utils.js';
 
 const urlParams = new URLSearchParams(window.location.search);
@@ -555,14 +556,8 @@ if (sortBtn && sortDropdown) {
   });
 }
 
-function getConfiguredCcliNumber(config) {
-  const pluginValue = String(config?.pluginConfigs?.credit_ccli?.licenseNumber || '').trim();
-  if (pluginValue) return pluginValue;
-  return String(config?.ccliLicenseNumber || '').trim();
-}
-
 function appendBrowserPresentationParams(url, overrides = {}) {
-  const ccli = getConfiguredCcliNumber(appConfig);
+  const pluginParams = collectPluginPresentationParams(appConfig);
   const needsMedia = !!appConfig?.preferHighBitrate;
   const requestedLanguage = Object.prototype.hasOwnProperty.call(overrides, 'language')
     ? overrides.language
@@ -572,15 +567,15 @@ function appendBrowserPresentationParams(url, overrides = {}) {
     : (appConfig?.screenTypeVariant || '');
   const lang = String(requestedLanguage || '').trim().toLowerCase();
   const variant = String(requestedVariant || '').trim().toLowerCase();
-  if (!needsMedia && !ccli && !lang && !variant) return url;
+  if (!needsMedia && !Object.keys(pluginParams).length && !lang && !variant) return url;
 
   try {
     const parsed = new URL(url, window.location.origin);
     if (needsMedia) {
       parsed.searchParams.set('media', 'high');
     }
-    if (ccli) {
-      parsed.searchParams.set('ccli', ccli);
+    for (const [key, value] of Object.entries(pluginParams)) {
+      parsed.searchParams.set(key, value);
     }
     if (lang) {
       parsed.searchParams.set('lang', lang);
@@ -594,7 +589,7 @@ function appendBrowserPresentationParams(url, overrides = {}) {
   } catch {
     const params = [];
     if (needsMedia) params.push('media=high');
-    if (ccli) params.push(`ccli=${encodeURIComponent(ccli)}`);
+    for (const [key, value] of Object.entries(pluginParams)) params.push(`${key}=${encodeURIComponent(value)}`);
     if (lang) params.push(`lang=${encodeURIComponent(lang)}`);
     if (variant) params.push(`variant=${encodeURIComponent(variant)}`);
     if (!params.length) return url;
