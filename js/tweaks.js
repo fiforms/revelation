@@ -80,6 +80,7 @@ export function revealTweaks(deck) {
     // and some browsers require user interaction to start video playback.
 
     if (!isThumbnail) {
+      if (!staticOverlays) initVideoBandwidthManager(deck);
       initBackgroundAudio(deck);
       initCountdowns(deck);
       if (!isFollower || isNotesPreview) initFitVideoControls(deck);
@@ -184,6 +185,118 @@ function enforcePdfPageBackground() {
   pages.forEach((page) => {
     page.style.backgroundColor = themeBackground;
   });
+}
+
+// Reveal never releases a <video> once it has a source: unload() only hides a background with
+// display:none, and fit-media videos use plain `src`. Every video Reveal has ever loaded (and each
+// slide sharing one background file gets its own copy) keeps downloading after you leave it. Chromium
+// allows 6 HTTP/1.1 connections per host, so on a slow link those stale downloads hold every slot and
+// the new slide's background sits "pending" until they finish. This detaches the source from every
+// video except the current slide's, and the next slide's (fetched once the current one can play).
+// Detaching + load() aborts the request; the source is restored when the slide comes back in range.
+function initVideoBandwidthManager(deck) {
+  const RELEASED = 'data-revel-released-src';
+  let pendingNext = null;
+
+  const release = (video) => {
+    if (video.hasAttribute(RELEASED)) return;
+    const own = video.getAttribute('src');
+    const sources = Array.from(video.querySelectorAll('source[src]'));
+    if (!own && !sources.length) return;
+    video.pause();
+    video.setAttribute(RELEASED, own || '');
+    if (own) video.removeAttribute('src');
+    sources.forEach(s => {
+      s.setAttribute(RELEASED, s.getAttribute('src'));
+      s.removeAttribute('src');
+    });
+    video.load(); // abort the in-flight request and free its connection
+  };
+
+  const restore = (video) => {
+    if (!video.hasAttribute(RELEASED)) return;
+    const own = video.getAttribute(RELEASED);
+    if (own) video.setAttribute('src', own);
+    video.removeAttribute(RELEASED);
+    video.querySelectorAll(`source[${RELEASED}]`).forEach(s => {
+      s.setAttribute('src', s.getAttribute(RELEASED));
+      s.removeAttribute(RELEASED);
+    });
+    video.load();
+  };
+
+  const videosOf = (slide) => {
+    if (!slide) return [];
+    const bg = deck.getSlideBackground?.(slide);
+    return [
+      ...slide.querySelectorAll('video'),
+      ...(bg ? bg.querySelectorAll('video') : [])
+    ];
+  };
+
+  const sweep = () => {
+    if (deck.isOverview?.() || deck.isScrollView?.() || deck.isPrintView?.()) return;
+    const current = deck.getCurrentSlide?.();
+    if (!current) return;
+
+    const slides = deck.getSlides?.() || [];
+    const next = slides[slides.indexOf(current) + 1] || null;
+    const currentVideos = videosOf(current);
+    // A next slide with the same background hash gets the playing <video> carried forward by
+    // Reveal, so preloading its own copy would just download the same file twice.
+    const sameBg = (a, b) => {
+      const ha = a && deck.getSlideBackground?.(a)?.getAttribute('data-background-hash');
+      const hb = b && deck.getSlideBackground?.(b)?.getAttribute('data-background-hash');
+      return !!ha && ha === hb;
+    };
+    const nextVideos = next && !sameBg(current, next) ? videosOf(next) : [];
+    const keep = new Set([...currentVideos, ...nextVideos]);
+
+    document.querySelectorAll('.reveal .slides video, .reveal .backgrounds video').forEach(v => {
+      if (!keep.has(v)) release(v);
+    });
+
+    currentVideos.forEach(v => {
+      const wasReleased = v.hasAttribute(RELEASED);
+      restore(v);
+      // Fit videos were already sent play() while detached (that rejected); background videos
+      // get Reveal's own `loadeddata` autoplay listener, so only nudge the in-slide ones.
+      if (wasReleased && current.contains(v) && (v.hasAttribute('data-imagefit') || v.hasAttribute('data-imagefit-fill'))) {
+        v.play().catch(() => {});
+      }
+    });
+
+    // Start the next slide's download only once the current one can play, so it doesn't compete.
+    if (pendingNext) pendingNext();
+    pendingNext = null;
+    if (!nextVideos.some(v => v.hasAttribute(RELEASED))) return;
+    const waitingOn = currentVideos.filter(v => v.readyState < 3 && (v.getAttribute('src') || v.querySelector('source[src]')));
+    if (!waitingOn.length) {
+      nextVideos.forEach(restore);
+      return;
+    }
+    let done = false;
+    const go = () => {
+      if (done) return;
+      done = true;
+      cleanup();
+      nextVideos.forEach(restore);
+    };
+    const timer = window.setTimeout(go, 15000);
+    const cleanup = () => {
+      window.clearTimeout(timer);
+      waitingOn.forEach(v => v.removeEventListener('canplaythrough', go));
+    };
+    waitingOn.forEach(v => v.addEventListener('canplaythrough', go, { once: true }));
+    pendingNext = () => { done = true; cleanup(); };
+  };
+
+  // Reveal dispatches `slidechanged` before it carries shared background videos forward and starts
+  // the new background, so sweep once that synchronous work has finished.
+  const schedule = () => window.setTimeout(sweep, 0);
+  deck.on('ready', schedule);
+  deck.on('slidechanged', schedule);
+  deck.on('overviewhidden', schedule);
 }
 
 function initFitVideoControls(deck) {
